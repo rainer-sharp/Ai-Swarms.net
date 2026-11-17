@@ -1,0 +1,10 @@
+.git
+.vscode
+.claude
+CLAUDE.md
+*.pdf
+*.key
+/swarmainet
+bench
+spec
+deploy/docker/data

@@ -1,0 +1,23 @@
+# Helfer eines Gruppennetzes (Mitgliedsnetz, deploy/vps/README.md § 5a).
+# Ablage: data-demo/config.yaml. Es gibt keinen Netzschlüssel: Der VPS hält nur sein
+# Zertifikat mit Rolle helper, sieht keine Aufträge und lässt sich einzeln widerrufen.
+node:
+  data_dir: /data
+  listen:
+    - /ip4/0.0.0.0/tcp/4713
+    - /ip6/::/tcp/4713
+    - /ip4/0.0.0.0/udp/4713/quic-v1
+    - /ip6/::/udp/4713/quic-v1
+  announce:
+    - /dns/demo.ai-swarms.net/tcp/4713
+    - /dns/demo.ai-swarms.net/udp/4713/quic-v1
+  gateway: 127.0.0.1:7713
+  # Beispielwerte ersetzen, sie gehören zu keinem Netz (zu diesem Schlüssel gibt es
+  # kein Gegenstück mehr). Eigene Werte nennt swarmainet network create.
+  network_id: m-d0a601a124128e33
+  membership:
+    root: "UVJB2JShdCMDMg2D7XEBu9GdJ6tnbgHa1Om2X60fudU"
+  mdns: false
+  helper: true
+
+backends: []

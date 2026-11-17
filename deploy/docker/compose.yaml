@@ -1,0 +1,31 @@
+# Helferknoten und optional Tracker auf einem Server mit öffentlicher Adresse.
+#
+#   mkdir data && cp helper.yaml data/config.yaml   # dann Kennung und Schlüssel eintragen
+#   cp /pfad/zum/swarm.key data/swarm.key
+#   sudo chown -R 65532:65532 data                  # Container läuft als nonroot
+#   docker compose up -d --build
+#   docker compose exec helper swarmainet status -config /data/config.yaml
+#   docker compose exec helper swarmainet invite -config /data/config.yaml -with-key
+#
+# Firewall: 4711/tcp eingehend (offenes Netz zusätzlich 4712/tcp und 4712/udp).
+services:
+  helper:
+    build: ../..
+    image: swarmainet:latest
+    # Host-Netz, damit AutoNAT, beobachtete Adressen und IPv6 stimmen
+    # (spec/p2p-schicht.md § 6.1); das Gateway bleibt auf 127.0.0.1.
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./data:/data
+
+  # Optional (docker compose --profile tracker up -d): Adressbriefkasten für
+  # Knoten ohne feste Adressen (§ 2.3). Lauscht nur auf 127.0.0.1:7720;
+  # TLS übernimmt ein Reverse-Proxy (z. B. Caddy: reverse_proxy 127.0.0.1:7720),
+  # Knoten akzeptieren Tracker nur per HTTPS.
+  tracker:
+    image: swarmainet:latest
+    network_mode: host
+    restart: unless-stopped
+    command: ["tracker", "-listen", "127.0.0.1:7720", "-trust-proxy"]
+    profiles: ["tracker"]

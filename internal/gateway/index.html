@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SwarmAiNet Knoten</title>
+<style>
+  :root { --bg:#fafaf7; --fg:#1d1d1b; --muted:#6b6b66; --line:#e2e1dc; --accent:#2f6fd6; --bad:#b3261e; --ok:#1e7a3c; color-scheme: light; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#161615; --fg:#ecebe6; --muted:#a09f99; --line:#33332f; --accent:#7aa7f0; --bad:#f2b8b5; --ok:#8fd6a5; color-scheme: dark; } }
+  body { font: 15px/1.5 system-ui, sans-serif; background: var(--bg); color: var(--fg); margin: 0; padding: 24px 16px; }
+  main { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; } h2 { font-size: 1.05rem; margin: 28px 0 8px; }
+  .muted { color: var(--muted); } code { font-size: .85em; word-break: break-all; }
+  table { border-collapse: collapse; width: 100%; } td, th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  .wrap { overflow-x: auto; }
+  button { font: inherit; padding: 6px 14px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--fg); cursor: pointer; margin-right: 6px; }
+  button.danger { border-color: var(--bad); color: var(--bad); }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); font-size: .85em; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); }
+  input { font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: transparent; color: var(--fg); width: min(100%, 560px); }
+</style>
+</head>
+<body>
+<main>
+  <h1>SwarmAiNet Knoten</h1>
+  <div class="muted">Peer-ID <code id="pid">…</code> · läuft seit <span id="up">…</span></div>
+
+  <h2>Ressourcen</h2>
+  <div id="rem"></div>
+  <p>
+    <button onclick="post('/api/pause')">Pausieren</button>
+    <button onclick="post('/api/resume')">Fortsetzen</button>
+    <button class="danger" onclick="post('/api/stop')">Sofort-Stopp</button>
+  </p>
+
+  <h2>Eigene Agenten</h2>
+  <div class="wrap"><table id="local"></table></div>
+
+  <h2>Verbundene Knoten</h2>
+  <div class="wrap"><table id="peers"></table></div>
+  <p><input id="addr" placeholder="/ip4/192.168.1.20/tcp/4711/p2p/12D3Koo…"> <button onclick="connectPeer()">Verbinden</button></p>
+
+  <h2>Adressen dieses Knotens</h2>
+  <div id="addrs" class="muted"></div>
+
+  <h2>Quittungen</h2>
+  <div class="wrap"><table id="ledger"></table></div>
+<p class="muted" style="margin-top:32px">SwarmAiNet ist freie Software unter der <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU AGPL-3.0</a>. <a href="https://github.com/rainer-sharp/Ai-Swarms.net">Quellcode</a> · kommerzielle Lizenz auf Anfrage.</p>
+</main>
+<script>
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const shortId = s => s ? '…' + s.slice(-8) : '';
+async function post(path, body) {
+  const r = await fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+  const j = await r.json(); if (!r.ok) alert(j.error?.message || r.status); refresh();
+}
+function connectPeer() { const a = document.getElementById('addr').value.trim(); if (a) post('/api/connect', {addr: a}); }
+async function refresh() {
+  let s; try { s = await (await fetch('/api/status')).json(); } catch { return; }
+  document.getElementById('pid').textContent = s.peer_id;
+  document.getElementById('up').textContent = s.uptime;
+  const r = s.resources;
+  document.getElementById('rem').innerHTML =
+    `<span class="pill">${s.provide ? 'Bereitstellung aktiv' : 'Bereitstellung aus'}</span> ` +
+    `<span class="pill">freie Slots: ${r.slots_now}</span> <span class="pill">Fremdjobs: ${r.foreign_running}</span> ` +
+    `<span class="pill">GPU-Minuten heute: ${r.gpu_minutes_used_today.toFixed(1)}</span> ` +
+    (r.gpu_util_mean >= 0 ? `<span class="pill">GPU Ø ${r.gpu_util_mean.toFixed(0)} %</span> ` : '') +
+    `<span class="pill">PV: ${r.pv_on ? 'Überschuss' : '–'}</span>` +
+    (r.blocked ? `<p class="bad">Annahme gesperrt: ${esc(r.blocked)}</p>` : '<p class="ok">nimmt Aufträge an</p>');
+  const offered = new Set((s.offered_agents || []).map(a => a.agent_id));
+  document.getElementById('local').innerHTML = '<tr><th>Agent</th><th>Familie</th><th>Fähigkeiten</th><th>angeboten</th></tr>' +
+    (s.local_agents || []).map(a => `<tr><td>${esc(a.agent_id)}</td><td>${esc(a.model_family)}</td><td>${esc(a.skills.join(', '))}</td><td>${offered.has(a.agent_id) ? 'ja' : 'nein'}</td></tr>`).join('');
+  document.getElementById('peers').innerHTML = '<tr><th>Peer</th><th>Netz</th><th>vertraut</th><th>Agenten</th><th>Slots</th></tr>' +
+    ((s.peers || []).map(p => `<tr><td><code>${esc(shortId(p.peer_id))}</code></td><td>${esc(p.network || '')}${p.via === 'relay' ? ' (Relay)' : ''}</td><td>${p.trusted ? 'ja' : 'nein'}</td><td>${esc((p.agents || []).map(a => a.agent_id + ' (' + a.model_family + ')').join(', ')) || '–'}</td><td>${p.slots_now}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">keine</td></tr>');
+  document.getElementById('addrs').innerHTML = (s.networks || []).map(n => (n.addrs || []).map(a => `<div>${esc(n.network_id)}: <code>${esc(a)}</code></div>`).join('')).join('');
+  document.getElementById('ledger').innerHTML = `<tr><th>Peer</th><th>für Peer geleistet</th><th>von Peer erhalten</th></tr>` +
+    (Object.entries(s.ledger || {}).map(([p, v]) => `<tr><td><code>${esc(shortId(p))}</code></td><td>${v.given}</td><td>${v.received}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">noch keine</td></tr>');
+}
+refresh(); setInterval(refresh, 3000);
+</script>
+</body>
+</html>

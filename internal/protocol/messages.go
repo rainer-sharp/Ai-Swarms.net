@@ -1,0 +1,206 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
+
+package protocol
+
+import "encoding/json"
+
+import "time"
+
+// Freigabeklassen (spec/freigabeklassen.md). Die Reihenfolge ist relevant:
+// eine Delegation darf nur gleich streng oder strenger sein.
+type PrivacyClass string
+
+const (
+	PrivacyLocal   PrivacyClass = "local"
+	PrivacyTrusted PrivacyClass = "trusted"
+	PrivacyReduced PrivacyClass = "reduced"
+	PrivacyPublic  PrivacyClass = "public"
+)
+
+func (p PrivacyClass) rank() int {
+	switch p {
+	case PrivacyLocal:
+		return 0
+	case PrivacyTrusted:
+		return 1
+	case PrivacyReduced:
+		return 2
+	case PrivacyPublic:
+		return 3
+	}
+	return -1
+}
+
+func (p PrivacyClass) Valid() bool { return p.rank() >= 0 }
+
+// AtLeastAsStrict meldet, ob p mindestens so streng ist wie q.
+func (p PrivacyClass) AtLeastAsStrict(q PrivacyClass) bool { return p.rank() <= q.rank() }
+
+type Role string
+
+const (
+	RoleRouter      Role = "router"
+	RolePlanner     Role = "planner"
+	RoleSpecialist  Role = "specialist"
+	RoleVerifier    Role = "verifier"
+	RoleSynthesizer Role = "synthesizer"
+	RoleTool        Role = "tool"
+)
+
+// Capability ist die signierte, ablaufende Fähigkeitsanzeige.
+// Sie enthält keine Prompts, internen IPs oder genauen Hardware-/Energiedaten.
+type Capability struct {
+	PeerID       string       `json:"peer_id"`
+	ExpiresAt    time.Time    `json:"expires_at"`
+	Agents       []AgentInfo  `json:"agents"`
+	Availability Availability `json:"availability"`
+	Policy       Policy       `json:"policy"`
+}
+
+type AgentInfo struct {
+	AgentID     string   `json:"agent_id"`
+	ModelFamily string   `json:"model_family"`
+	Skills      []string `json:"skills"`
+	Modalities  []string `json:"modalities"`
+	ContextMax  int      `json:"context_max"`
+	// Strength: Selbsteinschätzung des Anbieters, 1–10, 0 = unbekannt.
+	Strength int `json:"strength,omitempty"`
+	// Tools: Das Modell beherrscht Werkzeug-Aufrufe (OpenAI tools).
+	Tools bool `json:"tools,omitempty"`
+}
+
+type Availability struct {
+	SlotsNow int      `json:"slots_now"`
+	Windows  []Window `json:"windows,omitempty"`
+}
+
+type Window struct {
+	From  string `json:"from"`
+	To    string `json:"to"`
+	Slots int    `json:"slots"`
+}
+
+type Policy struct {
+	Accepts   []string `json:"accepts"`   // "trusted", "public"
+	Retention string   `json:"retention"` // z. B. "no-prompt-storage"
+}
+
+type ChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	// Werkzeuge im OpenAI-Format: Aufrufe des Modells (role "assistant")
+	// und Ergebnisse dazu (role "tool").
+	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string     `json:"tool_call_id,omitempty"`
+	Name       string     `json:"name,omitempty"`
+}
+
+// ToolCall ist ein Werkzeug-Aufruf des Modells. Ausgeführt wird er nie im
+// Schwarm, sondern von der aufrufenden Anwendung (z. B. einem Coding-Agenten).
+type ToolCall struct {
+	ID       string       `json:"id"`
+	Type     string       `json:"type"` // "function"
+	Function ToolFunction `json:"function"`
+}
+
+type ToolFunction struct {
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"` // JSON als Text, wie bei OpenAI
+}
+
+// Limits gelten pro Auftragsgraph; Delegationen erben gleiche oder strengere Werte.
+type Limits struct {
+	Deadline     time.Time    `json:"deadline"`
+	MaxDepth     int          `json:"max_depth"`
+	MaxSubtasks  int          `json:"max_subtasks"`
+	MaxTokens    int          `json:"max_tokens"`
+	MaxBytes     int          `json:"max_bytes"`
+	PrivacyClass PrivacyClass `json:"privacy_class"`
+	Depth        int          `json:"depth"`
+}
+
+type ProposePayload struct {
+	SubtaskID string        `json:"subtask_id"`
+	Role      Role          `json:"role"`
+	Skill     string        `json:"skill,omitempty"`
+	AgentID   string        `json:"agent_id"`
+	Messages  []ChatMessage `json:"messages"`
+	Limits    Limits        `json:"limits"`
+	// JSONSchema optional: erwartete strukturierte Ausgabe.
+	JSONSchema string `json:"json_schema,omitempty"`
+	// Tools und ToolChoice im OpenAI-Format, unverändert weitergereicht.
+	Tools      json.RawMessage `json:"tools,omitempty"`
+	ToolChoice json.RawMessage `json:"tool_choice,omitempty"`
+}
+
+type BidPayload struct {
+	SubtaskID    string `json:"subtask_id"`
+	SlotsFree    int    `json:"slots_free"`
+	ExpectedSecs int    `json:"expected_secs"`
+}
+
+type AcceptPayload struct {
+	SubtaskID   string    `json:"subtask_id"`
+	LeaseExpiry time.Time `json:"lease_expiry"`
+}
+
+type RejectPayload struct {
+	SubtaskID string `json:"subtask_id"`
+	Reason    string `json:"reason"`
+}
+
+type CancelPayload struct {
+	SubtaskID string `json:"subtask_id"`
+	Reason    string `json:"reason"`
+}
+
+type ProgressPayload struct {
+	SubtaskID string `json:"subtask_id"`
+	Status    string `json:"status"`
+}
+
+// Ergebnisstatus
+const (
+	StatusOK      = "ok"
+	StatusPartial = "partial"
+	StatusFailed  = "failed"
+)
+
+// Result trennt Antwort, Evidenz, Einschränkungen und Konfidenz.
+type Result struct {
+	TaskID       string      `json:"task_id"`
+	SubtaskID    string      `json:"subtask_id"`
+	ProducerPeer string      `json:"producer_peer"`
+	AgentID      string      `json:"agent_id"`
+	ModelFamily  string      `json:"model_family"`
+	Role         Role        `json:"role"`
+	Result       ResultBody  `json:"result"`
+	Evidence     []Evidence  `json:"evidence,omitempty"`
+	Confidence   *Confidence `json:"confidence,omitempty"`
+	Limitations  []string    `json:"limitations,omitempty"`
+	Usage        Usage       `json:"usage"`
+}
+
+type ResultBody struct {
+	Status    string     `json:"status"`
+	Summary   string     `json:"summary,omitempty"`
+	Content   string     `json:"content"`
+	ToolCalls []ToolCall `json:"tool_calls,omitempty"`
+}
+
+type Evidence struct {
+	Type   string `json:"type"`
+	Digest string `json:"digest"`
+}
+
+type Confidence struct {
+	Value float64 `json:"value"`
+	Kind  string  `json:"kind"` // "self-reported" | "measured"
+}
+
+type Usage struct {
+	PromptTokens     int   `json:"prompt_tokens"`
+	CompletionTokens int   `json:"completion_tokens"`
+	DurationMs       int64 `json:"duration_ms"`
+}

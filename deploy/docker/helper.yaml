@@ -1,0 +1,25 @@
+# Helferknoten im Container (spec/p2p-schicht.md § 6.1): trägt das Netz als
+# Einstieg, DHT-Server und Relay, rechnet aber nicht. Als data/config.yaml
+# ablegen, Netz-Kennung und Schlüssel eintragen.
+node:
+  data_dir: /data
+  listen:
+    - /ip4/0.0.0.0/tcp/4711
+    - /ip6/::/tcp/4711
+  gateway: 127.0.0.1:7711          # nur im Container bzw. auf dem Host (network_mode: host)
+  network_id: p-xxxxxxxx           # Kennung des privaten Netzes, z. B. aus `swarmainet status` eines Mitglieds
+  network_key_file: /data/swarm.key # derselbe Schlüssel wie auf allen Mitgliedern
+  mdns: false                      # auf einem Server ohne LAN-Nachbarn unnötig
+  helper: true                     # nur Relay und DHT-Server, keine Modelle
+  # trackers: [https://example.org/swarmainet]   # optional, siehe Dienst "tracker" in compose.yaml
+
+  # Optional: zusätzlich Helfer des offenen Netzes, eigener Port und eigene Peer-ID.
+  # networks:
+  #   - network_id: swarmainet
+  #     listen:
+  #       - /ip4/0.0.0.0/tcp/4712
+  #       - /ip4/0.0.0.0/udp/4712/quic-v1
+  #       - /ip6/::/tcp/4712
+  #       - /ip6/::/udp/4712/quic-v1
+
+backends: []

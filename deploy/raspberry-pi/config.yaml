@@ -1,0 +1,25 @@
+# Helferknoten auf einem Raspberry Pi (deploy/raspberry-pi/README.md).
+# Ablage: /var/lib/swarmainet/config.yaml (install.sh legt sie an).
+node:
+  data_dir: /var/lib/swarmainet
+  listen:
+    - /ip4/0.0.0.0/tcp/4711
+    - /ip6/::/tcp/4711
+  # Öffentlicher Name, unter dem der Pi am Einsatzort von außen erreichbar ist
+  # (README, Abschnitt 3). Er sieht selbst nur seine lokale Adresse; ohne
+  # announce stünde die in Einladungen. Erst eintragen, wenn der Name auf den
+  # Einsatzort zeigt, sonst wählen andere Knoten einen fremden Server an.
+  # /dns/ löst sowohl A- (IPv4) als auch AAAA-Einträge (IPv6) auf.
+  announce: []
+  # announce:
+  #   - /dns/helper.example.net/tcp/4711
+  gateway: 127.0.0.1:7711
+  # Netz-Kennung und Schlüssel trägt `swarmainet join` aus einer Einladung ein.
+  # Von Hand: network_id wie bei den Mitgliedern, network_key_file auf die
+  # Schlüsseldatei (z. B. /var/lib/swarmainet/swarm.key).
+  network_id: swarmainet
+  network_key_file: ""
+  mdns: false                      # im Netz des Pi gibt es keine anderen Knoten
+  helper: true                     # nur Relay und DHT-Server, keine Modelle, keine Aufträge
+
+backends: []

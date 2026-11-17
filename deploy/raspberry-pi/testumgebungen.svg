@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 660" width="960" height="660" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+  <title>Testumgebungen für den Helferknoten: andere FritzBox mit Kabelanschluss und Mobilfunk-Router ZTE MF79U</title>
+  <defs>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1565c0"/></marker>
+    <marker id="o" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#e65100"/></marker>
+  </defs>
+  <rect width="960" height="660" fill="#ffffff"/>
+
+  <text x="480" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#212121">Testumgebungen für den Helferknoten</text>
+
+  <!-- Internet -->
+  <rect x="20" y="56" width="920" height="84" rx="10" fill="#f3f6fa" stroke="#90a4ae" stroke-dasharray="6 4"/>
+  <text x="34" y="76" font-size="13" font-weight="bold" fill="#546e7a">Internet</text>
+  <text x="480" y="106" text-anchor="middle" font-size="13" fill="#37474f">Alle Verbindungen laufen über das Internet – wie zwischen echten Standorten</text>
+  <text x="480" y="124" text-anchor="middle" font-size="11" fill="#616161">Netzschlüssel (PSK): ohne ihn kommt keine Verbindung zustande</text>
+
+  <!-- Testumgebung A -->
+  <rect x="20" y="164" width="450" height="336" rx="10" fill="#eef7ef" stroke="#81c784"/>
+  <text x="36" y="188" font-size="14" font-weight="bold" fill="#2e7d32">A: andere FritzBox mit Kabelanschluss</text>
+
+  <rect x="40" y="208" width="410" height="122" rx="8" fill="#ffffff" stroke="#c62828" stroke-width="1.5"/>
+  <text x="56" y="230" font-size="14" font-weight="bold" fill="#212121">FritzBox (Kabel)</text>
+  <text x="56" y="251" font-size="12" fill="#212121">öffentliche IPv4: Portfreigabe 4711/tcp → Pi</text>
+  <text x="56" y="270" font-size="12" fill="#212121">DS-Lite: IPv6-Freigabe 4711/tcp für den Pi</text>
+  <text x="56" y="289" font-size="12" fill="#212121">MyFRITZ!-Name bzw. eigener DNS-Name</text>
+  <text x="56" y="318" font-size="11" fill="#616161">Kabelanbieter vergeben oft DS-Lite – zuerst prüfen</text>
+
+  <rect x="40" y="372" width="410" height="106" rx="8" fill="#ffffff" stroke="#2e7d32" stroke-width="1.5"/>
+  <text x="56" y="394" font-size="14" font-weight="bold" fill="#212121">Raspberry Pi 4 im LAN dieser FritzBox</text>
+  <text x="56" y="414" font-size="12" fill="#212121">Rolle: Helfer (Relay + DHT-Server)</text>
+  <text x="56" y="433" font-size="12" fill="#212121">von außen erreichbar über 4711/tcp</text>
+  <text x="56" y="458" font-size="11" fill="#616161">ohne Router 2: nicht abgeschottet, nur für den Test</text>
+
+  <path d="M245,330 L245,370" fill="none" stroke="#2e7d32" stroke-width="2.5" marker-end="url(#g)"/>
+  <path d="M420,142 L420,206" fill="none" stroke="#2e7d32" stroke-width="2.5" marker-end="url(#g)"/>
+  <text x="412" y="157" text-anchor="end" font-size="12" font-weight="bold" fill="#2e7d32">eingehend 4711/tcp</text>
+
+  <!-- Testumgebung B -->
+  <rect x="490" y="164" width="450" height="336" rx="10" fill="#fdf3e7" stroke="#ffb74d"/>
+  <text x="506" y="188" font-size="14" font-weight="bold" fill="#e65100">B: Mobilfunk-Router ZTE MF79U mit O2-Karte</text>
+
+  <rect x="510" y="208" width="410" height="122" rx="8" fill="#ffffff" stroke="#e65100" stroke-width="1.5"/>
+  <text x="526" y="230" font-size="14" font-weight="bold" fill="#212121">ZTE MF79U (LTE-Stick mit WLAN)</text>
+  <text x="526" y="251" font-size="12" fill="#212121">IPv4: CGNAT beim Provider, von außen nie erreichbar</text>
+  <text x="526" y="270" font-size="12" fill="#212121">IPv6: je nach APN/Tarif, eingehend ungewiss</text>
+  <text x="526" y="289" font-size="12" fill="#212121">keine Portfreigabe, kein DynDNS</text>
+  <text x="526" y="318" font-size="11" fill="#616161">Netz des Sticks: 192.168.0.0/24</text>
+
+  <rect x="510" y="372" width="410" height="106" rx="8" fill="#ffffff" stroke="#2e7d32" stroke-width="1.5"/>
+  <text x="526" y="394" font-size="14" font-weight="bold" fill="#212121">Raspberry Pi 4 am Stick (USB oder WLAN)</text>
+  <text x="526" y="414" font-size="12" fill="#212121">Rolle: Knoten hinter CGNAT, verbindet ausgehend</text>
+  <text x="526" y="433" font-size="12" fill="#212121">Helfer nur, wenn IPv6 eingehend durchkommt</text>
+  <text x="526" y="458" font-size="11" fill="#616161">vom Heimnetz vollständig getrennt</text>
+
+  <path d="M715,370 L715,332" fill="none" stroke="#e65100" stroke-width="2.5" marker-end="url(#o)"/>
+  <text x="725" y="356" font-size="11" fill="#e65100">USB</text>
+  <path d="M905,206 L905,142" fill="none" stroke="#e65100" stroke-width="2.5" marker-end="url(#o)"/>
+  <text x="897" y="157" text-anchor="end" font-size="12" font-weight="bold" fill="#e65100">nur ausgehend (IPv4)</text>
+
+  <!-- Zuhause -->
+  <rect x="230" y="524" width="500" height="70" rx="8" fill="#ffffff" stroke="#1565c0" stroke-width="1.5"/>
+  <text x="480" y="548" text-anchor="middle" font-size="14" font-weight="bold" fill="#212121">Zuhause: Schwarm-Knoten an der eigenen FritzBox</text>
+  <text x="480" y="568" text-anchor="middle" font-size="12" fill="#212121">keine Freigabe nötig, verbinden sich ausgehend</text>
+  <text x="480" y="585" text-anchor="middle" font-size="11" fill="#616161">VM · Host · Notebook</text>
+  <path d="M480,522 L480,142" fill="none" stroke="#1565c0" stroke-width="2.5" marker-end="url(#b)"/>
+
+  <!-- Legende -->
+  <g font-size="12" fill="#424242">
+    <line x1="40" y1="626" x2="80" y2="626" stroke="#2e7d32" stroke-width="2.5"/><text x="88" y="630">von außen erreichbar</text>
+    <line x1="290" y1="626" x2="330" y2="626" stroke="#e65100" stroke-width="2.5"/><text x="338" y="630">nur ausgehend (CGNAT)</text>
+    <line x1="560" y1="626" x2="600" y2="626" stroke="#1565c0" stroke-width="2.5"/><text x="608" y="630">Heimnetz → Internet</text>
+  </g>
+</svg>

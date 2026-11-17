@@ -1,0 +1,33 @@
+# systemd-Unit für einen SwarmAiNet-Knoten (deploy/raspberry-pi/README.md).
+# Ablage: /etc/systemd/system/swarmainet.service
+[Unit]
+Description=SwarmAiNet-Knoten
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=swarmainet
+Group=swarmainet
+ExecStart=/usr/local/bin/swarmainet run -config /var/lib/swarmainet/config.yaml
+Restart=on-failure
+RestartSec=10
+
+# Härtung: der Knoten braucht nur sein Datenverzeichnis und das Netz.
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ReadWritePaths=/var/lib/swarmainet
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+RestrictNamespaces=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+[Install]
+WantedBy=multi-user.target

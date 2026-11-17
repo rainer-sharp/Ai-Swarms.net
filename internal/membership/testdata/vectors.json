@@ -1,0 +1,11 @@
+{
+  "root_seed_hex": "0101010101010101010101010101010101010101010101010101010101010101",
+  "root_pub": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+  "network_id": "m-78ce600a33734543",
+  "node_peer_id": "12D3KooWJWoaqZhDaoEFshF7Rh1bpY9ohihFhzcW6d69Lr2NASuq",
+  "cert_signed_bytes": "swarmainet/member-cert/v1\n{\"v\":1,\"network_id\":\"m-78ce600a33734543\",\"serial\":\"AAAAAAAAAAAAAAAAAAAAAA\",\"subject\":\"12D3KooWJWoaqZhDaoEFshF7Rh1bpY9ohihFhzcW6d69Lr2NASuq\",\"role\":\"member\",\"name\":\"gerät \u003c1\u003e \u0026 co\",\"issued_at\":\"2026-11-08T10:00:00Z\",\"expires_at\":\"2026-12-08T10:00:00Z\",\"issuer\":\"root\"}",
+  "cert_sig": "VNO7QA1aEnnY_7TDDr069yvcQbUWJnGxKV0Mcwe6RQjwzSX9dEdR3kjSzSe_QE-LU1yRKa6lKMNydMXyQqcODw",
+  "crl_signed_bytes": "swarmainet/member-crl/v1\n{\"v\":1,\"network_id\":\"m-78ce600a33734543\",\"issuer\":\"root\",\"seq\":1,\"issued_at\":\"2026-11-08T10:00:00Z\",\"revoked\":[{\"serial\":\"AAAAAAAAAAAAAAAAAAAAAA\",\"subject\":\"12D3KooWJWoaqZhDaoEFshF7Rh1bpY9ohihFhzcW6d69Lr2NASuq\",\"revoked_at\":\"2026-11-08T10:00:00Z\",\"reason\":\"gerät verloren\"}]}",
+  "crl_sig": "vXfu8d-DNUFAJVNhCROyUh_Io2dnjN4q_Thap34-krEWBY615vjaAORsmalpaUY7EWQmX3ZF0dmgnpuKw3PoAQ",
+  "cert_json": "{\"v\":1,\"network_id\":\"m-78ce600a33734543\",\"serial\":\"AAAAAAAAAAAAAAAAAAAAAA\",\"subject\":\"12D3KooWJWoaqZhDaoEFshF7Rh1bpY9ohihFhzcW6d69Lr2NASuq\",\"role\":\"member\",\"name\":\"gerät \\u003c1\\u003e \\u0026 co\",\"issued_at\":\"2026-11-08T10:00:00Z\",\"expires_at\":\"2026-12-08T10:00:00Z\",\"issuer\":\"root\",\"sig\":\"VNO7QA1aEnnY_7TDDr069yvcQbUWJnGxKV0Mcwe6RQjwzSX9dEdR3kjSzSe_QE-LU1yRKa6lKMNydMXyQqcODw\"}"
+}

@@ -1,0 +1,20 @@
+# Startknoten des offenen Netzes (deploy/vps/README.md). Ablage: data-open/config.yaml
+node:
+  data_dir: /data
+  listen:
+    - /ip4/0.0.0.0/tcp/4712
+    - /ip4/0.0.0.0/udp/4712/quic-v1
+    - /ip6/::/tcp/4712
+    - /ip6/::/udp/4712/quic-v1
+  announce:                        # öffentlicher Name des VPS (A- und AAAA-Eintrag)
+    - /dns/seed.ai-swarms.net/tcp/4712
+    - /dns/seed.ai-swarms.net/udp/4712/quic-v1
+  gateway: 127.0.0.1:7712          # zweiter Container nutzt 7711 (gemeinsames Host-Netz)
+  network_id: swarmainet           # offenes Netz, ohne Schlüssel
+  mdns: false
+  helper: true                     # Relay und DHT-Server, keine Modelle, keine Aufträge
+  dns_seeds: [none]                # er ist selbst der Seed
+  relay_limits:
+    reservations: 128              # öffentlicher Startknoten: mehr als die Vorgabe (32)
+
+backends: []

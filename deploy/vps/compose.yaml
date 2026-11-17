@@ -1,0 +1,44 @@
+# Helfer auf einem VPS, je in einem eigenen Container (deploy/vps/README.md):
+#   seed     Startknoten des offenen Netzes      4712/tcp+udp, Gateway 7712
+#   private  Helfer des eigenen privaten Schwarms 4711/tcp,     Gateway 7711
+#   demo     Helfer eines Gruppennetzes (optional) 4713/tcp+udp, Gateway 7713
+#
+#   docker compose up -d seed private
+#   docker compose --profile demo up -d demo
+#   docker compose --profile tracker up -d tracker
+#   docker compose exec seed swarmainet status -config /data/config.yaml
+#
+# Alle nutzen das Host-Netz (AutoNAT, IPv6) und brauchen deshalb
+# verschiedene Ports und Gateway-Ports.
+services:
+  seed:
+    build: ../..
+    image: swarmainet:latest
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./data-open:/data
+
+  private:
+    image: swarmainet:latest
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./data-private:/data
+
+  demo:
+    image: swarmainet:latest
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./data-demo:/data
+    profiles: ["demo"]
+
+  # Optional: Adressbriefkasten (spec/p2p-schicht.md § 2.3), nur auf
+  # 127.0.0.1:7720 hinter einem TLS-Reverse-Proxy.
+  tracker:
+    image: swarmainet:latest
+    network_mode: host
+    restart: unless-stopped
+    command: ["tracker", "-listen", "127.0.0.1:7720", "-trust-proxy"]
+    profiles: ["tracker"]

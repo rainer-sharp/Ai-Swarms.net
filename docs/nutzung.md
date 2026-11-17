@@ -1,0 +1,87 @@
+# Nutzung
+
+Jeder Knoten stellt auf `http://127.0.0.1:7711` eine OpenAI-kompatible API und eine Status-Seite bereit. Das Gateway lauscht nur auf localhost. Jede Anwendung, die einen OpenAI-Endpunkt kennt, kann den Schwarm nutzen: Open WebUI, eine IDE oder ein Coding-Agent. Als Endpunkt `http://127.0.0.1:7711/v1` eintragen; einen API-Schlüssel braucht das Gateway nicht.
+
+## Modellnamen: Wie der Schwarm arbeitet
+
+Der Modellname wählt das Muster, nach dem die Modelle zusammenarbeiten:
+
+| Modellname | Muster |
+|---|---|
+| `swarmainet` | Standard aus `tasks.pattern` (Entwurf + Prüfer + Synthese) |
+| `swarmainet/single` | bester Spezialist, bei Ausfall der nächste |
+| `swarmainet/parallel` | bis zu drei Modelle verschiedener Familien unabhängig, Synthese lokal |
+| `swarmainet/draft_verify_synthesize` | Entwurf, Prüfung durch eine andere Familie, Synthese nur bei Mängeln |
+| `swarmainet/parallel_verify` | wie `parallel`, danach Prüfung der Synthese durch eine andere Familie, Überarbeitung nur bei Mängeln |
+
+```sh
+curl -s http://127.0.0.1:7711/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -H 'X-SwarmAiNet-Privacy: trusted' \
+  -d '{"model":"swarmainet","messages":[{"role":"user","content":"Schreibe eine Python-Funktion für Primzahlen"}]}'
+```
+
+Die Antwort enthält zusätzlich das Feld `swarmainet` mit Ablauf, Prüfurteil, gefundenen Mängeln und Einschränkungen. In `steps[]` stehen je Schritt Agent, Peer, Dauer und Tokens.
+
+## Optionale Header
+
+| Header | Bedeutung |
+|---|---|
+| `X-SwarmAiNet-Privacy` | Freigabeklasse `local`, `trusted`, `reduced` oder `public`: wer die Anfrage sehen darf ([Freigabeklassen](../spec/freigabeklassen.md)) |
+| `X-SwarmAiNet-Skill` | Fähigkeit, z. B. `code.python`; ohne Angabe entscheidet der Router |
+| `X-SwarmAiNet-Agents` | kommagetrennte Agent-IDs, auf die die Auswahl beschränkt wird (für Messungen) |
+| `X-SwarmAiNet-Trace: 1` | Texte der Zwischenschritte in `steps[].output` |
+
+Ohne Header gilt `tasks.privacy_class` aus der Konfiguration (Standard `trusted`): Die Anfrage geht nur an eigene oder vertraute Geräte. An fremde Knoten im offenen Netz geht nur, was als `public` markiert ist.
+
+## Open WebUI
+
+1. *Einstellungen → Verbindungen → OpenAI-API*: URL `http://127.0.0.1:7711/v1`, Schlüssel beliebig.
+2. Die Modelle `swarmainet`, `swarmainet/single` usw. erscheinen in der Modellauswahl.
+3. Für Werkzeuge (z. B. Open Terminal): beim Modell unter *Erweiterte Parameter* den **Funktionsaufruf auf „Nativ“** stellen.
+
+Läuft Open WebUI in Docker, erreicht es localhost des Rechners nur mit Host-Netz (`network_mode: host`) oder über `host.docker.internal` mit einer Weiterleitung. Das Gateway selbst bleibt auf localhost.
+
+## Coding-Agenten und Werkzeuge
+
+Anfragen mit `tools` (z. B. von pi oder Open WebUI mit Funktionsaufruf „Nativ“) gehen an genau ein Modell, das in der Konfiguration `tools: true` trägt; dabei gilt immer das Muster `single`, unabhängig vom Modellnamen. Die Antwort enthält `tool_calls` und `finish_reason: "tool_calls"`, auch beim Streaming.
+
+Die Werkzeuge führt die **Anwendung selbst** aus, also Open WebUI oder der Agent auf Ihrem Rechner, nicht das Modell. Jedes Ergebnis geht aber zurück an das Modell. Deshalb legt `allowed_tools` je Netz fest, welche Werkzeuge dessen Modelle sehen dürfen:
+
+| Netz | ohne `allowed_tools` | mit Liste |
+|---|---|---|
+| eigener Knoten | alle | alle |
+| privates Netz (PSK) | alle | nur die Liste |
+| Mitgliedsnetz | keine | nur die Liste |
+| offenes Netz, fremde Knoten | keine | nur die Liste |
+| `trusted_peers` | alle | alle |
+
+Findet sich kein freigegebener Agent, antwortet das Gateway mit 400. Ruft ein Modell ein Werkzeug auf, das ihm nicht gezeigt wurde, wird die Antwort verworfen. Einzelheiten: [Freigabeklassen, Regel 6](../spec/freigabeklassen.md).
+
+Inhalte als Liste von Textteilen werden zusammengefügt. Bilder werden noch nicht unterstützt (400).
+
+## Befehle
+
+| Befehl | Zweck |
+|---|---|
+| `init` | Konfiguration und Schlüssel anlegen |
+| `run` | Knoten starten |
+| `status` | Status des laufenden Knotens (JSON) |
+| `pause`, `resume`, `stop` | fremde Aufträge pausieren, fortsetzen, Sofort-Stopp |
+| `ping [-net ID] <peer>` | Weg zu einem Peer prüfen |
+| `psk DATEI` | Schlüssel für ein privates Netz erzeugen |
+| `invite [-with-key] [-lan] [-peer ADR] [-net ID]` | Einladungslink erzeugen (Knoten muss laufen) |
+| `join [-key DATEI] <link>` | Netz aus einer Einladung beitreten |
+| `network create` | Mitgliedsnetz mit Wurzelschlüssel anlegen |
+| `member invite\|request\|issue\|install\|revoke\|import-crl\|list` | Mitglieder aufnehmen und Zertifikate verwalten |
+| `tracker [-listen ADR] [-tls-cert F -tls-key F] [-trust-proxy]` | Adressbriefkasten betreiben |
+| `bench run\|report\|hash` | Benchmark, siehe [`bench/`](../bench/README.md) |
+
+Alle Befehle nehmen `-config PFAD` (Standard `~/.swarmainet/config.yaml`) und `-v` für ausführliche Protokolle; Optionen stehen vor den übrigen Argumenten.
+
+## Diagnose
+
+- **`swarmainet status`:** je Netz (`networks[]`) Peer-ID, Adressen, `reachability` (offenes Netz), Relay-Dienst und -Reservierungen, DHT-Modus und -Größe, veröffentlichte Fähigkeiten und `hints` mit Hinweisen im Klartext; je Peer Netz, Rolle und `via: direct|relay`.
+- **`swarmainet ping <peer-id>`** (oder `/ip4/…/tcp/4711/p2p/<peer-id>`, `-net` für ein bestimmtes Netz): bekannte Adressen, Suche in der DHT, Verbindungsaufbau direkt oder über Relay (mit kurzer Wartezeit auf Hole Punching), Laufzeit, angebotene Agenten; bei Fehlschlag mit Hinweisen zu Firewall, Netzschlüssel oder fehlendem Relay.
+- **Status-Seite** unter `http://127.0.0.1:7711`: Ressourcen, eigene Agenten, verbundene Knoten, eigene Adressen und Quittungen; dort lässt sich auch ein Peer von Hand anwählen.
+- **„kein passender agent verfügbar“:** Kein verbundenes Modell hat die verlangte Fähigkeit und Freigabeklasse, oder alle sagen gerade ab (Zeitfenster, Auslastung). `status` zeigt, welche Agenten bekannt sind.

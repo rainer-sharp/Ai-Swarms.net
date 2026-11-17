@@ -1,0 +1,68 @@
+# Benchmark Runde 1 (spec/benchmark.md) für den Testaufbau mit zwei Rechenservern:
+#   192.168.101.94  vLLM       qwen3.8-flash-next
+#   192.168.101.95  llama.cpp  Qwen3.8-27B Q4   |  Ollama (ein Modell zur Zeit): gpt-oss:20b, llama3.1:8b
+# Reihenfolge so gewählt, dass Ollama möglichst selten das Modell wechselt.
+# Start auf der VM:  ./swarmainet bench run bench/plan-r1.yaml
+# Auswertung:        ./swarmainet bench report bench/results-r1.jsonl
+
+tasks: bench/tasks-r1.jsonl
+tasks_sha256: ad80b86d7b2210498281e42eeeb07ffd393b46c98da3601b9c77b24a9d2cc841
+out: bench/results-r1.jsonl
+max_tokens: 4096
+
+runs:
+  # Stufe 1: Einzelmodelle direkt am Backend, ohne Schwarm
+  - name: einzel-flash
+    mode: direct
+    url: http://192.168.101.94:8000/v1
+    model: qwen3.8-flash-next
+  - name: einzel-qwen27b
+    mode: direct
+    url: http://192.168.101.95:8080/v1
+    model: unsloth/Qwen3.8-27B-GGUF:Q4_K_XL
+  - name: einzel-llama31
+    mode: direct
+    url: http://192.168.101.95:11434/v1
+    model: llama3.1:8b
+  - name: einzel-gptoss
+    mode: direct
+    url: http://192.168.101.95:11434/v1
+    model: gpt-oss:20b
+
+  # Stufe 2: Schwarm über das Gateway der VM, drei Modelle, nur gpt-oss in Ollama
+  - name: schwarm-single
+    mode: swarm
+    gateway: http://127.0.0.1:7711
+    pattern: single
+    agents: &ohne_llama [vllm/qwen3.8-flash-next, "llamacpp/unsloth/Qwen3.8-27B-GGUF:Q4_K_XL", "ollama/gpt-oss:20b"]
+  - name: schwarm-draft-verify
+    mode: swarm
+    gateway: http://127.0.0.1:7711
+    pattern: draft_verify_synthesize
+    agents: *ohne_llama
+  - name: schwarm-parallel
+    mode: swarm
+    gateway: http://127.0.0.1:7711
+    pattern: parallel
+    agents: *ohne_llama
+  - name: schwarm-parallel-verify
+    mode: swarm
+    gateway: http://127.0.0.1:7711
+    pattern: parallel_verify
+    agents: *ohne_llama
+
+  # Eigener Block: dritte Familie llama, mit Ollama-Modellwechseln (Laufzeit nicht vergleichbar)
+  - name: schwarm-parallel-verify-llama
+    mode: swarm
+    gateway: http://127.0.0.1:7711
+    pattern: parallel_verify
+    agents: [vllm/qwen3.8-flash-next, "llamacpp/unsloth/Qwen3.8-27B-GGUF:Q4_K_XL", "ollama/gpt-oss:20b", "ollama/llama3.1:8b"]
+
+  # Budget-Gleichheit: Self-Consistency für das voraussichtlich beste Einzelmodell.
+  # Nach Stufe 1 prüfen, ob es wirklich das beste ist, und samples an den
+  # Token-Verbrauch der Schwarm-Muster anpassen.
+  - name: sc3-flash
+    mode: direct
+    url: http://192.168.101.94:8000/v1
+    model: qwen3.8-flash-next
+    samples: 3

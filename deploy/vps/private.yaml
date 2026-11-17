@@ -1,0 +1,18 @@
+# Helfer des eigenen privaten Schwarms (deploy/vps/README.md). Ablage: data-private/config.yaml
+# Netz-Kennung und Schlüssel trägt `swarmainet join` aus einer Einladung eines
+# Mitglieds ein (README, Schritt 5); bis dahin startet der Container nicht.
+node:
+  data_dir: /data
+  listen:
+    - /ip4/0.0.0.0/tcp/4711        # private Netze nur über TCP
+    - /ip6/::/tcp/4711
+  announce:
+    - /dns/helper.ai-swarms.net/tcp/4711
+  gateway: 127.0.0.1:7711
+  network_id: swarmainet           # wird von join durch die Kennung des Schwarms ersetzt
+  network_key_file: ""             # wird von join eingetragen
+  mdns: false
+  helper: true
+  dns_seeds: [none]
+
+backends: []

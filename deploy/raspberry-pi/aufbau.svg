@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 680" width="960" height="680" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+  <title>Helferknoten auf einem Raspberry Pi hinter FritzBox und zweitem Router</title>
+  <defs>
+    <marker id="g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2e7d32"/></marker>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1565c0"/></marker>
+    <marker id="k" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#757575"/></marker>
+  </defs>
+  <rect width="960" height="680" fill="#ffffff"/>
+
+  <text x="480" y="34" text-anchor="middle" font-size="19" font-weight="bold" fill="#212121">Helferknoten auf einem Raspberry Pi hinter FritzBox und zweitem Router</text>
+
+  <!-- Zonen -->
+  <rect x="20" y="56" width="920" height="118" rx="10" fill="#f3f6fa" stroke="#90a4ae" stroke-dasharray="6 4"/>
+  <text x="34" y="76" font-size="13" font-weight="bold" fill="#546e7a">Internet</text>
+
+  <rect x="20" y="318" width="920" height="130" rx="10" fill="#fdf7ec" stroke="#d7b46a"/>
+  <text x="34" y="338" font-size="13" font-weight="bold" fill="#8d6e2f">Heimnetz 192.168.178.0/24</text>
+
+  <rect x="20" y="478" width="920" height="140" rx="10" fill="#eef7ef" stroke="#81c784"/>
+  <text x="34" y="604" font-size="13" font-weight="bold" fill="#2e7d32">Eigenes Netz 192.168.50.0/24 – kein Zugriff aufs Heimnetz</text>
+
+  <!-- Internet -->
+  <rect x="40" y="88" width="330" height="72" rx="8" fill="#ffffff" stroke="#607d8b"/>
+  <text x="56" y="110" font-size="14" font-weight="bold" fill="#212121">DNS beim Domain-Anbieter</text>
+  <text x="56" y="130" font-size="12" fill="#212121">swarm.example.de → öffentliche IP der FritzBox</text>
+  <text x="56" y="148" font-size="11" fill="#616161">DynDNS-Update oder CNAME auf MyFRITZ!</text>
+
+  <rect x="600" y="88" width="320" height="72" rx="8" fill="#ffffff" stroke="#607d8b"/>
+  <text x="616" y="110" font-size="14" font-weight="bold" fill="#212121">Knoten am anderen Standort</text>
+  <text x="616" y="130" font-size="11" fill="#212121">bootstrap: /dns4/swarm.example.de/tcp/4711/p2p/…</text>
+  <text x="616" y="148" font-size="11" fill="#616161">verbindet sich ausgehend, kein offener Port</text>
+
+  <!-- FritzBox -->
+  <rect x="345" y="204" width="270" height="86" rx="8" fill="#ffffff" stroke="#c62828" stroke-width="1.5"/>
+  <text x="480" y="227" text-anchor="middle" font-size="15" font-weight="bold" fill="#212121">FritzBox</text>
+  <text x="480" y="247" text-anchor="middle" font-size="12" fill="#212121">öffentliche IPv4 (dynamisch)</text>
+  <text x="480" y="266" text-anchor="middle" font-size="12" fill="#212121">Portfreigabe 4711/tcp → 192.168.178.2</text>
+  <text x="480" y="282" text-anchor="middle" font-size="11" fill="#616161">sonst nichts freigegeben</text>
+
+  <!-- Heimnetz-Knoten -->
+  <rect x="40" y="352" width="370" height="80" rx="8" fill="#ffffff" stroke="#8d6e2f"/>
+  <text x="56" y="374" font-size="14" font-weight="bold" fill="#212121">Schwarm-Knoten zu Hause</text>
+  <text x="56" y="394" font-size="12" fill="#212121">VM .52 · Host .29 · Notebook</text>
+  <text x="56" y="414" font-size="11" fill="#616161">bootstrap: /dns4/swarm.example.de/tcp/4711/p2p/…</text>
+
+  <!-- Router 2 -->
+  <rect x="540" y="384" width="380" height="118" rx="8" fill="#ffffff" stroke="#37474f" stroke-width="1.5"/>
+  <text x="730" y="406" text-anchor="middle" font-size="15" font-weight="bold" fill="#212121">Router 2</text>
+  <text x="556" y="427" font-size="12" fill="#212121">WAN 192.168.178.2 · LAN 192.168.50.1</text>
+  <text x="556" y="446" font-size="12" fill="#212121">Weiterleitung 4711/tcp → 192.168.50.10</text>
+  <text x="556" y="465" font-size="12" fill="#c62828">Firewall: neue Verbindungen 192.168.50.0/24 →</text>
+  <text x="556" y="482" font-size="12" fill="#c62828">192.168.178.0/24 und private Netze gesperrt</text>
+  <text x="556" y="496" font-size="11" fill="#616161">UPnP und Fernwartung aus</text>
+
+  <!-- Raspberry Pi -->
+  <rect x="540" y="520" width="380" height="72" rx="8" fill="#ffffff" stroke="#2e7d32" stroke-width="1.5"/>
+  <text x="556" y="542" font-size="14" font-weight="bold" fill="#212121">Raspberry Pi 192.168.50.10</text>
+  <text x="556" y="561" font-size="12" fill="#212121">swarmainet · helper: true · Relay + DHT-Server</text>
+  <text x="556" y="580" font-size="11" fill="#616161">announce: /dns4/swarm.example.de/tcp/4711 · keine Modelle</text>
+
+  <!-- Pfeile -->
+  <path d="M205,160 L205,184 L400,184 L400,202" fill="none" stroke="#757575" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#k)"/>
+  <text x="212" y="198" font-size="11" fill="#616161">zeigt auf</text>
+
+  <path d="M760,160 L760,184 L560,184 L560,202" fill="none" stroke="#2e7d32" stroke-width="2.5" marker-end="url(#g)"/>
+  <path d="M500,290 L500,306 L730,306 L730,382" fill="none" stroke="#2e7d32" stroke-width="2.5" marker-end="url(#g)"/>
+  <text x="742" y="300" font-size="12" font-weight="bold" fill="#2e7d32">4711/tcp</text>
+  <path d="M730,502 L730,518" fill="none" stroke="#2e7d32" stroke-width="2.5" marker-end="url(#g)"/>
+
+  <path d="M225,352 L225,262 L343,262" fill="none" stroke="#1565c0" stroke-width="2.5" marker-end="url(#b)"/>
+  <text x="215" y="282" text-anchor="end" font-size="11" fill="#1565c0">über swarm.example.de</text>
+  <text x="215" y="296" text-anchor="end" font-size="11" fill="#1565c0">(öffentliche Adresse)</text>
+
+  <path d="M538,556 L225,556 L225,436" fill="none" stroke="#c62828" stroke-width="2" stroke-dasharray="7 5" marker-end="url(#k)"/>
+  <g stroke="#c62828" stroke-width="3"><line x1="370" y1="546" x2="390" y2="566"/><line x1="390" y1="546" x2="370" y2="566"/></g>
+  <text x="240" y="548" font-size="12" font-weight="bold" fill="#c62828">gesperrt</text>
+
+  <!-- Legende -->
+  <g font-size="12" fill="#424242">
+    <line x1="40" y1="650" x2="80" y2="650" stroke="#2e7d32" stroke-width="2.5"/><text x="88" y="654">Verbindung von außen (nur 4711/tcp)</text>
+    <line x1="350" y1="650" x2="390" y2="650" stroke="#1565c0" stroke-width="2.5"/><text x="398" y="654">Heimnetz → Helfer (wie von außen)</text>
+    <line x1="640" y1="650" x2="680" y2="650" stroke="#c62828" stroke-width="2" stroke-dasharray="7 5"/><text x="688" y="654">durch Router 2 gesperrt</text>
+  </g>
+</svg>

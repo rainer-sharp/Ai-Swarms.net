@@ -1,0 +1,108 @@
+# Beispielkonfiguration für einen SwarmAiNet-Knoten im lokalen Schwarm (Phase 1).
+# Ablage: ~/.swarmainet/config.yaml  (erzeugen mit `swarmainet init`)
+
+node:
+  data_dir: ~/.swarmainet
+  listen:
+    - /ip4/0.0.0.0/udp/4711/quic-v1
+    - /ip4/0.0.0.0/tcp/4711
+    - /ip6/::/udp/4711/quic-v1
+    - /ip6/::/tcp/4711
+  gateway: 127.0.0.1:7711          # OpenAI-API + Web-Oberfläche, nur localhost
+  network_id: swarmainet
+  mdns: true                        # andere Knoten im LAN automatisch finden
+  # Privater Schwarm: alle Geräte mit demselben Schlüssel gelten als vertraut.
+  # Schlüssel erzeugen: swarmainet psk ~/.swarmainet/swarm.key
+  network_key_file: ""
+  static_peers: []                  # z. B. /ip4/192.168.1.20/tcp/4711/p2p/12D3Koo…; dauerhaft verbunden
+  bootstrap: []                     # Einstiegsadressen, nur solange kein Peer verbunden ist (swarmainet join)
+  trackers: []                      # HTTPS-Adressbriefkästen (swarmainet tracker), z. B. https://example.org/swarmainet
+  trusted_peers: []                 # Peer-IDs, denen Aufträge der Klasse "trusted" zugehen dürfen
+  provide: false                    # eigene Modelle im Schwarm anbieten (Opt-in)
+  # Phase 2 (spec/p2p-schicht.md):
+  relay_service: auto               # auto: im offenen Netz bei öffentlicher Erreichbarkeit; true: immer
+                                    # (Helfer, Brückenknoten ohne Portfreigabe); false: nie
+  # relay_limits: {reservations: 32, circuits_per_peer: 2, data_mib: 8, duration_s: 600}
+  # dns_seeds: [seed.ai-swarms.net] # ohne Angabe im offenen Netz der eingebaute Seed; [none] schaltet ab
+  helper: false                     # nur Netz tragen (Relay), ohne eigene Modelle
+  pex: true                         # bekannte Peers mit verbundenen Knoten austauschen
+  dht_server: auto                  # auto | true | false; auto: offenes Netz bei öffentlicher Erreichbarkeit,
+                                    # privater Schwarm mit eigenen Listen-Adressen oder als Relay
+  # listen: []                      # ohne Listen-Adressen nur ausgehend; erreichbar über Relays
+  port_mapping: false               # Portfreigabe per UPnP/NAT-PMP anfordern (Opt-in, ändert Router-Einstellungen)
+  announce: []                      # zusätzliche Adressen ohne /p2p, z. B. /dns4/swarm.example.de/tcp/4711 hinter einer Portfreigabe
+  announce_private: false           # interne Adressen auch im offenen Netz veröffentlichen (nur Testnetze im LAN)
+  # Weitere Netze, je mit eigenem Port und standardmäßig eigener Peer-ID (spec/p2p-schicht.md § 9).
+  # Felder ohne Angabe übernehmen die Werte von oben; swarmainet join trägt sie automatisch ein.
+  # networks:
+  #   - network_id: swarmainet        # offenes Netz zusätzlich zum privaten oben
+  #     listen: [/ip4/0.0.0.0/tcp/4712, /ip4/0.0.0.0/udp/4712/quic-v1]
+  #     identity: separate            # separate | shared (shared macht die Teilnahme verknüpfbar)
+  #     provide: true
+  #     accept_public_tasks: true
+  #     allowed_tools: [get_current_timestamp]   # Werkzeuge für fremde Modelle; ohne Liste keine
+  #   - network_id: m-3fa9c1d27be04a68           # Mitgliedsnetz, angelegt von swarmainet join
+  #     listen: [/ip4/0.0.0.0/tcp/4713, /ip4/0.0.0.0/udp/4713/quic-v1]
+  #     membership: { root: "<wurzelschlüssel>" }
+  #     allowed_tools: []                        # ohne Liste keine
+
+backends:
+  - name: ollama
+    url: http://127.0.0.1:11434/v1  # llama.cpp: http://127.0.0.1:8080/v1, LM Studio: http://127.0.0.1:1234/v1
+    api_key: ""
+    models:
+      - name: qwen2.5-coder:7b
+        family: qwen
+        skills: [code.python, code.go, code.review]
+        context: 32768
+        strength: 5                 # 1 (schwach) bis 10 (stark), 0 = unbekannt; wählt den Prüfer
+        tools: true                 # beherrscht Werkzeug-Aufrufe (für Coding-Agenten)
+        offer: true
+      - name: llama3.1:8b
+        family: llama
+        skills: [general, code.review]
+        context: 131072
+        strength: 4
+        offer: false
+
+resources:
+  prioritize_own_use: true
+  accept_public_tasks: false        # Opt-in
+  hardware:
+    max_parallel_jobs: 1
+    gpu_util_mean_max: 60           # % gemittelt über gpu_window_s
+    gpu_window_s: 120
+    ram_reserve_gib: 16
+    vram_budget_gib: 24             # noch nicht durchgesetzt
+    extra_power_max_w: 180          # noch nicht durchgesetzt
+    temperature_stop_c: 85
+  schedule:
+    windows:
+      - { days: [mon, tue, wed, thu, fri], from: "22:00", to: "07:00" }
+      - { days: [sat, sun], from: "00:00", to: "24:00" }
+    gpu_minutes_per_day: 180
+  energy:
+    mode: off                       # pv_preferred | pv_only | price_only | off
+    source: home_assistant
+    home_assistant:
+      url: http://homeassistant.local:8123
+      token_env: HA_TOKEN           # Token aus Umgebungsvariable, nie in der Datei
+      grid_export: sensor.netz_einspeisung_w
+      battery_soc: sensor.hausakku_soc
+      price: sensor.strompreis_eur_kwh
+    reserve_w: 150
+    start_above_w: 500
+    start_stable_s: 300
+    stop_below_w: 250
+    stop_stable_s: 120
+    battery_soc_min: 50
+    price_max_eur_kwh: 0.18
+    stale_readings: no_new_jobs     # oder: ignore
+    reading_max_age_s: 120
+
+tasks:
+  pattern: draft_verify_synthesize  # single | parallel | draft_verify_synthesize | parallel_verify
+  privacy_class: trusted            # local | trusted | reduced | public
+  max_tokens: 2048
+  deadline_s: 300
+  max_subtasks: 8
