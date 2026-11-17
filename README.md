@@ -1,71 +1,75 @@
 # SwarmAiNet
 
-**Lokale KI-Modelle bilden ein Team.** SwarmAiNet verbindet die Rechner, auf denen Sie Modelle mit Ollama, llama.cpp, vLLM oder LM Studio betreiben, zu einem Schwarm. Für jede Anfrage stellt er ein Team zusammen: Ein Modell entwirft, ein Modell einer anderen Familie prüft, und nur bei Mängeln wird nachgebessert. Ihre Anwendungen sprechen mit dem Schwarm wie mit einem einzelnen OpenAI-Endpunkt.
+**English** · [Deutsch](LIESMICH.md)
 
-> **Status: Forschungsprototyp.** Der lokale Schwarm sowie private Netze und Gruppennetze über mehrere Standorte laufen auf echter Hardware. Das offene Netz ist bisher nur im Prozess getestet. Ob der Schwarm bessere Antworten liefert als das beste Einzelmodell, ist noch nicht belegt. Protokoll in Version 0.1, inkompatible Änderungen sind möglich. Details: [Stand](docs/stand.md).
+**Local AI models form a team.** SwarmAiNet connects the computers on which you run models with Ollama, llama.cpp, vLLM or LM Studio into a swarm. For each request it assembles a team: one model drafts, a model from a different family reviews, and revisions happen only if flaws are found. Your applications talk to the swarm as if it were a single OpenAI endpoint.
 
-## Was es kann
+> **Status: research prototype.** The local swarm as well as private networks and group networks across multiple sites run on real hardware. The open network has so far only been tested in-process. Whether the swarm delivers better answers than the best single model has not yet been shown. Protocol version 0.1; incompatible changes are possible. Details: [Status](docs/stand.md) (German).
 
-- **Ein Endpunkt für alle Modelle:** OpenAI-kompatible API auf `http://127.0.0.1:7711/v1` für Open WebUI, IDEs und Coding-Agenten, auch mit Werkzeug-Aufrufen.
-- **Zusammenarbeit nach Muster:** bester Spezialist, mehrere Modelle parallel mit Synthese oder Entwurf mit Prüfung durch eine andere Modellfamilie. Die Antwort zeigt, welches Modell was beigetragen hat.
-- **Drei Netzarten:**
-  - **Privates Netz** für die eigenen Geräte, abgeschlossen mit einem gemeinsamen Schlüssel.
-  - **Gruppennetz** für Vereine, Teams und Firmen: Zertifikat je Knoten, Mitglieder per Einladungslink aufnehmen und einzeln in Sekunden entfernen, ohne zentralen Server.
-  - **Offenes Netz** für alle, mit eingeschränkten Rechten für Fremde.
-- **Über Standorte hinweg:** Knoten hinter NAT, CGNAT oder DS-Lite finden sich ohne offene Ports, direkt, per Hole Punching oder über einen Helfer.
-- **Ihre Daten bleiben bei Ihnen:** Sie legen je Anfrage fest, wer sie sehen darf (nur lokal, vertraute Geräte, öffentlich). Welche Werkzeuge fremde Modelle sehen, bestimmen Sie je Netz.
-- **Ihre Hardware bleibt Ihre:** Eigene Anfragen haben Vorrang. Für andere rechnet ein Knoten nur, wenn Sie es einschalten, und nur in Zeitfenstern, unter GPU- und Temperaturgrenzen oder bei PV-Überschuss.
+> **Note:** The documentation and specification are currently available in German only.
 
-## Schnellstart
+## What it does
 
-Voraussetzungen: Go 1.27 und ein laufender Inferenz-Server mit OpenAI-kompatibler API, z. B. Ollama.
+- **One endpoint for all models:** OpenAI-compatible API at `http://127.0.0.1:7711/v1` for Open WebUI, IDEs and coding agents, including tool calls.
+- **Collaboration by pattern:** best specialist, several models in parallel with synthesis, or a draft reviewed by a different model family. The response shows which model contributed what.
+- **Three kinds of network:**
+  - **Private network** for your own devices, closed off with a shared key.
+  - **Group network** for clubs, teams and companies: a certificate per node, members admitted via invitation link and removed individually within seconds, without a central server.
+  - **Open network** for everyone, with restricted rights for strangers.
+- **Across sites:** nodes behind NAT, CGNAT or DS-Lite find each other without open ports, directly, via hole punching or through a helper.
+- **Your data stays with you:** for each request you decide who may see it (local only, trusted devices, public). You decide per network which tools foreign models get to see.
+- **Your hardware stays yours:** your own requests take priority. A node only computes for others if you switch it on, and only within time windows, under GPU and temperature limits, or when there is surplus solar power.
+
+## Quick start
+
+Requirements: Go 1.27 and a running inference server with an OpenAI-compatible API, e.g. Ollama.
 
 ```sh
 git clone https://github.com/rainer-sharp/Ai-Swarms.net.git
 cd Ai-Swarms.net
 go build -o swarmainet ./cmd/swarmainet
 
-./swarmainet init                    # legt ~/.swarmainet/config.yaml an
-$EDITOR ~/.swarmainet/config.yaml    # Modelle unter backends eintragen
+./swarmainet init                    # creates ~/.swarmainet/config.yaml
+$EDITOR ~/.swarmainet/config.yaml    # add your models under backends
 ./swarmainet run
 ```
 
-Ein Beispiel für den Abschnitt `backends` mit zwei Modellfamilien steht in [`config.example.yaml`](config.example.yaml). Danach:
+An example of the `backends` section with two model families is in [`config.example.yaml`](config.example.yaml). Then:
 
 ```sh
 curl -s http://127.0.0.1:7711/v1/chat/completions -H 'Content-Type: application/json' \
-  -d '{"model":"swarmainet","messages":[{"role":"user","content":"Was ist ein Primzahlsieb?"}]}'
+  -d '{"model":"swarmainet","messages":[{"role":"user","content":"What is a prime sieve?"}]}'
 ```
 
-Oder in Open WebUI unter *Einstellungen → Verbindungen* die URL `http://127.0.0.1:7711/v1` eintragen und das Modell `swarmainet` wählen.
+Or in Open WebUI, enter the URL `http://127.0.0.1:7711/v1` under *Settings → Connections* and select the model `swarmainet`.
 
-> Ohne weitere Einstellungen ist ein neuer Knoten im offenen Netz. Er nimmt dort keine fremden Aufträge an und gibt Ihre Anfragen nicht nach außen, ist für andere aber mit Peer-ID und Adresse sichtbar. Für die eigenen Geräte richten Sie besser ein [privates Netz](docs/netze.md#privates-netz-eigene-geräte) ein.
+> Without further settings, a new node joins the open network. It accepts no foreign tasks there and does not send your requests outside, but it is visible to others with its peer ID and address. For your own devices, you are better off setting up a [private network](docs/netze.md#privates-netz-eigene-geräte).
 
-**Weitere Geräte verbinden:** Auf einem laufenden Knoten `swarmainet invite -with-key` aufrufen und auf dem neuen Gerät `swarmainet join '<link>'`. Im LAN finden sich die Geräte danach selbst; für mehrere Standorte siehe [Netzarten](docs/netze.md#mehrere-standorte).
+**Connecting more devices:** on a running node, run `swarmainet invite -with-key`, and on the new device `swarmainet join '<link>'`. On a LAN the devices then find each other on their own; for multiple sites see [Network types](docs/netze.md#mehrere-standorte).
 
-## Dokumentation
+## Documentation (German)
 
 | | |
 |---|---|
-| [Installation](docs/installation.md) | Bauen, Einrichten, Dauerbetrieb unter Linux und Docker |
-| [Nutzung](docs/nutzung.md) | Modellnamen und Muster, Open WebUI, Coding-Agenten, Befehle, Diagnose |
-| [Netzarten](docs/netze.md) | Privates Netz, Gruppennetz, offenes Netz, mehrere Standorte, Helfer |
-| [Konfiguration](docs/konfiguration.md) | Alle Schlüssel und Dateien |
-| [Stand](docs/stand.md) | Was erprobt ist, was fehlt |
-| [Spezifikation](spec/README.md) | Protokoll, Netzschicht, Sicherheitsmodell |
+| [Installation](docs/installation.md) | Building, setup, continuous operation on Linux and Docker |
+| [Usage](docs/nutzung.md) | Model names and patterns, Open WebUI, coding agents, commands, diagnostics |
+| [Network types](docs/netze.md) | Private network, group network, open network, multiple sites, helpers |
+| [Configuration](docs/konfiguration.md) | All keys and files |
+| [Status](docs/stand.md) | What has been tested, what is missing |
+| [Specification](spec/README.md) | Protocol, network layer, security model |
 
-## Sicherheit
+## Security
 
-SwarmAiNet ist nicht auditiert. Geben Sie vertrauliche Inhalte nur an eigene Geräte oder Mitglieder eines Gruppennetzes. Im offenen Netz sehen fremde Knoten, was Sie als `public` senden. Schwachstellen bitte nicht öffentlich melden, sondern wie in [SECURITY.md](SECURITY.md) beschrieben.
+SwarmAiNet has not been audited. Share confidential content only with your own devices or members of a group network. In the open network, foreign nodes see whatever you send as `public`. Please do not report vulnerabilities publicly; follow the process described in [SECURITY.md](SECURITY.md).
 
-## Mitwirken
+## Contributing
 
-Fehlerberichte, Messungen mit anderen Modellen und Erfahrungen aus anderen Netzen sind willkommen, siehe [CONTRIBUTING.md](CONTRIBUTING.md). Code-Beiträge setzen die [Beitragsvereinbarung](CLA.md) voraus.
+Bug reports, measurements with other models and experience from other networks are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Code contributions require the [contributor agreement](CLA.md).
 
-## Lizenz
+## License
 
-SwarmAiNet ist freie Software unter der [GNU AGPL-3.0](LICENSE). Wer es verändert und weitergibt oder als Dienst im Netz anbietet, muss den Quellcode offenlegen. Für den Einbau in geschlossene Produkte gibt es eine [kommerzielle Lizenz](COMMERCIAL.md).
+SwarmAiNet is free software under the [GNU AGPL-3.0](LICENSE). Anyone who modifies and distributes it, or offers it as a network service, must disclose the source code. A [commercial license](COMMERCIAL.md) is available for use in closed products.
 
-Die Dokumentation und die Spezifikation stehen unter [CC BY 4.0](LICENSE-DOCS), Abgrenzung siehe [COMMERCIAL.md](COMMERCIAL.md#dokumentation-cc-by-40).
+The documentation and specification are licensed under [CC BY 4.0](LICENSE-DOCS); for the distinction see [COMMERCIAL.md](COMMERCIAL.md#dokumentation-cc-by-40).
 
-Die Benchmark-Aufgaben in `bench/` stammen aus HumanEval und GSM8K (© OpenAI, MIT).
+The benchmark tasks in `bench/` are taken from HumanEval and GSM8K (© OpenAI, MIT).
