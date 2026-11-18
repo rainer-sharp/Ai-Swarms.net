@@ -56,6 +56,7 @@ Or in Open WebUI, enter the URL `http://127.0.0.1:7711/v1` under *Settings → C
 | [Network types](docs/networks.md) | Private network, group network, open network, multiple sites, helpers |
 | [Configuration](docs/configuration.md) | All keys and files |
 | [Status](docs/status.md) | What has been tested, what is missing |
+| [Concept](docs/concept.md) | Vision, decisions, roles, trust, roadmap |
 | [Specification](spec/README.md) | Protocol, network layer, security model |
 
 ## Security

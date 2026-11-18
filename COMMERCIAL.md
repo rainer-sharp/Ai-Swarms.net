@@ -35,7 +35,7 @@ Die Dokumentation steht unter der [Creative Commons Namensnennung 4.0 Internatio
 
 Als Dokumentation gelten:
 
-- alles unter `docs/`, einschließlich des Gesamtkonzepts (`docs/gesamtkonzept.pdf`),
+- alles unter `docs/`, einschließlich des Gesamtkonzepts (`docs/concept.md`, `docs/de/concept.md`, Grafiken) und seiner archivierten ersten Fassung (`docs/archive/concept-2026-10-14-de.pdf`),
 - alles unter `spec/`,
 - die Anleitungen `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `deploy/*/README.md`, `bench/README.md` und `bench/report-r1.md` sowie ihre deutschen Fassungen in den Unterordnern `de/` (z. B. `de/README.md`, `deploy/vps/de/README.md`),
 - die Grafiken `deploy/raspberry-pi/*.svg`,

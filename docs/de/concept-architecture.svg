@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 436" width="850" height="436" font-family="DejaVu Sans, Helvetica, Arial, sans-serif">
+  <title>Architektur: Ein Knoten koordiniert lokal und holt Spezialisten aus dem Netz</title>
+  <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#59636e"/></marker></defs>
+  <rect width="850" height="436" fill="#ffffff"/>
+  <rect x="20" y="16" width="300" height="56" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="32" y="38" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Nutzer und Anwendungen</text>
+  <text x="32" y="57" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Open WebUI, IDE, Coding-Agenten</text>
+  <rect x="20" y="96" width="570" height="232" rx="10" fill="#f3f4f6" stroke="#b8bcc2"/>
+  <text x="576" y="118" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="end">Eigener SwarmAiNet-Knoten</text>
+  <rect x="34" y="130" width="174" height="82" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="46" y="152" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Gateway</text>
+  <text x="46" y="171" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">OpenAI-API, nur localhost</text>
+  <text x="46" y="188" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Web-Oberfläche, Status</text>
+  <rect x="218" y="130" width="174" height="82" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="230" y="152" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Auswahl</text>
+  <text x="230" y="171" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Regeln, Lastverteilung</text>
+  <text x="230" y="188" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Bandit, PI-Regler (Phase 3)</text>
+  <rect x="402" y="130" width="174" height="82" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="414" y="152" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Vertrauen</text>
+  <text x="414" y="171" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Quittungen, Zertifikate</text>
+  <text x="414" y="188" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Kredit (Phase 4)</text>
+  <rect x="34" y="226" width="174" height="82" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="46" y="248" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Ressourcen (REM)</text>
+  <text x="46" y="267" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Zeit, Last, PV</text>
+  <text x="46" y="284" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">lokale Grenzen</text>
+  <rect x="218" y="226" width="174" height="82" rx="8" fill="#dbe8f7" stroke="#2f6fbf" stroke-width="1.8"/>
+  <text x="230" y="248" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Orchestrierung</text>
+  <text x="230" y="267" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Muster, Prüfer</text>
+  <text x="230" y="284" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Synthese</text>
+  <rect x="402" y="226" width="174" height="82" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="414" y="248" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">P2P-Transport</text>
+  <text x="414" y="267" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">libp2p, QUIC/TCP, NAT</text>
+  <text x="414" y="284" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Relay, 3 Netzarten</text>
+  <line x1="120" y1="72" x2="120" y2="128" stroke="#59636e" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="140" y="362" width="330" height="56" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="152" y="384" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Lokale Backends</text>
+  <text x="152" y="403" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Ollama, llama.cpp, vLLM, LM Studio, MLX</text>
+  <line x1="305" y1="308" x2="305" y2="360" stroke="#59636e" stroke-width="1.5" marker-end="url(#a)"/>
+  <rect x="610" y="96" width="220" height="322" rx="10" fill="#f3f4f6" stroke="#b8bcc2"/>
+  <text x="624" y="118" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="start">Andere Knoten</text>
+  <rect x="622" y="130" width="196" height="64" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="634" y="152" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Einstieg</text>
+  <text x="634" y="171" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">DNS-Seed, Tracker</text>
+  <text x="634" y="188" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Startknoten, Peer-Austausch</text>
+  <rect x="622" y="200" width="196" height="62" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="634" y="222" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Spezialisten</text>
+  <text x="634" y="241" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Code, Vision, Mathe</text>
+  <rect x="622" y="270" width="196" height="62" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="634" y="292" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Prüfer</text>
+  <text x="634" y="311" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">andere Modellfamilie</text>
+  <rect x="622" y="340" width="196" height="64" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
+  <text x="634" y="362" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Helfer</text>
+  <text x="634" y="381" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Relay, DHT-Server</text>
+  <text x="634" y="398" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">keine Modelle</text>
+  <line x1="578" y1="268" x2="620" y2="268" stroke="#59636e" stroke-width="1.5" marker-end="url(#a)" marker-start="url(#a)"/>
+</svg>

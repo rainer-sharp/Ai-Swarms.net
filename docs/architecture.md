@@ -30,4 +30,4 @@ Application (Open WebUI, IDE, agent)
 | Benchmark | `internal/bench`, data in `bench/` |
 | Commands | `cmd/swarmainet` |
 
-The authoritative description of the protocol, network layer and security assumptions is the [specification](../spec/README.md). The original [overall concept](gesamtkonzept.pdf) (in German) describes the goal including the later phases.
+The authoritative description of the protocol, network layer and security assumptions is the [specification](../spec/README.md). The [overall concept](concept.md) describes the goal including the later phases.

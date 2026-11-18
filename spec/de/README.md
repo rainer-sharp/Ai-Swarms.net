@@ -2,7 +2,7 @@
 
 [English](../README.md) · **Deutsch**
 
-Versionierte, sprachunabhängige Spezifikation von SwarmAiNet. Grundlage ist das [Gesamtkonzept](../../docs/gesamtkonzept.pdf).
+Versionierte, sprachunabhängige Spezifikation von SwarmAiNet. Grundlage ist das [Gesamtkonzept](../../docs/de/concept.md).
 
 | Dokument | Inhalt |
 |---|---|

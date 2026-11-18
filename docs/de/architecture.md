@@ -30,4 +30,4 @@ Anwendung (Open WebUI, IDE, Agent)
 | Benchmark | `internal/bench`, Daten in `bench/` |
 | Befehle | `cmd/swarmainet` |
 
-Die verbindliche Beschreibung von Protokoll, Netzschicht und Sicherheitsannahmen steht in der [Spezifikation](../../spec/de/README.md). Das ursprüngliche [Gesamtkonzept](../gesamtkonzept.pdf) beschreibt das Ziel einschließlich der späteren Phasen.
+Die verbindliche Beschreibung von Protokoll, Netzschicht und Sicherheitsannahmen steht in der [Spezifikation](../../spec/de/README.md). Das [Gesamtkonzept](concept.md) beschreibt das Ziel einschließlich der späteren Phasen.
