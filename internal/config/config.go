@@ -46,7 +46,8 @@ type Node struct {
 	MDNS         bool     `yaml:"mdns"`
 	StaticPeers  []string `yaml:"static_peers"`
 	// Bootstrap: Einstiegsadressen (z. B. aus einer Einladung); angewählt,
-	// solange kein Peer verbunden ist. static_peers halten dagegen dauerhaft
+	// solange der Knoten keine Peers, keine DHT-Partner oder hinter NAT keinen
+	// Relay-Platz hat (spec/p2p-schicht.md § 2). static_peers halten dagegen dauerhaft
 	// Verbindung.
 	Bootstrap []string `yaml:"bootstrap"`
 	// Trackers: HTTPS-Adressbriefkästen (swarmainet tracker), bei denen der
@@ -62,9 +63,10 @@ type Node struct {
 	RelayService string `yaml:"relay_service"`
 	// RelayLimits: Grenzen des Relays; 0 = Vorgabe (spec/p2p-schicht.md § 6).
 	RelayLimits RelayLimits `yaml:"relay_limits,omitempty"`
-	// DNSSeeds: Domains mit _dnsaddr-TXT-Einträgen für den Einstieg, solange
-	// kein Peer verbunden ist. Ohne Angabe gilt im offenen Netz DefaultDNSSeeds;
-	// [none] schaltet die Seeds ab.
+	// DNSSeeds: Domains mit _dnsaddr-TXT-Einträgen für den Einstieg (wann:
+	// wie Bootstrap). Ohne Angabe gilt im offenen Netz DefaultDNSSeeds;
+	// [none] schaltet die Seeds ab. Gilt auch für die Netze unter networks,
+	// soweit sie keine eigenen angeben; Mitgliedsnetze nutzen keine.
 	DNSSeeds []string `yaml:"dns_seeds,omitempty"`
 	// PEX: mit verbundenen Knoten bekannte Peers austauschen.
 	PEX bool `yaml:"pex"`
@@ -175,13 +177,19 @@ func (c Config) AllNetworks() []NetworkSettings {
 		return d
 	}
 	for _, x := range n.Networks {
+		// dns_seeds gelten ohne eigene Angabe für alle Netze; ein Mitgliedsnetz
+		// fragt nie einen Seed (spec/mitgliedschaft.md).
+		seedList := x.DNSSeeds
+		if seedList == nil && x.Membership == nil {
+			seedList = n.DNSSeeds
+		}
 		s := NetworkSettings{
 			NetworkID: x.NetworkID, NetworkKeyFile: expandHome(x.NetworkKeyFile), Listen: x.Listen,
 			Bootstrap: x.Bootstrap, Trackers: x.Trackers, StaticPeers: x.StaticPeers, TrustedPeers: x.TrustedPeers,
 			IdentityFile: filepath.Join(n.DataDir, "identity-"+x.NetworkID+".key"),
 			Provide:      or(x.Provide, first.Provide), AcceptPublic: or(x.AcceptPublicTasks, first.AcceptPublic),
 			MDNS: or(x.MDNS, first.MDNS), PEX: or(x.PEX, first.PEX), RelayService: cmp.Or(x.RelayService, first.RelayService),
-			RelayLimits: first.RelayLimits, DNSSeeds: seeds(x.DNSSeeds, x.NetworkKeyFile == "" && x.Membership == nil),
+			RelayLimits: first.RelayLimits, DNSSeeds: seeds(seedList, x.NetworkKeyFile == "" && x.Membership == nil),
 			Membership:      resolveMembership(x.Membership, n.DataDir, x.NetworkID),
 			AllowedTools:    x.AllowedTools,
 			DHTServer:       cmp.Or(x.DHTServer, first.DHTServer),

@@ -1,6 +1,6 @@
 # P2P-Schicht (Phase 2)
 
-Status: umgesetzt, Gate für den privaten Schwarm am 29.10.2026 auf echter Hardware erfüllt (§ 14); das offene Netz ist bisher nur im Prozess geprüft. Umgesetzt: Peer-Cache (§ 2.1), Peer-Austausch (§ 2.4), Erreichbarkeit (§ 3, Portfreigabe per UPnP/NAT-PMP ohne PCP), DHT (§ 4), Fähigkeitsverweise (§ 5), Relay (§ 6), Helfer- und Brückenknoten (§ 6.1), Missbrauchsschutz (§ 8), Diagnose (§ 10), Einladung (§ 2.2, ohne QR-Code), Tracker (§ 2.3), mehrere Netze gleichzeitig (§ 9). Ergänzt [Protokoll v0.1](protokoll-v0.1.md) um Netzeintritt, Erreichbarkeit und Auffinden von Peers über das LAN hinaus. Die Nachrichten, der Envelope und der Ablauf eines Teilauftrags bleiben unverändert. Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
+Status: umgesetzt, Gate für den privaten Schwarm am 29.10.2026 auf echter Hardware erfüllt (§ 14); das offene Netz am 18.11.2026 über zwei Standorte (§ 15). Umgesetzt: Peer-Cache (§ 2.1), Peer-Austausch (§ 2.4), Erreichbarkeit (§ 3, Portfreigabe per UPnP/NAT-PMP ohne PCP), DHT (§ 4), Fähigkeitsverweise (§ 5), Relay (§ 6), Helfer- und Brückenknoten (§ 6.1), Missbrauchsschutz (§ 8), Diagnose (§ 10), Einladung (§ 2.2), Tracker (§ 2.3), mehrere Netze gleichzeitig (§ 9). Ergänzt [Protokoll v0.1](protokoll-v0.1.md) um Netzeintritt, Erreichbarkeit und Auffinden von Peers über das LAN hinaus. Die Nachrichten, der Envelope und der Ablauf eines Teilauftrags bleiben unverändert. Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
 
 Grundsatz aus dem Gesamtkonzept: DHT und Relay liefern nur Kontakte, Adressen und Verweise, **keine Steuerung und kein Vertrauen**. Ob ein Peer vertraut ist und was er sehen darf, entscheiden weiterhin PSK, `trusted_peers` und die [Freigabeklassen](freigabeklassen.md).
 
@@ -55,8 +55,10 @@ Ein Knoten versucht beim Start parallel bzw. in dieser Reihenfolge, Kontakt herz
 3. **Einladung:** beim ersten Beitritt importiert (Abschnitt 2.2).
 4. **Bootstrap-Liste** (`bootstrap`): Multiadressen mit fester Peer-ID. Für das offene Netz liefert die Software eine Liste mehrerer unabhängiger Betreiber mit; für private Netze ist sie die eigene Einstiegsliste.
 5. **Tracker** (`trackers`): HTTPS-Adressbriefkästen (Abschnitt 2.3).
-6. **DNS-Seeds** (`dns_seeds`): `dnsaddr`-TXT-Einträge unter `_dnsaddr.<domain>` der Form `dnsaddr=/ip4/…/tcp/4711/p2p/<peer-id>`. Sie liefern nur Adressen; die Peer-ID in jedem Eintrag MUSS beim Verbinden geprüft werden. DNS ist ein Hinweis und nie ein Vertrauensnachweis. Im offenen Netz gilt ohne Angabe der eingebaute Seed `seed.ai-swarms.net`; `[none]` schaltet ab, eine eigene Liste ersetzt ihn. Angewählt werden bis zu 8 zufällig gewählte Einträge, solange kein Peer verbunden ist. Über den Seed lassen sich Einstiegsknoten austauschen, ohne die Software neu auszuliefern: Ein abgeschalteter Startknoten wird einfach aus dem DNS genommen, neue Helfer kommen hinzu.
+6. **DNS-Seeds** (`dns_seeds`): `dnsaddr`-TXT-Einträge unter `_dnsaddr.<domain>` der Form `dnsaddr=/ip4/…/tcp/4711/p2p/<peer-id>`. Sie liefern nur Adressen; die Peer-ID in jedem Eintrag MUSS beim Verbinden geprüft werden. DNS ist ein Hinweis und nie ein Vertrauensnachweis. Im offenen Netz gilt ohne Angabe der eingebaute Seed `seed.ai-swarms.net`; `[none]` schaltet ab, eine eigene Liste ersetzt ihn. Die Angabe gilt auch für weitere Netze (§ 9), soweit sie keine eigene haben; Mitgliedsnetze fragen nie einen Seed. Angewählt werden bis zu 8 zufällig gewählte Einträge, solange der Knoten einen Einstieg braucht (siehe unten). Über den Seed lassen sich Einstiegsknoten austauschen, ohne die Software neu auszuliefern: Ein abgeschalteter Startknoten wird einfach aus dem DNS genommen, neue Helfer kommen hinzu.
 7. **Statische Peers** (`static_peers`, wie Phase 1).
+
+**Wann Einstiegsknoten angewählt werden.** Bootstrap-Liste und DNS-Seeds werden jede Minute angewählt, solange (a) kein Peer verbunden ist, (b) die DHT-Routing-Tabelle leer ist oder (c) ein Knoten ohne öffentliche Erreichbarkeit und ohne eigenes Relay keinen Relay-Platz hat. Bereits verbundene Einstiegsknoten werden übersprungen. Fehlgeschlagene Versuche werden nur protokolliert, solange gar kein Peer verbunden ist. Grund für (b) und (c): Zwei Knoten hinter NAT, die nach dem Ausfall des Startknotens nur noch einander kennen, bilden sonst eine Insel, die neue Knoten über den zurückgekehrten Startknoten nicht finden (§ 15).
 
 Im laufenden Betrieb ergänzen **Peer-Austausch** (Abschnitt 2.4) und DHT die Kontakte, ohne dass eine der Starthilfen noch gebraucht wird.
 
@@ -76,7 +78,7 @@ Sind alle Einstiegsquellen ausgefallen, arbeiten bekannte Knoten über den Peer-
 
 ### 2.2 Einladung
 
-`swarmainet invite [--with-key]` erzeugt einen Link und optional einen QR-Code:
+`swarmainet invite [--with-key] [--qr]` erzeugt einen Link und optional einen QR-Code im Terminal (Fehlerkorrektur L, Rand zwei Module, schwarz auf weiß unabhängig vom Farbschema):
 
 ```
 swarmainet://join?v=1&net=<network_id>&peer=<multiaddr mit /p2p/...>[&peer=...][&tracker=<https-url>][&psk=<base64url>]
@@ -84,7 +86,7 @@ swarmainet://join?v=1&net=<network_id>&peer=<multiaddr mit /p2p/...>[&peer=...][
 
 - `peer` (ein- oder mehrmals): öffentlich erreichbare Adressen des Einladenden oder seiner Einstiegsknoten. Lokale Adressen nur, wenn ausdrücklich gewünscht (`--lan`).
 - `psk` nur für private Netze und nur mit `--with-key`. **Wer den Link hat, ist Mitglied.** Der Link MUSS deshalb über einen vertraulichen Kanal weitergegeben werden. Die Software zeigt dazu eine Warnung an und speichert den Link nicht.
-- `swarmainet join <link>` legt das Netz in der Konfiguration an, schreibt den Schlüssel nach `<data_dir>/<network_id>.key` (Modus 0600) und übernimmt die Adressen als Bootstrap-Liste (`node.bootstrap`: angewählt, solange kein Peer verbunden ist). Ohne Schlüssel im Link kann die Schlüsseldatei mit `-key DATEI` angegeben werden. Ein bestehender Schlüssel mit anderem Inhalt wird nicht überschrieben.
+- `swarmainet join <link>` legt das Netz in der Konfiguration an, schreibt den Schlüssel nach `<data_dir>/<network_id>.key` (Modus 0600) und übernimmt die Adressen als Bootstrap-Liste (`node.bootstrap`: angewählt, solange der Knoten einen Einstieg braucht, § 2). Ohne Schlüssel im Link kann die Schlüsseldatei mit `-key DATEI` angegeben werden. Ein bestehender Schlüssel mit anderem Inhalt wird nicht überschrieben.
 - `swarmainet invite` nimmt die Adressen des laufenden Knotens ohne Loopback, im offenen Netz nur öffentliche (mit `-lan` auch lokale); `-peer` ergänzt weitere, etwa die eines Brückenknotens.
 - Eine Einladung ohne PSK enthält nur öffentliche Kontaktdaten und darf offen geteilt werden.
 
@@ -368,7 +370,43 @@ Alle drei im privaten Schwarm (PSK), der Pi per `invite`/`join` aufgenommen, sei
 | Ausfall des Pi | Verbindungen über ihn brechen ab, die Knoten laufen weiter |
 | Pi wieder an | VM direkt verbunden und Relay-Platz neu binnen etwa einer Minute, Notebook 30 s später wieder über das Relay; ohne Neustart oder Eingriff |
 
-Nicht gemessen wurde die Zeit bis zur ersten Verbindung beim Start. **Noch offen:** offenes Testnetz auf Hardware, Brückenknoten über VPN (Variante A), Windows als Plattform, ein Tracker im Betrieb.
+Nicht gemessen wurde die Zeit bis zur ersten Verbindung beim Start. **Noch offen:** Brückenknoten über VPN (Variante A), Windows als Plattform, ein Tracker im Betrieb.
 
 **Erfahrungen aus der Inbetriebnahme** (in die Anleitung eingeflossen): Der Raspberry Pi Imager aus den Ubuntu-Paketen (1.8) ist für das aktuelle Raspberry Pi OS zu alt, die Anpassungen gehen verloren; der Pi hat keine Uhr, frühe Zeitstempel nach dem Start sind falsch; nach einer Änderung der Konfiguration ist `systemctl restart` nötig, weil der Dienst nach dem Hochfahren schon läuft; der DNS-Anbieter verlangt beim CNAME-Ziel einen abschließenden Punkt.
 
+## 15. Ergebnis offenes Netz auf Hardware (18.11.2026)
+
+**Aufbau:** offenes Netz (`network_id: swarmainet`, ohne PSK), jeder Knoten als eigene Instanz mit eigener Identität neben den privaten Knoten derselben Geräte. Kein mDNS, keine Einladung, keine statischen Peers: Einstieg allein über den eingebauten DNS-Seed.
+
+| Knoten | Anschluss | erreichbar von außen | Rolle |
+|---|---|---|---|
+| Startknoten | VPS, öffentliche IPv4 und IPv6, TCP und QUIC | ja | Relay (`auto`), DHT-Server, keine Modelle; im DNS-Seed eingetragen |
+| VM | FritzBox zu Hause, keine Freigabe; IPv6 von außen abgewiesen | nein | Anbieter, `accept_public_tasks`, 2 Modelle auf einem KI-Server im Heimnetz, keine Werkzeuge freigegeben |
+| Notebook | Mobilfunk-Router (CGNAT für IPv4, IPv6 mit Paketfilter) | nein | Koordinator ohne eigenes Modell |
+
+**Ergebnisse:**
+
+| Prüfung | Ergebnis |
+|---|---|
+| Einstieg über den DNS-Seed | VM nach 1 s verbunden, Relay-Platz sofort; Notebook ebenso |
+| Fähigkeit finden | Notebook findet den Anbieter über die DHT |
+| Auftrag `public` Notebook → VM | ausgeführt (Muster `single`), 2,7–10,6 s je nach Modell, Quittung gebucht |
+| Auftrag `trusted` vom Notebook | verlässt das Notebook nicht („kein passender agent verfügbar“) |
+| private Adressen | weder in Identify noch in der DHT veröffentlicht |
+| Hole Punching VM ↔ Notebook | **gelungen** über IPv6/QUIC, direkte Verbindung, 46–48 ms. Gegenprobe: Ein frischer Knoten erreicht das Notebook unter derselben Adresse nicht, und die FritzBox weist eingehendes IPv6 zur VM ab (ICMPv6 „administratively prohibited“). Am 29.10. scheiterte es über TCP und IPv4. |
+| Startknoten aus | bestehende direkte Verbindung hält, Aufträge laufen weiter |
+| Notebook-Neustart bei ausgeschaltetem Startknoten | Verbindung trotzdem zustande gekommen, vermutlich durch gleichzeitiges Anwählen aus beiden Peer-Caches (IPv6 ohne NAT, feste Ports); nicht verlässlich |
+| Startknoten wieder an | **Lücke:** VM und Notebook wählten ihn nicht wieder an, weil Einstiegsknoten nur ohne jeden Peer angewählt wurden. Beide blieben eine Insel ohne Relay-Platz und mit leerer DHT-Tabelle. Behoben mit der Regel in § 2 („Wann Einstiegsknoten angewählt werden“). |
+| Fix auf Hardware | Insel aus drei Knoten ohne öffentliche Erreichbarkeit (VM, zweiter Knoten auf der VM, Notebook), Startknoten 40 min aus: Nach seiner Rückkehr hatten beide VM-Knoten nach 12 s wieder Relay-Platz und DHT-Partner, ohne Neustart oder Eingriff. |
+
+**Werkzeugrechte** (Freigabeklassen, Regel 6): Auftraggeber war ein zweiter Knoten mit eigener Identität, für den der Anbieter ein Fremder ist; er fand ihn über Startknoten und DHT. Was das Modell beim Anbieter tatsächlich sah, zeichnete ein Proxy vor dem Inferenz-Server auf. Jede Anfrage enthielt `get_current_timestamp` und `run_command`.
+
+| Fall | Ergebnis |
+|---|---|
+| ohne `allowed_tools` | abgelehnt (HTTP 400 „kein agent mit freigabe für diese werkzeuge“), beim Anbieter kommt nichts an |
+| `allowed_tools: [get_current_timestamp]` | Modell sieht nur `get_current_timestamp` und ruft es auf |
+| `run_command` per `tool_choice` erzwungen | vor dem Versand auf `auto` gesetzt; Modell sieht `run_command` nicht und ruft nichts auf |
+| zweite Runde mit Ergebnis von `get_current_timestamp` | Antwort mit der Uhrzeit |
+| Verlauf mit Aufruf und Ergebnis von `run_command` | abgelehnt, der Verlauf geht nicht an den Fremden |
+
+Beobachtungen: Globale IPv6-Adressen werden veröffentlicht, bevor AutoNAT sie bestätigt; für das Hole Punching ist das nötig. `trusted`-Anfragen ohne vertraute Peers sollten eine verständlichere Meldung bekommen. **Noch offen:** mehrere unabhängige Startknoten, Dauerbetrieb. Das Verwerfen von Aufrufen nicht gezeigter Werkzeuge war auf Hardware nicht zu provozieren, das Modell hielt sich an die gezeigte Liste; geprüft ist es im Prozess.

@@ -70,7 +70,7 @@ type Options struct {
 	PSKFile       string
 	MDNS          bool
 	StaticPeers   []string
-	Bootstrap     []string // Einstieg, solange kein Peer verbunden ist
+	Bootstrap     []string // Einstieg, solange needEntry gilt (ohne Peers, DHT oder Relay-Platz)
 	Trackers      []string // HTTPS-Adressbriefkästen (spec/p2p-schicht.md § 2.3)
 	TrustedPeers  []string
 	Provide       bool // Fähigkeitsanzeige und Auftragsannahme aktivieren
@@ -501,10 +501,39 @@ func (n *Node) connectStatic(ctx context.Context) {
 	}
 }
 
+// needEntry: Einstiegsknoten werden gebraucht, solange kein Peer verbunden
+// ist, die DHT-Routing-Tabelle leer ist oder ein Knoten ohne öffentliche
+// Erreichbarkeit keinen Relay-Platz hat (spec/p2p-schicht.md § 2). Sonst
+// bleiben zwei Knoten hinter NAT, die nach dem Ausfall des Startknotens nur
+// noch einander kennen, eine Insel, auch wenn er zurückkommt.
+func (n *Node) needEntry() bool {
+	if len(n.host.Network().Peers()) == 0 {
+		return true
+	}
+	if n.dht != nil && n.dht.RoutingTable().Size() == 0 {
+		return true
+	}
+	if n.relay == nil && n.Reachability() != "public" {
+		n.resvMu.Lock()
+		defer n.resvMu.Unlock()
+		return len(n.resv) == 0
+	}
+	return false
+}
+
+// entryLogLevel: Fehlgeschlagene Einstiegsversuche sind nur auffällig, solange
+// gar kein Peer verbunden ist; sonst wiederholen sie sich jede Minute.
+func (n *Node) entryLogLevel() slog.Level {
+	if len(n.host.Network().Peers()) == 0 {
+		return slog.LevelInfo
+	}
+	return slog.LevelDebug
+}
+
 // connectBootstrap wählt die Einstiegsadressen und DNS-Seeds an, solange
-// kein Peer verbunden ist; danach tragen Peer-Austausch, DHT und Peer-Cache.
+// needEntry gilt; sonst tragen Peer-Austausch, DHT und Peer-Cache.
 func (n *Node) connectBootstrap(ctx context.Context) {
-	if len(n.host.Network().Peers()) > 0 {
+	if !n.needEntry() {
 		return
 	}
 	for _, d := range n.opts.DNSSeeds {
@@ -516,11 +545,14 @@ func (n *Node) connectBootstrap(ctx context.Context) {
 			slog.Warn("bootstrap-adresse ungültig", "addr", s, "err", err)
 			continue
 		}
+		if ai.ID == n.host.ID() || n.connected(ai.ID) {
+			continue
+		}
 		go func() {
 			cctx, cancel := context.WithTimeout(allowLimited(ctx), 10*time.Second)
 			defer cancel()
 			if err := n.host.Connect(cctx, *ai); err != nil {
-				slog.Info("einstiegsknoten nicht erreichbar", "peer", ai.ID, "err", err)
+				slog.Log(ctx, n.entryLogLevel(), "einstiegsknoten nicht erreichbar", "peer", ai.ID, "err", err)
 			}
 		}()
 	}

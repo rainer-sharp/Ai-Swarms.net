@@ -272,11 +272,12 @@ func memberInvite(args []string, home string, now time.Time, out io.Writer) erro
 	ttl := f.Duration("ttl", membership.MaxInviteTTL, "Gültigkeit, höchstens 24h")
 	var extra multiFlag
 	f.Var(&extra, "peer", "zusätzliche Adresse, etwa über einen Helfer (mehrfach)")
+	showQR := f.Bool("qr", false, "Link zusätzlich als QR-Code anzeigen")
 	if err := f.Parse(args); err != nil {
 		return err
 	}
 	if !strings.HasPrefix(*network, "m-") {
-		return errors.New("aufruf: swarmainet member invite -net m-… [-role R] [-name N] [-ttl D] [-peer ADR]")
+		return errors.New("aufruf: swarmainet member invite -net m-… [-role R] [-name N] [-ttl D] [-peer ADR] [-qr]")
 	}
 	ctx, err := f.issuer(*network, "", now)
 	if err != nil {
@@ -310,6 +311,11 @@ func memberInvite(args []string, home string, now time.Time, out io.Writer) erro
 		return err
 	}
 	fmt.Fprintln(out, inv)
+	if *showQR {
+		if err := printQR(os.Stderr, inv.String()); err != nil {
+			return err
+		}
+	}
 	fmt.Fprintf(os.Stderr, "\nDie Einladung öffnet einen Platz als %s, gilt einmal und höchstens %s. Vertraulich weitergeben.\n"+
 		"Dieser Knoten muss laufen, wenn sie eingelöst wird.\n", *role, min(*ttl, membership.MaxInviteTTL))
 	return nil

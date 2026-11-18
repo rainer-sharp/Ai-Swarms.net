@@ -15,7 +15,7 @@ node:
   # Schlüssel erzeugen: swarmainet psk ~/.swarmainet/swarm.key
   network_key_file: ""
   static_peers: []                  # z. B. /ip4/192.168.1.20/tcp/4711/p2p/12D3Koo…; dauerhaft verbunden
-  bootstrap: []                     # Einstiegsadressen, nur solange kein Peer verbunden ist (swarmainet join)
+  bootstrap: []                     # Einstiegsadressen, solange ohne Peers, DHT oder Relay-Platz (swarmainet join)
   trackers: []                      # HTTPS-Adressbriefkästen (swarmainet tracker), z. B. https://example.org/swarmainet
   trusted_peers: []                 # Peer-IDs, denen Aufträge der Klasse "trusted" zugehen dürfen
   provide: false                    # eigene Modelle im Schwarm anbieten (Opt-in)
@@ -23,7 +23,7 @@ node:
   relay_service: auto               # auto: im offenen Netz bei öffentlicher Erreichbarkeit; true: immer
                                     # (Helfer, Brückenknoten ohne Portfreigabe); false: nie
   # relay_limits: {reservations: 32, circuits_per_peer: 2, data_mib: 8, duration_s: 600}
-  # dns_seeds: [seed.ai-swarms.net] # ohne Angabe im offenen Netz der eingebaute Seed; [none] schaltet ab
+  # dns_seeds: [seed.ai-swarms.net] # ohne Angabe im offenen Netz der eingebaute Seed; [none] schaltet ab (auch für networks)
   helper: false                     # nur Netz tragen (Relay), ohne eigene Modelle
   pex: true                         # bekannte Peers mit verbundenen Knoten austauschen
   dht_server: auto                  # auto | true | false; auto: offenes Netz bei öffentlicher Erreichbarkeit,

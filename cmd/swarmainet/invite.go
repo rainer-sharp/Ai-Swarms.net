@@ -76,7 +76,7 @@ func usableAddrs(st netInfo, lan bool) []string {
 
 // cmdInvite erzeugt einen Einladungslink aus den Adressen des laufenden
 // Knotens (spec/p2p-schicht.md § 2.2).
-func cmdInvite(path, network string, withKey, lan bool, extra []string) error {
+func cmdInvite(path, network string, withKey, lan, showQR bool, extra []string) error {
 	cfg, err := config.Load(path)
 	if err != nil {
 		return err
@@ -110,10 +110,18 @@ func cmdInvite(path, network string, withKey, lan bool, extra []string) error {
 		return err
 	}
 	fmt.Println(inv)
+	if showQR {
+		if err := printQR(os.Stderr, inv.String()); err != nil {
+			return err
+		}
+	}
 	switch {
 	case withKey:
 		fmt.Fprintln(os.Stderr, "\nAchtung: Der Link enthält den Netzschlüssel. Wer ihn hat, ist Mitglied des Netzes.\n"+
 			"Nur über einen vertraulichen Kanal weitergeben und nicht dauerhaft speichern.")
+		if showQR {
+			fmt.Fprintln(os.Stderr, "Der QR-Code enthält ihn ebenfalls: nicht fotografieren, nur scannen und danach vom Telefon löschen.")
+		}
 	case st.Private:
 		fmt.Fprintln(os.Stderr, "\nOhne Netzschlüssel: Der Eingeladene braucht zusätzlich die Schlüsseldatei\n"+
 			"(swarmainet join -key DATEI <link>) oder einen Link mit -with-key.")

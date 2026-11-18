@@ -59,11 +59,12 @@ Befehle:
               -with-key  Netzschlüssel einbetten (nur privat; vertraulich weitergeben!)
               -lan       im offenen Netz auch lokale Adressen aufnehmen
               -peer ADR  zusätzliche Adresse, z. B. eines Brückenknotens (mehrfach)
+              -qr        Link zusätzlich als QR-Code im Terminal anzeigen
   join      Netz aus einer Einladung beitreten, auch Mitgliedsnetze: join [-key DATEI] <link>;
             gehört der Knoten schon zu einem Netz, kommt es unter node.networks dazu
   network   network create: Mitgliedsnetz mit Wurzelschlüssel anlegen (spec/mitgliedschaft.md)
   member    Zertifikate eines Mitgliedsnetzes verwalten:
-              invite -net ID [-role R] [-name N] [-ttl D] [-peer ADR]   Einladung, einmalig, höchstens 24h
+              invite -net ID [-role R] [-name N] [-ttl D] [-peer ADR] [-qr]   Einladung, einmalig, höchstens 24h
               request -net ID                Peer-ID dieses Knotens im Netz nennen
               issue -net ID [-role R] [-name N] [-ttl D] [-out DATEI] <peer-id>
               install -root SCHLÜSSEL DATEI  Zertifikat prüfen und übernehmen
@@ -91,6 +92,7 @@ func main() {
 	verbose := fs.Bool("v", false, "ausführliche Protokollierung")
 	withKey := fs.Bool("with-key", false, "invite: Netzschlüssel einbetten")
 	lan := fs.Bool("lan", false, "invite: lokale Adressen aufnehmen")
+	showQR := fs.Bool("qr", false, "invite: Link zusätzlich als QR-Code anzeigen")
 	keyFile := fs.String("key", "", "join: Schlüsseldatei des privaten Netzes")
 	netID := fs.String("net", "", "ping, invite: Netz-Kennung (Standard: erstes Netz)")
 	listen := fs.String("listen", "127.0.0.1:7720", "tracker: Adresse")
@@ -140,7 +142,7 @@ func main() {
 	case "psk":
 		err = cmdPSK(fs.Arg(0))
 	case "invite":
-		err = cmdInvite(*cfgPath, *netID, *withKey, *lan, extraPeers)
+		err = cmdInvite(*cfgPath, *netID, *withKey, *lan, *showQR, extraPeers)
 	case "join":
 		err = cmdJoin(*cfgPath, fs.Arg(0), *keyFile)
 	case "tracker":

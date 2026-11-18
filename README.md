@@ -4,7 +4,7 @@
 
 **Local AI models form a team.** SwarmAiNet connects the computers on which you run models with Ollama, llama.cpp, vLLM or LM Studio into a swarm. For each request it assembles a team: one model drafts, a model from a different family reviews, and revisions happen only if flaws are found. Your applications talk to the swarm as if it were a single OpenAI endpoint.
 
-> **Status: research prototype.** The local swarm as well as private networks and group networks across multiple sites run on real hardware. The open network has so far only been tested in-process. Whether the swarm delivers better answers than the best single model has not yet been shown. Protocol version 0.1; incompatible changes are possible. Details: [Status](docs/stand.md) (German).
+> **Status: research prototype.** The local swarm as well as private networks, group networks and the open network run on real hardware across multiple sites. Whether the swarm delivers better answers than the best single model has not yet been shown. Protocol version 0.1; incompatible changes are possible. Details: [Status](docs/stand.md) (German).
 
 > **Note:** The documentation and specification are currently available in German only.
 

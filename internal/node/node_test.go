@@ -90,7 +90,7 @@ func newTestNodeWith(t *testing.T, ctx context.Context, id *identity.Identity, m
 	cfg.Node.Listen = []string{"/ip4/127.0.0.1/tcp/0"}
 	cfg.Node.MDNS = false
 	cfg.Node.AnnouncePrivate = true      // Tests laufen auf Loopback
-	cfg.Node.DNSSeeds = []string{"none"} // keine echten DNS-Anfragen
+	cfg.Node.DNSSeeds = []string{"none"} // keine echten DNS-Anfragen, auch nicht in node.networks
 	cfg.Node.Provide = offer
 	for _, p := range trusted {
 		cfg.Node.TrustedPeers = append(cfg.Node.TrustedPeers, p.ID.String())

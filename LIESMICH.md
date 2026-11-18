@@ -4,7 +4,7 @@
 
 **Lokale KI-Modelle bilden ein Team.** SwarmAiNet verbindet die Rechner, auf denen Sie Modelle mit Ollama, llama.cpp, vLLM oder LM Studio betreiben, zu einem Schwarm. Für jede Anfrage stellt er ein Team zusammen: Ein Modell entwirft, ein Modell einer anderen Familie prüft, und nur bei Mängeln wird nachgebessert. Ihre Anwendungen sprechen mit dem Schwarm wie mit einem einzelnen OpenAI-Endpunkt.
 
-> **Status: Forschungsprototyp.** Der lokale Schwarm sowie private Netze und Gruppennetze über mehrere Standorte laufen auf echter Hardware. Das offene Netz ist bisher nur im Prozess getestet. Ob der Schwarm bessere Antworten liefert als das beste Einzelmodell, ist noch nicht belegt. Protokoll in Version 0.1, inkompatible Änderungen sind möglich. Details: [Stand](docs/stand.md).
+> **Status: Forschungsprototyp.** Der lokale Schwarm sowie private Netze, Gruppennetze und das offene Netz laufen auf echter Hardware über mehrere Standorte. Ob der Schwarm bessere Antworten liefert als das beste Einzelmodell, ist noch nicht belegt. Protokoll in Version 0.1, inkompatible Änderungen sind möglich. Details: [Stand](docs/stand.md).
 
 ## Was es kann
 

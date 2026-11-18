@@ -6,6 +6,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -271,5 +272,35 @@ func TestMembershipValidation(t *testing.T) {
 	c := base()
 	if s := c.AllNetworks()[0].DNSSeeds; len(s) != 0 {
 		t.Fatalf("seeds: %v", s)
+	}
+}
+
+// TestDNSSeedsApplyToAllNetworks: dns_seeds von oben gelten auch für die
+// Netze unter networks, eigene Angaben gehen vor, Mitgliedsnetze fragen nie.
+func TestDNSSeedsApplyToAllNetworks(t *testing.T) {
+	key, _ := identity.New()
+	pub, _ := membership.RootKey(key)
+	member := Network{NetworkID: membership.NetworkID(pub), Listen: []string{"/ip4/0.0.0.0/tcp/4714"},
+		Membership: &Membership{Root: membership.EncodeRoot(pub)}}
+	open := Network{NetworkID: "swarmainet", Listen: []string{"/ip4/0.0.0.0/tcp/4712"}}
+	own := Network{NetworkID: "eigen", Listen: []string{"/ip4/0.0.0.0/tcp/4713"}, DNSSeeds: []string{"seed.example.net"}}
+	for _, tc := range []struct {
+		top        []string
+		open, eign []string
+	}{
+		{nil, DefaultDNSSeeds, []string{"seed.example.net"}},
+		{[]string{"none"}, nil, []string{"seed.example.net"}},
+		{[]string{"seed.example.org"}, []string{"seed.example.org"}, []string{"seed.example.net"}},
+	} {
+		c := Default()
+		c.Node.NetworkID, c.Node.NetworkKeyFile, c.Node.DNSSeeds = "p-12345678", "/x.key", tc.top
+		c.Node.Networks = []Network{open, own, member}
+		if err := c.Validate(); err != nil {
+			t.Fatal(err)
+		}
+		n := c.AllNetworks()
+		if !slices.Equal(n[1].DNSSeeds, tc.open) || !slices.Equal(n[2].DNSSeeds, tc.eign) || len(n[3].DNSSeeds) != 0 {
+			t.Errorf("oben %v: offen %v, eigen %v, mitglied %v", tc.top, n[1].DNSSeeds, n[2].DNSSeeds, n[3].DNSSeeds)
+		}
 	}
 }

@@ -22,7 +22,7 @@ Geheimnisse gehören nicht in die Datei: Der Home-Assistant-Token kommt aus eine
 | `membership` | – | macht ein Netz zum Mitgliedsnetz: `root`, optional `cert_file` |
 | `mdns` | `true` | andere Knoten im LAN automatisch finden |
 | `static_peers` | `[]` | dauerhaft verbundene Adressen |
-| `bootstrap` | `[]` | Einstiegsadressen, angewählt, solange kein Peer verbunden ist (`join` trägt sie ein) |
+| `bootstrap` | `[]` | Einstiegsadressen, angewählt, solange der Knoten keine Peers, keine DHT-Partner oder hinter NAT keinen Relay-Platz hat (`join` trägt sie ein) |
 | `trackers` | `[]` | HTTPS-Adressbriefkästen |
 | `trusted_peers` | `[]` | Peer-IDs, denen vertrauliche Aufträge und alle Werkzeuge zugehen dürfen |
 | `provide` | `false` | eigene Modelle im Netz anbieten |
@@ -32,7 +32,7 @@ Geheimnisse gehören nicht in die Datei: Der Home-Assistant-Token kommt aus eine
 | `relay_limits` | – | Grenzen des Relays: `reservations`, `circuits_per_peer`, `data_mib`, `duration_s` |
 | `helper` | `false` | nur Netz tragen (Relay, DHT-Server), keine Modelle, keine Aufträge |
 | `dht_server` | `auto` | `auto`: offenes Netz bei öffentlicher Erreichbarkeit, privat mit eigener Listen-Adresse oder als Relay; `true`/`false` erzwingen |
-| `dns_seeds` | offen: `seed.ai-swarms.net` | Domains mit `_dnsaddr`-Einträgen für den Einstieg; `[none]` schaltet ab |
+| `dns_seeds` | offen: `seed.ai-swarms.net` | Domains mit `_dnsaddr`-Einträgen für den Einstieg; `[none]` schaltet ab. Gilt auch für die Netze unter `networks`, soweit sie keine eigenen angeben; Mitgliedsnetze nutzen keine |
 | `announce` | `[]` | zusätzlich bekannt gegebene Adressen ohne `/p2p`, z. B. `/dns4/swarm.example.de/tcp/4711` hinter einer Portfreigabe |
 | `announce_private` | `false` | interne Adressen auch im offenen Netz veröffentlichen (nur Testnetze) |
 | `port_mapping` | `false` | Portfreigabe per UPnP/NAT-PMP beim Router anfordern; Status unter `networks[].port_mapping` |

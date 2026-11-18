@@ -28,11 +28,11 @@ Alternativ lassen sich einzelne Geräte ohne gemeinsames Netz vertrauen: ihre Pe
 ### Einladungen
 
 ```sh
-swarmainet invite -with-key [-peer <adresse>] [-net <netz>]   # auf einem laufenden Knoten
+swarmainet invite -with-key [-peer <adresse>] [-net <netz>] [-qr]   # auf einem laufenden Knoten
 swarmainet join '<link>'                                      # auf dem neuen Gerät
 ```
 
-`invite` nimmt die Adressen des laufenden Knotens (ohne Loopback; im offenen Netz nur öffentliche, mit `-lan` auch lokale), mit `-peer` weitere, etwa die eines Helfers, dazu die konfigurierten Tracker. `-with-key` bettet den Netzschlüssel ein: **Wer den Link hat, ist Mitglied.** Den Link deshalb nur vertraulich weitergeben. Ohne Schlüssel im Link gibt man ihn bei `join -key DATEI` an.
+`invite` nimmt die Adressen des laufenden Knotens (ohne Loopback; im offenen Netz nur öffentliche, mit `-lan` auch lokale), mit `-peer` weitere, etwa die eines Helfers, dazu die konfigurierten Tracker. `-with-key` bettet den Netzschlüssel ein: **Wer den Link hat, ist Mitglied.** Den Link deshalb nur vertraulich weitergeben. Ohne Schlüssel im Link gibt man ihn bei `join -key DATEI` an. Mit `-qr` erscheint der Link zusätzlich als QR-Code im Terminal, etwa um ihn mit dem Telefon abzulesen; mit Schlüssel gilt für den Code dasselbe wie für den Link: nicht fotografieren, nach dem Übertragen vom Telefon löschen.
 
 `join` legt die Konfiguration bei Bedarf an, speichert den Schlüssel als `~/.swarmainet/<network_id>.key` (Rechte 0600), trägt Adressen unter `node.bootstrap` und Tracker unter `node.trackers` ein und erhält die Kommentare in der Datei. Gehört der Knoten schon zu einem Netz, kommt das neue unter `node.networks` mit dem nächsten freien Port dazu.
 
@@ -57,7 +57,7 @@ swarmainet member issue -net m-… -role issuer <peer-id>
 swarmainet member install -root <schlüssel> DATEI
 
 swarmainet run                                 # der Aussteller muss für Einladungen laufen
-swarmainet member invite -net m-…              # Link: einmalig, höchstens 24 Stunden
+swarmainet member invite -net m-… [-qr]        # Link: einmalig, höchstens 24 Stunden
 swarmainet join '<link>'                       # auf dem neuen Knoten
 ```
 

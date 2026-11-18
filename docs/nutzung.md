@@ -70,7 +70,7 @@ Inhalte als Liste von Textteilen werden zusammengefügt. Bilder werden noch nich
 | `pause`, `resume`, `stop` | fremde Aufträge pausieren, fortsetzen, Sofort-Stopp |
 | `ping [-net ID] <peer>` | Weg zu einem Peer prüfen |
 | `psk DATEI` | Schlüssel für ein privates Netz erzeugen |
-| `invite [-with-key] [-lan] [-peer ADR] [-net ID]` | Einladungslink erzeugen (Knoten muss laufen) |
+| `invite [-with-key] [-lan] [-peer ADR] [-net ID] [-qr]` | Einladungslink erzeugen (Knoten muss laufen), mit `-qr` auch als QR-Code |
 | `join [-key DATEI] <link>` | Netz aus einer Einladung beitreten |
 | `network create` | Mitgliedsnetz mit Wurzelschlüssel anlegen |
 | `member invite\|request\|issue\|install\|revoke\|import-crl\|list` | Mitglieder aufnehmen und Zertifikate verwalten |

@@ -43,7 +43,7 @@ func (n *Node) connectSeed(ctx context.Context, domain string) {
 			dctx, cancel := context.WithTimeout(allowLimited(ctx), 10*time.Second)
 			defer cancel()
 			if err := n.host.Connect(dctx, ai); err != nil {
-				slog.Info("einstiegsknoten aus dns-seed nicht erreichbar", "seed", domain, "peer", ai.ID, "err", err)
+				slog.Log(ctx, n.entryLogLevel(), "einstiegsknoten aus dns-seed nicht erreichbar", "seed", domain, "peer", ai.ID, "err", err)
 			}
 		}()
 	}
