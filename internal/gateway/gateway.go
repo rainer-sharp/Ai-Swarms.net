@@ -204,8 +204,8 @@ func chat(b Backend, w http.ResponseWriter, r *http.Request) {
 	}
 	oreq.Limits.MaxTokens = req.MaxTokens
 	ans, err := b.Ask(r.Context(), oreq)
-	if errors.Is(err, orchestrator.ErrToolsNotAllowed) {
-		writeErr(w, http.StatusBadRequest, err)
+	if errors.Is(err, orchestrator.ErrToolsNotAllowed) || errors.Is(err, orchestrator.ErrPrivacy) {
+		writeErr(w, http.StatusBadRequest, err) // Ursache liegt in der Anfrage
 		return
 	}
 	if err != nil {

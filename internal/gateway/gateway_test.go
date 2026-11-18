@@ -6,6 +6,7 @@ package gateway
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,10 +19,14 @@ import (
 type fakeBackend struct {
 	last  orchestrator.Request
 	calls []protocol.ToolCall // Antwort mit Werkzeug-Aufrufen statt Text
+	err   error               // Fehler statt Antwort
 }
 
 func (f *fakeBackend) Ask(_ context.Context, r orchestrator.Request) (*orchestrator.Answer, error) {
 	f.last = r
+	if f.err != nil {
+		return nil, f.err
+	}
 	if f.calls != nil {
 		return &orchestrator.Answer{TaskID: "t1", ToolCalls: f.calls, Pattern: r.Pattern}, nil
 	}
@@ -138,5 +143,25 @@ func TestToolsAndContentParts(t *testing.T) {
 	rec = do(h, "POST", "/v1/chat/completions", `{"model":"swarmainet","messages":[{"role":"user","content":[{"type":"image_url","image_url":{"url":"data:…"}}]}]}`, "127.0.0.1:5000", "127.0.0.1:7711")
 	if rec.Code != 400 || !strings.Contains(rec.Body.String(), "bilder") {
 		t.Fatalf("bild: %d %s", rec.Code, rec.Body)
+	}
+}
+
+// TestNoAgentStatus: Scheitert die Auswahl an der Freigabeklasse oder an den
+// Werkzeugrechten, liegt es an der Anfrage (400); sonst am Schwarm (502).
+func TestNoAgentStatus(t *testing.T) {
+	privacy := fmt.Errorf("vorher: %w", orchestrator.ErrPrivacy)
+	for _, tc := range []struct {
+		err  error
+		code int
+	}{
+		{privacy, 400},
+		{orchestrator.ErrToolsNotAllowed, 400},
+		{orchestrator.ErrNoAgent, 502},
+	} {
+		h := Handler(&fakeBackend{err: tc.err})
+		rec := do(h, "POST", "/v1/chat/completions", `{"model":"swarmainet","messages":[{"role":"user","content":"x"}]}`, "127.0.0.1:5000", "127.0.0.1:7711")
+		if rec.Code != tc.code {
+			t.Errorf("%v: %d, erwartet %d", tc.err, rec.Code, tc.code)
+		}
 	}
 }

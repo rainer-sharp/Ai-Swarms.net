@@ -711,3 +711,40 @@ func TestToolRights(t *testing.T) {
 		})
 	}
 }
+
+// TestNoAgentReason: Liegt es an der Freigabeklasse, sagt der Fehler das und
+// nennt den Ausweg; errors.Is bleibt erhalten.
+func TestNoAgentReason(t *testing.T) {
+	stranger := staticDir{{ID: "fremd", PeerID: "p9", Family: "gpt-oss", Skills: []string{"general"}}}
+	for _, tc := range []struct {
+		name    string
+		dir     staticDir
+		privacy protocol.PrivacyClass
+		limit   []string
+		want    string
+	}{
+		{"trusted ohne vertraute", stranger, protocol.PrivacyTrusted, nil, "X-SwarmAiNet-Privacy: public"},
+		{"reduced ohne vertraute", stranger, protocol.PrivacyReduced, nil, "freigabeklasse reduced"},
+		{"local ohne eigenes modell", stranger, protocol.PrivacyLocal, nil, "nur modelle dieses knotens"},
+		{"gar nichts bekannt", nil, protocol.PrivacyTrusted, nil, "keine modelle in der konfiguration"},
+		{"ausdrücklich beschränkt", stranger, protocol.PrivacyTrusted, []string{"gibt-es-nicht"}, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			o := &Orchestrator{Dir: tc.dir, Exec: &fakeExec{}}
+			_, err := o.Run(context.Background(), Request{
+				Messages: []protocol.ChatMessage{{Role: "user", Content: "x"}},
+				Pattern:  PatternSingle, Privacy: tc.privacy, Agents: tc.limit,
+			})
+			if !errors.Is(err, ErrNoAgent) {
+				t.Fatalf("fehler: %v", err)
+			}
+			if tc.want == "" && err.Error() != ErrNoAgent.Error() || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("meldung: %v", err)
+			}
+			// 400 nur, wenn es an der Freigabeklasse liegt.
+			if byClass := tc.dir != nil && tc.limit == nil; errors.Is(err, ErrPrivacy) != byClass {
+				t.Fatalf("ErrPrivacy %v, erwartet %v: %v", errors.Is(err, ErrPrivacy), byClass, err)
+			}
+		})
+	}
+}

@@ -196,6 +196,17 @@ func (l *loadTracker) begin(a Agent) func() {
 
 var ErrNoAgent = errors.New("kein passender agent verfügbar")
 
+// ErrPrivacy: Kein Agent ist wählbar, weil die Freigabeklasse der Anfrage alle
+// bekannten ausschließt. Ein solcher Fehler ist zugleich ErrNoAgent; die
+// Ursache liegt in der Anfrage, das Gateway antwortet mit 400.
+var ErrPrivacy = errors.New("freigabeklasse schließt alle agenten aus")
+
+// privacyError trägt die erklärende Meldung und gilt als ErrNoAgent und ErrPrivacy.
+type privacyError struct{ msg string }
+
+func (e privacyError) Error() string        { return e.msg }
+func (e privacyError) Is(target error) bool { return target == ErrNoAgent || target == ErrPrivacy }
+
 // ErrToolsNotAllowed: Die Werkzeug-Aufrufe eines Modells führt die Anwendung auf
 // dem eigenen Rechner aus. Ohne Agent, dem die Werkzeuge freigegeben sind, läuft
 // ein solcher Auftrag nicht (spec/freigabeklassen.md).
@@ -271,8 +282,11 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 	default:
 		err = fmt.Errorf("pattern %q unbekannt", req.Pattern)
 	}
-	if hasTools(req) && errors.Is(err, ErrNoAgent) {
+	switch {
+	case hasTools(req) && errors.Is(err, ErrNoAgent):
 		err = ErrToolsNotAllowed
+	case errors.Is(err, ErrNoAgent):
+		err = noAgentReason(o.Dir.Agents(), req)
 	}
 	if err != nil {
 		return r.ans, err
@@ -347,6 +361,30 @@ func (r *run) rank(skill string, preferLocal, balance bool, exclude func(Agent) 
 		return out[i].ContextMax > out[j].ContextMax
 	})
 	return out
+}
+
+// noAgentReason erklärt ErrNoAgent, wenn es an der Freigabeklasse liegt
+// (dann auch ErrPrivacy) oder gar kein Agent bekannt ist.
+// errors.Is(err, ErrNoAgent) bleibt erhalten.
+func noAgentReason(agents []Agent, req Request) error {
+	if len(req.Agents) > 0 {
+		return ErrNoAgent // ausdrücklich beschränkt, die Klasse ist nicht der Grund
+	}
+	if len(agents) == 0 {
+		return fmt.Errorf("%w: keine modelle in der konfiguration und keine anbieter im netz gefunden", ErrNoAgent)
+	}
+	for _, a := range agents {
+		if allowed(a, req.Privacy) {
+			return ErrNoAgent // es gäbe Agenten, sie passen aus anderen Gründen nicht
+		}
+	}
+	if req.Privacy == protocol.PrivacyLocal {
+		return privacyError{fmt.Sprintf("%v: freigabeklasse local erlaubt nur modelle dieses knotens, hier ist keins eingerichtet "+
+			"(bekannt: %d agenten anderer knoten)", ErrNoAgent, len(agents))}
+	}
+	return privacyError{fmt.Sprintf("%v: freigabeklasse %s erlaubt nur eigene und vertraute knoten (privates netz, mitgliedsnetz, "+
+		"trusted_peers), bekannt sind nur %d agenten fremder knoten; darf der inhalt öffentlich sein, "+
+		"die anfrage mit dem header X-SwarmAiNet-Privacy: public senden", ErrNoAgent, req.Privacy, len(agents))}
 }
 
 // allowed setzt die Freigabeklassen um. "reduced" verlangt Pseudonymisierung,
