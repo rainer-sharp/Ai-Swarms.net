@@ -123,7 +123,7 @@ func (n *Node) handleTask(s network.Stream) {
 		reject("nur für vertrauten kreis bestimmt")
 		return
 	case !trusted && !n.opts.AcceptsPublic:
-		// accept_public_tasks gilt je Netz (spec/p2p-schicht.md § 9).
+		// accept_public_tasks gilt je Netz (spec/p2p-layer.md § 9).
 		reject("keine öffentlichen aufträge in diesem netz")
 		return
 	case !p.Limits.Deadline.IsZero() && time.Now().After(p.Limits.Deadline):
@@ -249,7 +249,7 @@ var ErrRejected = errors.New("teilauftrag abgelehnt")
 // Absagegründe, die nur vorübergehende Auslastung bedeuten.
 const (
 	rejectNoCapacity = "keine kapazität" // Ressourcenmanager
-	rejectBusy       = "busy"            // Ratenlimit (spec/p2p-schicht.md § 8)
+	rejectBusy       = "busy"            // Ratenlimit (spec/p2p-layer.md § 8)
 )
 
 // Execute schickt einen Teilauftrag an einen anderen Knoten (implementiert

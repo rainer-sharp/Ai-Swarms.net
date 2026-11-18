@@ -1,4 +1,4 @@
-# Helferknoten im Container (spec/p2p-schicht.md § 6.1): trägt das Netz als
+# Helferknoten im Container (spec/p2p-layer.md § 6.1): trägt das Netz als
 # Einstieg, DHT-Server und Relay, rechnet aber nicht. Als data/config.yaml
 # ablegen, Netz-Kennung und Schlüssel eintragen.
 node:

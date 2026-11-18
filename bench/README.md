@@ -1,34 +1,36 @@
 # Benchmark
 
-Aufgaben und Lauf-Pläne für den Benchmark aus [`spec/benchmark.md`](../spec/benchmark.md).
+**English** · [Deutsch](de/README.md)
 
-| Datei | Inhalt |
+Tasks and run plans for the benchmark from [`spec/benchmark.md`](../spec/benchmark.md).
+
+| File | Contents |
 |---|---|
-| `tasks-r1.jsonl` | Runde 1: 40 Code-Aufgaben (HumanEval/0, /4, … /156) und 40 Mathe-Aufgaben (GSM8K-Test 0, 33, … 1287) |
-| `plan-r1.yaml` | Läufe für den Testaufbau (vLLM auf `.94`, llama.cpp und Ollama auf `.95`) |
-| `results-r1.jsonl` | Ergebnisse, eine Zeile je Lauf und Aufgabe (entsteht beim Lauf) |
-| `report-r1.md` | Bericht und Bewertung der Runde 1 (17.10.2026) |
+| `tasks-r1.jsonl` | Round 1: 40 code tasks (HumanEval/0, /4, … /156) and 40 maths tasks (GSM8K test 0, 33, … 1287) |
+| `plan-r1.yaml` | Runs for the test setup (vLLM on `.94`, llama.cpp and Ollama on `.95`) |
+| `results-r1.jsonl` | Results, one line per run and task (created during the run) |
+| `report-r1.md` | Report and assessment of round 1 (17 Oct 2026) |
 
-## Ablauf
+## Procedure
 
 ```sh
-./swarmainet bench hash bench/tasks-r1.jsonl          # SHA-256 muss mit tasks_sha256 im Plan übereinstimmen
-./swarmainet bench run -limit 1 bench/plan-r1.yaml    # Probelauf: je Lauf eine Aufgabe pro Art
-./swarmainet bench run bench/plan-r1.yaml             # voller Lauf, über Nacht
-./swarmainet bench report bench/results-r1.jsonl      # Auswertung als Markdown
+./swarmainet bench hash bench/tasks-r1.jsonl          # SHA-256 must match tasks_sha256 in the plan
+./swarmainet bench run -limit 1 bench/plan-r1.yaml    # trial run: one task per type for each run
+./swarmainet bench run bench/plan-r1.yaml             # full run, overnight
+./swarmainet bench report bench/results-r1.jsonl      # evaluation as Markdown
 ```
 
-- Der Lauf ist **fortsetzbar**: bereits vorhandene Ergebnisse werden übersprungen. `-retry-errors` führt Aufgaben mit Fehler erneut aus, `-only lauf1,lauf2` beschränkt auf einzelne Läufe.
-- Stimmt der SHA-256 des Aufgabensatzes nicht mit `tasks_sha256` im Plan überein, verweigert `bench run` den Lauf (Commit-Reveal).
-- Schwarm-Läufe brauchen einen laufenden Knoten auf der VM und die Peers mit den in `agents` genannten Modellen.
+- The run is **resumable**: existing results are skipped. `-retry-errors` re-runs tasks that failed, `-only run1,run2` restricts to individual runs.
+- If the SHA-256 of the task set does not match `tasks_sha256` in the plan, `bench run` refuses to run (commit-reveal).
+- Swarm runs need a running node on the VM and the peers with the models named in `agents`.
 
-## Bewertung
+## Assessment
 
-- **Code:** Der Code aus der Antwort läuft mit den verdeckten HumanEval-Tests in einer Sandbox (`bwrap`): nur `/usr` lesbar, kein Netz, keine Umgebungsvariablen, 1 GiB Speicher, 10 s CPU, 20 s Gesamtzeit.
-- **Mathematik:** Die Zahl aus der letzten Zeile `Answer: …` (sonst die letzte Zahl im Text) muss exakt der GSM8K-Lösung entsprechen.
-- **Zwischenschritte** (Schwarm-Läufe): Der Lauf fordert mit `X-SwarmAiNet-Trace: 1` die Texte aller Schritte an und bewertet Entwürfe, Teillösungen und Synthesen wie eine Endantwort (`step_solved`). Daraus berechnet der Bericht Trefferquote und Fehlalarme des Prüfers sowie die Wirkung von Überarbeitung und Synthese. Die Ergebnisdatei wird dadurch mehrere MB groß.
-- **Self-Consistency** (`samples > 1`): Mathematik per Mehrheitsentscheid; Code nimmt den ersten Versuch, der die Beispiele aus dem Docstring besteht, sonst den ersten Versuch. 21 der 40 Code-Aufgaben haben keine brauchbaren Beispiele (17 ohne, 4 mit fehlerhaften Beispielen in HumanEval).
+- **Code:** the code from the answer runs with the hidden HumanEval tests in a sandbox (`bwrap`): only `/usr` readable, no network, no environment variables, 1 GiB memory, 10 s CPU, 20 s total time.
+- **Mathematics:** the number from the last line `Answer: …` (otherwise the last number in the text) must exactly match the GSM8K solution.
+- **Intermediate steps** (swarm runs): the run requests the texts of all steps with `X-SwarmAiNet-Trace: 1` and assesses drafts, partial solutions and syntheses like a final answer (`step_solved`). From this the report computes hit rate and false alarms of the verifier as well as the effect of revision and synthesis. The results file thereby grows to several MB.
+- **Self-consistency** (`samples > 1`): mathematics by majority vote; code takes the first attempt that passes the examples from the docstring, otherwise the first attempt. 21 of the 40 code tasks have no usable examples (17 without, 4 with faulty examples in HumanEval).
 
-## Lizenzen
+## Licenses
 
-Die Aufgaben stammen aus [HumanEval](https://github.com/openai/human-eval) und [GSM8K](https://github.com/openai/grade-school-math), beide © OpenAI unter MIT-Lizenz (`LICENSE-human-eval`, `LICENSE-gsm8k`). Die Prompts sind um eine Antwortanweisung ergänzt.
+The tasks come from [HumanEval](https://github.com/openai/human-eval) and [GSM8K](https://github.com/openai/grade-school-math), both © OpenAI under the MIT license (`LICENSE-human-eval`, `LICENSE-gsm8k`). The prompts have been extended with an answer instruction.

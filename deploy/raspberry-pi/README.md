@@ -1,331 +1,335 @@
-# Helferknoten auf einem Raspberry Pi
+# Helper node on a Raspberry Pi
 
-Diese Anleitung richtet einen **Helferknoten** ([spec/p2p-schicht.md](../../spec/p2p-schicht.md) § 6.1) auf einem Raspberry Pi 4 ein. Über ihn verbinden sich die Standorte eines privaten Schwarms. Der Pi rechnet nicht, nimmt keine Aufträge an und kennt keine Modelle; er ist Einstieg, DHT-Server und Relay. Alle anderen Knoten verbinden sich **ausgehend** zu ihm und brauchen keine Portfreigabe.
+**English** · [Deutsch](de/README.md)
 
-Es gibt einen Zielaufbau und zwei Testumgebungen, die sich schon jetzt aufbauen lassen:
+This guide sets up a **helper node** ([spec/p2p-layer.md](../../spec/p2p-layer.md) § 6.1) on a Raspberry Pi 4. The sites of a private swarm connect through it. The Pi does not compute, accepts no tasks and knows no models; it is entry point, DHT server and relay. All other nodes connect to it **outgoing** and need no port forwarding.
 
-| Aufbau | Rolle des Pi | von außen erreichbar | Abschnitte |
+There is a target setup and two test environments that can already be built now:
+
+| Setup | Role of the Pi | reachable from outside | Sections |
 |---|---|---|---|
-| **Zielaufbau:** eigene FritzBox, Router 2, Pi | Helfer, vom Heimnetz abgeschottet | IPv4 über zwei Portfreigaben | 1–4, 7–8 |
-| **Test A:** andere FritzBox mit Kabelanschluss | Helfer | IPv4-Portfreigabe, bei DS-Lite IPv6-Freigabe | 1–3, 5, 7–8 |
-| **Test B:** Mobilfunk-Router ZTE MF79U mit O2 | Helfer nur über IPv6, sonst Knoten hinter CGNAT | IPv4 nie, IPv6 vielleicht | 1–3, 6–8 |
+| **Target setup:** your own FritzBox, router 2, Pi | helper, isolated from the home network | IPv4 via two port forwardings | 1–4, 7–8 |
+| **Test A:** another FritzBox with a cable connection | helper | IPv4 port forwarding, with DS-Lite an IPv6 forwarding | 1–3, 5, 7–8 |
+| **Test B:** mobile router ZTE MF79U with O2 | helper only via IPv6, otherwise a node behind CGNAT | IPv4 never, IPv6 maybe | 1–3, 6–8 |
 
-**Zielaufbau:**
+**Target setup** (diagram labels in German):
 
-![Zielaufbau: Internet, FritzBox, Heimnetz, Router 2, Raspberry Pi](aufbau.svg)
+![Target setup: internet, FritzBox, home network, router 2, Raspberry Pi](aufbau.svg)
 
-**Testumgebungen:**
+**Test environments:**
 
-![Testumgebungen: andere FritzBox mit Kabelanschluss und Mobilfunk-Router ZTE MF79U](testumgebungen.svg)
+![Test environments: another FritzBox with a cable connection and mobile router ZTE MF79U](testumgebungen.svg)
 
-In allen Fällen gilt:
+In all cases:
 
-- Von außen ist höchstens **ein Port** erreichbar: 4711/tcp.
-- Wegen des Netzschlüssels (PSK) kommt ohne Schlüssel nicht einmal der Verbindungsaufbau zustande. Für Fremde ist der Port nur Rauschen.
+- At most **one port** is reachable from outside: 4711/tcp.
+- Because of the network key (PSK), not even the connection setup succeeds without the key. For strangers the port is only noise.
 
-## 1. Was du brauchst
+## 1. What you need
 
 | | |
 |---|---|
-| Raspberry Pi | **Pi 4** mit 2 GB RAM oder mehr (Pi 3 und 5 gehen ebenso), Netzteil USB-C 5,1 V / 3 A, Netzwerkkabel, Gehäuse mit Kühlung |
-| Speicherkarte | microSD ab 16 GB, Klasse A1 oder A2, dazu ein Kartenleser am PC |
-| Betriebssystem | **Raspberry Pi OS Lite (64-bit)**, derzeit auf Basis von Debian 13 „Trixie“. Die Lite-Variante hat keine Desktop-Oberfläche, die der Helfer nicht braucht. |
-| Entwicklungsrechner | mit Go (zum Bauen von swarmainet) und einem SSH-Schlüssel |
-| Domain | eine eigene Domain mit verwaltbarem DNS (Zielaufbau; in den Tests reicht oft ein MyFRITZ!-Name) |
+| Raspberry Pi | **Pi 4** with 2 GB RAM or more (Pi 3 and 5 work as well), USB-C power supply 5.1 V / 3 A, network cable, case with cooling |
+| Memory card | microSD from 16 GB, class A1 or A2, plus a card reader on the PC |
+| Operating system | **Raspberry Pi OS Lite (64-bit)**, currently based on Debian 13 "Trixie". The Lite variant has no desktop, which the helper does not need. |
+| Development computer | with Go (to build swarmainet) and an SSH key |
+| Domain | a domain of your own with manageable DNS (target setup; in the tests a MyFRITZ! name is often sufficient) |
 
-Im Folgenden stehen Beispielwerte: Heimnetz `192.168.178.0/24`, Name `swarm.example.de`, Rechnername des Pi `swarm-helper`, Benutzer `admin`. Ersetze sie durch deine.
+Example values follow: home network `192.168.178.0/24`, name `swarm.example.de`, host name of the Pi `swarm-helper`, user `admin`. Replace them with yours.
 
-## 2. Raspberry Pi 4 vorbereiten
+## 2. Preparing the Raspberry Pi 4
 
-Den Pi richtest du am besten **zu Hause** ein, am eigenen Netz und mit Bildschirm-freiem Zugang per SSH. Danach kommt er an seinen Einsatzort.
+Best set up the Pi **at home**, on your own network and headless via SSH. Then it goes to its place of use.
 
-### 2.1 SSH-Schlüssel
+### 2.1 SSH key
 
-Falls du auf dem Entwicklungsrechner noch keinen hast:
+If you do not have one on the development computer yet:
 
 ```sh
 ssh-keygen -t ed25519 -C "swarm-helper"
-cat ~/.ssh/id_ed25519.pub        # diese Zeile braucht der Imager gleich
+cat ~/.ssh/id_ed25519.pub        # the Imager needs this line in a moment
 ```
 
-### 2.2 Image auf die Karte schreiben
+### 2.2 Writing the image to the card
 
-1. **Raspberry Pi Imager ab Version 2** installieren, von [raspberrypi.com/software](https://www.raspberrypi.com/software/) (unter Linux als AppImage). **Nicht** das Paket `rpi-imager` aus Ubuntu oder Debian: Es ist Version 1.8 und zu alt für das aktuelle Raspberry Pi OS. Es schreibt das Image zwar, aber die Anpassungen aus Schritt 3 (Rechnername, Benutzer, SSH, Schlüssel) kommen nicht an.
-2. Imager starten und nacheinander wählen:
-   - **Gerät:** Raspberry Pi 4
-   - **Betriebssystem:** *Raspberry Pi OS (other)* → **Raspberry Pi OS Lite (64-bit)**
-   - **Speicher:** die microSD-Karte (alles darauf wird gelöscht)
-3. **Anpassen** (der Imager fragt danach, ob die Einstellungen angewendet werden sollen):
-   - Rechnername: `swarm-helper`
-   - Benutzer und Kennwort: eigener Benutzer, z. B. `admin`, mit starkem Kennwort
-   - Zeitzone `Europe/Berlin`, Tastatur `de`
-   - **WLAN nur für Test B**, wenn der Pi per WLAN statt USB am Stick hängt (Abschnitt 6); sonst leer lassen
-   - **SSH aktivieren**, „nur Authentifizierung über öffentliche Schlüssel“, und den Inhalt von `id_ed25519.pub` eintragen
-4. Schreiben lassen. Der Imager prüft das Image nach dem Schreiben selbst.
+1. Install **Raspberry Pi Imager version 2 or later** from [raspberrypi.com/software](https://www.raspberrypi.com/software/) (on Linux as an AppImage). **Not** the package `rpi-imager` from Ubuntu or Debian: it is version 1.8 and too old for the current Raspberry Pi OS. It does write the image, but the customisations from step 3 (host name, user, SSH, key) do not arrive.
+2. Start the Imager and choose one after the other:
+   - **Device:** Raspberry Pi 4
+   - **Operating system:** *Raspberry Pi OS (other)* → **Raspberry Pi OS Lite (64-bit)**
+   - **Storage:** the microSD card (everything on it will be deleted)
+3. **Customise** (the Imager then asks whether the settings should be applied):
+   - Host name: `swarm-helper`
+   - User and password: a user of your own, e.g. `admin`, with a strong password
+   - Time zone, keyboard layout as appropriate
+   - **Wi-Fi only for test B**, if the Pi is connected to the stick via Wi-Fi instead of USB (section 6); otherwise leave empty
+   - **Enable SSH**, "Allow public-key authentication only", and enter the content of `id_ed25519.pub`
+4. Let it write. The Imager verifies the image itself after writing.
 
-### 2.3 Erster Start
+### 2.3 First start
 
-1. Karte in den Pi, Netzwerkkabel an die FritzBox zu Hause, Netzteil anschließen. Der erste Start dauert ein bis zwei Minuten.
-2. Anmelden:
+1. Card into the Pi, network cable to the FritzBox at home, connect the power supply. The first start takes one to two minutes.
+2. Log in:
    ```sh
    ssh admin@swarm-helper.local
    ```
-   Klappt der Name nicht, steht die Adresse in der FritzBox unter *Heimnetz → Netzwerk*.
-3. Aktualisieren und automatische Sicherheitsupdates einschalten:
+   If the name does not work, the address is listed in the FritzBox under *Home Network → Network*.
+3. Update and enable automatic security updates:
    ```sh
    sudo apt update && sudo apt full-upgrade -y
    sudo apt install -y unattended-upgrades
    sudo reboot
    ```
 
-### 2.4 Wenn der Pi nicht erreichbar ist
+### 2.4 If the Pi cannot be reached
 
-- **Nicht im Netz, nicht in der FritzBox:** auf die Leuchtdioden achten. Rot dauerhaft heißt Strom in Ordnung; grün flackert beim Start und ist danach meist aus, das ist normal. Ein gleichmäßig wiederholtes Blinkmuster der grünen LED heißt, der Pi findet kein startfähiges System: Karte neu schreiben. **Bleiben die LEDs an der Netzwerkbuchse dunkel, zuerst das Kabel tauschen**, gegen eines, das an einem anderen Gerät nachweislich funktioniert, und einen anderen Anschluss an der FritzBox nehmen. Manche Gehäuse haben einen eigenen Ein-Taster (z. B. Argon ONE); ohne Druck darauf startet der Pi nicht.
-- **Im Netz, aber nicht unter `swarm-helper.local` und ohne SSH:** Dann hat der Imager die Anpassungen nicht übernommen, meist wegen einer zu alten Version (Schritt 2.2). Daran erkennbar, dass der Pi mit Monitor beim ersten Start nach Tastatur und Benutzer fragt. Nachholen am Pi mit Monitor und Tastatur:
+- **Not on the network, not in the FritzBox:** watch the LEDs. Red permanently on means power is fine; green flickers during start and is then mostly off, which is normal. A regularly repeated blink pattern of the green LED means the Pi finds no bootable system: write the card again. **If the LEDs at the network socket stay dark, first swap the cable** for one that demonstrably works on another device, and use another port on the FritzBox. Some cases have their own power button (e.g. Argon ONE); without pressing it the Pi does not start.
+- **On the network, but not as `swarm-helper.local` and without SSH:** then the Imager did not apply the customisations, usually because of a too old version (step 2.2). Recognisable by the Pi asking for keyboard and user on the first start when a monitor is attached. Catch up on the Pi with monitor and keyboard:
   ```sh
   sudo hostnamectl set-hostname swarm-helper
   sudo sed -i 's/raspberrypi/swarm-helper/g' /etc/hosts
   sudo systemctl enable --now ssh
   ```
-  Dann auf dem Entwicklungsrechner den Schlüssel übertragen und die Anmeldung prüfen:
+  Then transfer the key on the development computer and check the login:
   ```sh
-  ssh-copy-id admin@<Adresse des Pi>
-  ssh admin@<Adresse des Pi>          # muss ohne Kennwort gehen
+  ssh-copy-id admin@<address of the Pi>
+  ssh admin@<address of the Pi>          # must work without a password
   ```
-  Erst danach auf dem Pi die Anmeldung per Kennwort abschalten:
+  Only then switch off password login on the Pi:
   ```sh
   echo "PasswordAuthentication no" | sudo tee /etc/ssh/sshd_config.d/10-nur-schluessel.conf
   sudo systemctl restart ssh
   ```
 
-## 3. swarmainet installieren
+## 3. Installing swarmainet
 
-1. **Bauen** auf dem Entwicklungsrechner im Projektverzeichnis und auf den Pi kopieren:
+1. **Build** on the development computer in the project directory and copy to the Pi:
    ```sh
    CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -o swarmainet-arm64 ./cmd/swarmainet
    scp swarmainet-arm64 deploy/raspberry-pi/{install.sh,config.yaml,swarmainet.service} admin@swarm-helper.local:
    ```
-2. **Installieren** auf dem Pi:
+2. **Install** on the Pi:
    ```sh
    sudo sh install.sh
    ```
-   Das Skript legt den Systembenutzer `swarmainet`, das Datenverzeichnis `/var/lib/swarmainet` (Modus 0700), die Konfiguration aus der Vorlage und den Dienst an (gehärtete systemd-Unit, startet mit dem System). Gestartet wird noch nicht. Bei späteren Aufrufen tauscht es nur das Programm aus; Konfiguration und Schlüssel bleiben.
-3. **Netz beitreten:** Auf einem Knoten des Schwarms zu Hause eine Einladung erzeugen:
+   The script creates the system user `swarmainet`, the data directory `/var/lib/swarmainet` (mode 0700), the configuration from the template and the service (hardened systemd unit, starts with the system). It does not start it yet. On later runs it only replaces the program; configuration and keys are kept.
+3. **Join the network:** create an invitation on a node of the swarm at home:
    ```sh
    swarmainet invite -with-key
    ```
-   und auf dem Pi damit beitreten:
+   and join with it on the Pi:
    ```sh
    sudo -u swarmainet swarmainet join -config /var/lib/swarmainet/config.yaml '<link>'
    ```
-   `join` trägt Netz-Kennung und Schlüssel ein. Der Link enthält den Netzschlüssel: nur vertraulich übertragen, etwa per SSH, und danach nicht aufheben.
-4. **Öffentlichen Namen eintragen:**
+   `join` enters network ID and key. The link contains the network key: only transfer it confidentially, e.g. via SSH, and do not keep it afterwards.
+4. **Enter the public name:**
    ```sh
    sudoedit /var/lib/swarmainet/config.yaml
    ```
-   Unter `announce` den Namen, unter dem der Pi am Einsatzort erreichbar ist (Abschnitt 4, 5 oder 6), z. B. `/dns/swarm.example.de/tcp/4711`. Solange der Pi zu Hause zum Ausprobieren läuft oder der Name noch nicht auf den Einsatzort zeigt, bleibt `announce: []` leer. Für den Helfer am besten eine eigene Subdomain nehmen (z. B. `helper.<deine-domain>`), damit die Hauptdomain etwa für eine Webseite frei bleibt. Ohne `announce` kennt der Pi nur seine lokale Adresse, und mit der kann außerhalb niemand etwas anfangen. `/dns/` löst A- und AAAA-Einträge auf, also IPv4 und IPv6.
-5. **Neu starten und Peer-ID notieren.** Der Dienst startet nach jedem Hochfahren von selbst, läuft also womöglich schon mit der alten Konfiguration; Änderungen liest er erst beim Neustart. Deshalb immer `restart`, nicht `start`:
+   Under `announce`, the name under which the Pi is reachable at its place of use (section 4, 5 or 6), e.g. `/dns/swarm.example.de/tcp/4711`. As long as the Pi is running at home for trying things out or the name does not yet point to the place of use, `announce: []` stays empty. Best use a subdomain of its own for the helper (e.g. `helper.<your-domain>`), so that the main domain stays free, e.g. for a website. Without `announce`, the Pi only knows its local address, and nobody outside can do anything with it. `/dns/` resolves A and AAAA records, i.e. IPv4 and IPv6.
+5. **Restart and note the peer ID.** The service starts on its own after every boot, so it may already be running with the old configuration; it only reads changes on restart. Therefore always `restart`, not `start`:
    ```sh
    sudo systemctl restart swarmainet
-   journalctl -u swarmainet -f                     # Protokoll, Strg+C beendet
+   journalctl -u swarmainet -f                     # log, Ctrl+C ends it
    sudo -u swarmainet swarmainet status -config /var/lib/swarmainet/config.yaml | grep -m1 peer_id
    ```
-6. Pi herunterfahren (`sudo poweroff`) und an den Einsatzort bringen.
+6. Shut down the Pi (`sudo poweroff`) and take it to its place of use.
 
-**Aktualisieren:** neues `swarmainet-arm64` kopieren und `sudo sh install.sh` erneut aufrufen; der Dienst wird dabei neu gestartet.
+**Updating:** copy a new `swarmainet-arm64` and run `sudo sh install.sh` again; the service is restarted in the process.
 
-**Alternative mit Docker:** Der Helfer läuft auch im Container ([deploy/docker](../docker/compose.yaml)), das Image baut auf dem Pi für arm64. Nativ mit systemd braucht weniger Speicher und ist auf dem Pi die einfachere Wahl.
+**Alternative with Docker:** the helper also runs in a container ([deploy/docker](../docker/compose.yaml)), the image builds for arm64 on the Pi. Natively with systemd needs less memory and is the simpler choice on the Pi.
 
-## 4. Zielaufbau: FritzBox, Router 2 und DNS
+## 4. Target setup: FritzBox, router 2 and DNS
 
-Hier hängt der Pi hinter einem zweiten Router, der ihn vom Heimnetz abschottet. Beispielwerte: Router 2 mit WAN `192.168.178.2` und LAN `192.168.50.0/24`, Pi `192.168.50.10`.
+Here the Pi sits behind a second router that isolates it from the home network. Example values: router 2 with WAN `192.168.178.2` and LAN `192.168.50.0/24`, Pi `192.168.50.10`.
 
-### 4.1 DNS-Eintrag statt Domain-Weiterleitung
+### 4.1 DNS record instead of domain forwarding
 
-Die „Domain-Weiterleitung“ vieler Anbieter ist eine **HTTP-Umleitung**: Ein Webserver des Anbieters schickt Browser zu einer anderen Adresse weiter. Für libp2p ist das unbrauchbar, denn der Knoten spricht kein HTTP. Gebraucht wird ein **DNS-Eintrag**, der `swarm.example.de` auf die aktuelle IPv4-Adresse der FritzBox zeigen lässt:
+The "domain forwarding" of many providers is an **HTTP redirect**: a web server of the provider sends browsers on to another address. That is useless for libp2p, because the node does not speak HTTP. What is needed is a **DNS record** that makes `swarm.example.de` point to the current IPv4 address of the FritzBox:
 
-- **A-Eintrag per DynDNS**, wenn der Anbieter eine Update-URL anbietet. In der FritzBox unter *Internet → Freigaben → DynDNS* „DynDNS benutzen“ aktivieren, „Benutzerdefiniert“ wählen und Update-URL, Domainname, Benutzer und Kennwort des Anbieters eintragen.
-- **CNAME auf MyFRITZ!**: in der FritzBox ein MyFRITZ!-Konto einrichten (*Internet → MyFRITZ!-Konto*). Die FritzBox bekommt einen Namen wie `xxxxxxxx.myfritz.net`, der ihr automatisch folgt. Beim Domain-Anbieter `swarm.example.de` als CNAME darauf zeigen lassen.
+- **A record via DynDNS**, if the provider offers an update URL. In the FritzBox under *Internet → Permit Access → DynDNS*, enable "Use DynDNS", choose "User-defined" and enter the provider's update URL, domain name, user and password.
+- **CNAME to MyFRITZ!**: set up a MyFRITZ! account in the FritzBox (*Internet → MyFRITZ! Account*). The FritzBox gets a name like `xxxxxxxx.myfritz.net` that follows it automatically. At the domain provider, make `swarm.example.de` a CNAME pointing to it.
 
-Die TTL des Eintrags sollte kurz sein, z. B. 300 s. **Einen Portfilter gibt es im DNS nicht**: DNS bildet nur Namen auf Adressen ab und sieht weder Ports noch Verkehr. Gefiltert wird in FritzBox und Router 2.
+The TTL of the record should be short, e.g. 300 s. **There is no port filter in DNS**: DNS only maps names to addresses and sees neither ports nor traffic. Filtering happens in the FritzBox and router 2.
 
-Manche Anbieter nennen das „DNS-Weiterleitung“. Ob sie passt, zeigt sich am Ergebnis:
+Some providers call this "DNS forwarding". Whether it fits shows in the result:
 
 ```sh
-dig +short swarm.example.de     # muss die öffentliche IPv4 der FritzBox liefern
+dig +short swarm.example.de     # must return the public IPv4 of the FritzBox
 ```
 
-- Erscheint die IPv4 der FritzBox (*Internet → Online-Monitor*), allein oder unter einem MyFRITZ!-Namen, ist alles richtig.
-- Erscheint eine IP des Domain-Anbieters, ist es eine HTTP-Umleitung; Port 4711 kommt dann nie bei der FritzBox an.
-- Der Eintrag muss der **wechselnden** IP folgen. Zum Testen *Internet → Online-Monitor → Neu verbinden* und `dig` nach einigen Minuten wiederholen.
+- If the IPv4 of the FritzBox appears (*Internet → Online Monitor*), alone or under a MyFRITZ! name, everything is right.
+- If an IP of the domain provider appears, it is an HTTP redirect; port 4711 will then never arrive at the FritzBox.
+- The record must follow the **changing** IP. To test, *Internet → Online Monitor → Reconnect* and repeat `dig` after a few minutes.
 
 ### 4.2 FritzBox
 
-1. **Öffentliche IPv4 prüfen:** *Internet → Online-Monitor*. Steht dort „DS-Lite“ oder keine eigene IPv4-Adresse, kommt eine IPv4-Freigabe nie an; siehe Abschnitt 9.
-2. **Router 2 eine feste Adresse geben:** *Heimnetz → Netzwerk → Netzwerkverbindungen*, Router 2 bearbeiten, „Diesem Netzwerkgerät immer die gleiche IPv4-Adresse zuweisen“, z. B. `192.168.178.2`.
-3. **Portfreigabe nur an Router 2:** *Internet → Freigaben → Portfreigaben → Gerät für Freigaben hinzufügen*, Router 2 wählen, dann *Neue Freigabe → Portfreigabe*: „Andere Anwendung“, Bezeichnung `swarmainet`, Protokoll **TCP**, Port an Gerät **4711** bis 4711, Port extern **4711**, „Freigabe aktivieren für IPv4“.
-4. **Nicht** „Selbstständige Portfreigaben erlauben“ und **nicht** „Exposed Host“ für Router 2 aktivieren.
+1. **Check the public IPv4:** *Internet → Online Monitor*. If it says "DS-Lite" or there is no IPv4 address of your own, an IPv4 forwarding will never arrive; see section 9.
+2. **Give router 2 a fixed address:** *Home Network → Network → Network Connections*, edit router 2, "Always assign this network device the same IPv4 address", e.g. `192.168.178.2`.
+3. **Port forwarding only to router 2:** *Internet → Permit Access → Port Sharing → Add Device for Sharing*, choose router 2, then *New Sharing → Port Sharing*: "Other application", name `swarmainet`, protocol **TCP**, port to device **4711** to 4711, external port **4711**, "Enable sharing for IPv4".
+4. Do **not** enable "Allow automatic port forwarding" and **not** "Exposed Host" for router 2.
+
+(Menu names of the FritzBox user interface are translated here and may differ slightly in your language version.)
 
 ### 4.3 Router 2
 
-Die Menüs heißen bei jedem Hersteller anders. Einzustellen ist:
+The menus have different names with every manufacturer. What to set:
 
-1. **WAN** am LAN-Anschluss der FritzBox, Adresse `192.168.178.2`.
-2. **LAN** als eigenes Netz, z. B. `192.168.50.1/24`; dem Pi per DHCP-Reservierung immer `192.168.50.10` geben.
-3. **Portweiterleitung** WAN 4711/tcp → `192.168.50.10:4711`.
-4. **Firewall, und das ist der wichtigste Punkt:** Ohne Regel erreicht der Pi das Heimnetz, denn Router 2 schickt alles an die FritzBox weiter. Deshalb **neue Verbindungen aus dem LAN von Router 2** an alle privaten Netze sperren, außer an das eigene:
-   - Ziel `192.168.178.0/24` (Heimnetz): sperren
-   - Ziel `10.0.0.0/8`, `172.16.0.0/12` und `192.168.0.0/16` außer `192.168.50.0/24`: sperren
-   - alles andere (Internet): erlauben
+1. **WAN** on the LAN port of the FritzBox, address `192.168.178.2`.
+2. **LAN** as a network of its own, e.g. `192.168.50.1/24`; always give the Pi `192.168.50.10` via a DHCP reservation.
+3. **Port forwarding** WAN 4711/tcp → `192.168.50.10:4711`.
+4. **Firewall, and this is the most important point:** without a rule, the Pi reaches the home network, because router 2 forwards everything to the FritzBox. Therefore block **new connections from the LAN of router 2** to all private networks except its own:
+   - destination `192.168.178.0/24` (home network): block
+   - destination `10.0.0.0/8`, `172.16.0.0/12` and `192.168.0.0/16` except `192.168.50.0/24`: block
+   - everything else (internet): allow
 
-   **Antworten müssen durchkommen:** Verbindet sich ein Knoten aus dem Heimnetz mit dem Pi, gehen dessen Antworten an eine Adresse im Heimnetz. Die Regel darf deshalb nur **neue** Verbindungen sperren; bestehende und zugehörige (*established*/*related*) müssen erlaubt bleiben. Bei OpenWrt ist das eine Regel in der *forward*-Kette mit dem Zustand `NEW`.
-5. **UPnP**, **Fernwartung** und **WPS** abschalten, eigenes Admin-Kennwort setzen.
+   **Replies must get through:** if a node from the home network connects to the Pi, the Pi's replies go to an address in the home network. The rule may therefore only block **new** connections; existing and related ones (*established*/*related*) must remain allowed. With OpenWrt this is a rule in the *forward* chain with the state `NEW`.
+5. Switch off **UPnP**, **remote maintenance** and **WPS**, set an admin password of your own.
 
-Prüfen vom Pi aus:
+Check from the Pi:
 
 ```sh
-ping -c1 1.1.1.1            # Internet: muss gehen
-ping -c1 192.168.178.29     # ein Gerät im Heimnetz: muss scheitern
+ping -c1 1.1.1.1            # internet: must work
+ping -c1 192.168.178.29     # a device in the home network: must fail
 ```
 
-`announce` in der Pi-Konfiguration: `/dns/swarm.example.de/tcp/4711`.
+`announce` in the Pi configuration: `/dns/swarm.example.de/tcp/4711`.
 
-## 5. Testumgebung A: andere FritzBox mit Kabelanschluss
+## 5. Test environment A: another FritzBox with a cable connection
 
-Der Pi hängt direkt im LAN einer anderen FritzBox, ohne Router 2. Das ist ein echter Test über das Internet: Die Knoten zu Hause erreichen den Pi über den Provider, nicht über die eigene FritzBox.
+The Pi is connected directly to the LAN of another FritzBox, without router 2. This is a real test via the internet: the nodes at home reach the Pi via the provider, not via their own FritzBox.
 
-> **Nur für den Test:** Ohne Router 2 ist der Pi nicht vom LAN dieser FritzBox abgeschottet. Wer den Pi übernimmt, erreicht die Geräte dort. Den Betreiber der FritzBox vorher fragen und den Pi nach dem Test wieder abbauen.
+> **For testing only:** without router 2, the Pi is not isolated from the LAN of this FritzBox. Whoever takes over the Pi reaches the devices there. Ask the operator of the FritzBox beforehand and remove the Pi again after the test.
 
-1. **Anschlussart prüfen:** *Internet → Online-Monitor*. Kabelanbieter vergeben häufig **DS-Lite**, dann gibt es keine eigene IPv4, aber öffentliches IPv6.
-2. **Pi anschließen** (Kabel an die FritzBox) und unter *Heimnetz → Netzwerk* „Diesem Netzwerkgerät immer die gleiche IPv4-Adresse zuweisen“ setzen.
-3. **Freigabe für den Pi:** *Internet → Freigaben → Portfreigaben → Gerät für Freigaben hinzufügen* → `swarm-helper` → *Neue Freigabe → Portfreigabe*, TCP, Port 4711 auf 4711:
-   - **Mit öffentlicher IPv4:** „Freigabe aktivieren für IPv4“ und für IPv6
-   - **Bei DS-Lite:** nur „Freigabe aktivieren für IPv6“; IPv4 kommt dort nie an
-4. **Name:** Mit einem MyFRITZ!-Konto auf dieser FritzBox (*Internet → MyFRITZ!-Konto*) bekommen Geräte mit Freigaben in der Regel einen eigenen Namen der Form `swarm-helper.xxxxxxxx.myfritz.net`, der bei IPv6 auf das Gerät selbst zeigt; er erscheint bei den Freigaben bzw. im MyFRITZ!-Konto. Der Name der FritzBox selbst (`xxxxxxxx.myfritz.net`) genügt, wenn nur IPv4 freigegeben ist. Alternativ zeigt ein CNAME der eigenen Domain auf einen dieser Namen.
-5. **`announce`** in der Pi-Konfiguration auf diesen Namen setzen, z. B. `/dns/swarm-helper.xxxxxxxx.myfritz.net/tcp/4711`, dann `sudo systemctl restart swarmainet`.
-6. **Prüfen:** `dig +short A …` und `dig +short AAAA …` für den Namen. Bei DS-Lite genügt der AAAA-Eintrag; die Knoten zu Hause brauchen dann IPv6, das die eigene FritzBox in der Regel hat.
+1. **Check the connection type:** *Internet → Online Monitor*. Cable providers often assign **DS-Lite**; then there is no IPv4 of your own, but public IPv6.
+2. **Connect the Pi** (cable to the FritzBox) and under *Home Network → Network* set "Always assign this network device the same IPv4 address".
+3. **Forwarding for the Pi:** *Internet → Permit Access → Port Sharing → Add Device for Sharing* → `swarm-helper` → *New Sharing → Port Sharing*, TCP, port 4711 to 4711:
+   - **With a public IPv4:** "Enable sharing for IPv4" and for IPv6
+   - **With DS-Lite:** only "Enable sharing for IPv6"; IPv4 never arrives there
+4. **Name:** with a MyFRITZ! account on this FritzBox (*Internet → MyFRITZ! Account*), devices with forwardings usually get a name of their own of the form `swarm-helper.xxxxxxxx.myfritz.net`, which with IPv6 points to the device itself; it appears with the forwardings or in the MyFRITZ! account. The name of the FritzBox itself (`xxxxxxxx.myfritz.net`) is sufficient if only IPv4 is forwarded. Alternatively, a CNAME of your own domain points to one of these names.
+5. Set **`announce`** in the Pi configuration to this name, e.g. `/dns/swarm-helper.xxxxxxxx.myfritz.net/tcp/4711`, then `sudo systemctl restart swarmainet`.
+6. **Check:** `dig +short A …` and `dig +short AAAA …` for the name. With DS-Lite the AAAA record is sufficient; the nodes at home then need IPv6, which your own FritzBox usually has.
 
-## 6. Testumgebung B: Mobilfunk-Router ZTE MF79U mit O2
+## 6. Test environment B: mobile router ZTE MF79U with O2
 
-Der ZTE MF79U ist ein LTE-Stick mit eigenem WLAN. Mobilfunkanbieter, auch O2, geben IPv4 nur über **CGNAT** heraus: Der Pi ist per IPv4 von außen **nie** erreichbar, und eine Portfreigabe im Stick nützt nichts. Über IPv6 kann es klappen, das hängt aber von Tarif, APN und der Firewall des Sticks ab. Daraus ergeben sich zwei Varianten:
+The ZTE MF79U is an LTE stick with its own Wi-Fi. Mobile providers, O2 included, only provide IPv4 via **CGNAT**: the Pi is **never** reachable from outside via IPv4, and a port forwarding in the stick is useless. It may work via IPv6, but that depends on the tariff, APN and the stick's firewall. Two variants follow from this:
 
-- **B1, Pi als Helfer über IPv6:** nur, wenn die Prüfung unten zeigt, dass IPv6 von außen ankommt.
-- **B2, Knoten hinter CGNAT:** Am Stick hängt ein gewöhnlicher Knoten, etwa das **Notebook** des Schwarms per WLAN. Er verbindet sich ausgehend zum Helfer aus Test A und testet so Relay und Hole Punching hinter CGNAT. Das ist der wahrscheinlichere und ebenso wertvolle Test.
+- **B1, Pi as a helper via IPv6:** only if the check below shows that IPv6 arrives from outside.
+- **B2, node behind CGNAT:** an ordinary node is connected to the stick, e.g. the swarm's **notebook** via Wi-Fi. It connects outgoing to the helper from test A and thus tests relay and hole punching behind CGNAT. This is the more likely and equally valuable test.
 
-### 6.1 Stick einrichten
+### 6.1 Setting up the stick
 
-1. Weboberfläche des Sticks: `http://192.168.0.1`, Kennwort steht auf dem Aufkleber (bei Werkseinstellung oft `admin`). Ein eigenes Kennwort setzen.
-2. **APN** in den Netzwerkeinstellungen: bei O2-Verträgen meist `internet`, bei Prepaid `pinternet.interkom.de`. Als **PDP-Typ IPv4v6** wählen, sonst gibt es kein IPv6. Die genauen Menünamen hängen von der Firmware ab.
-3. Nach dem Verbinden zeigt die Statusseite, ob eine IPv6-Adresse zugeteilt wurde.
+1. Web interface of the stick: `http://192.168.0.1`, the password is on the label (with factory settings often `admin`). Set a password of your own.
+2. **APN** in the network settings: for O2 contracts usually `internet`, for prepaid `pinternet.interkom.de`. Choose **IPv4v6** as the PDP type, otherwise there is no IPv6. The exact menu names depend on the firmware.
+3. After connecting, the status page shows whether an IPv6 address was assigned.
 
-### 6.2 Pi am Stick
+### 6.2 Pi on the stick
 
-- **Per USB (empfohlen):** Stick in einen USB-Port des Pi. Er erscheint als Netzwerkschnittstelle (`usb0` oder `eth1`) und vergibt per DHCP eine Adresse aus `192.168.0.0/24`; der Pi 4 versorgt ihn mit Strom. Erscheint nach `ip -br link` keine neue Schnittstelle, meldet sich der Stick noch als Speicher: `sudo apt install -y usb-modeswitch` und neu stecken. Ein angeschlossenes Netzwerkkabel vorher abziehen, damit der Pi den Stick als Weg ins Internet nimmt.
-- **Per WLAN:** das WLAN des Sticks beim Anpassen im Imager eintragen (Abschnitt 2.2) oder später mit `sudo nmcli device wifi connect <SSID> password <Kennwort>`.
+- **Via USB (recommended):** stick into a USB port of the Pi. It appears as a network interface (`usb0` or `eth1`) and assigns an address from `192.168.0.0/24` via DHCP; the Pi 4 supplies it with power. If no new interface appears after `ip -br link`, the stick still registers as storage: `sudo apt install -y usb-modeswitch` and plug it in again. Unplug a connected network cable first, so that the Pi takes the stick as its way to the internet.
+- **Via Wi-Fi:** enter the stick's Wi-Fi when customising in the Imager (section 2.2) or later with `sudo nmcli device wifi connect <SSID> password <password>`.
 
-Ob IPv4 und IPv6 nach draußen funktionieren:
+Whether IPv4 and IPv6 work outwards:
 
 ```sh
-ip -br addr                    # Adresse aus 192.168.0.x, ggf. öffentliche IPv6 (2a0…)
+ip -br addr                    # address from 192.168.0.x, possibly a public IPv6 (2a0…)
 ping -c1 1.1.1.1 && ping -6 -c1 2606:4700:4700::1111
 ```
 
-### 6.3 Variante B1: Pi als Helfer über IPv6
+### 6.3 Variant B1: Pi as a helper via IPv6
 
-1. **Erreichbar?** Die öffentliche IPv6 des Pi steht in `ip -br addr`. Von einem Knoten zu Hause:
+1. **Reachable?** The public IPv6 of the Pi is shown in `ip -br addr`. From a node at home:
    ```sh
-   swarmainet ping /ip6/<IPv6 des Pi>/tcp/4711/p2p/<Peer-ID des Pi>
+   swarmainet ping /ip6/<IPv6 of the Pi>/tcp/4711/p2p/<peer ID of the Pi>
    ```
-   Meldet er „Erreichbar (direkt)“, kommt IPv6 von außen an. Im privaten Netz prüft der Knoten das nicht selbst (die Angabe `reachability_by_family` im Status gibt es nur im offenen Netz); dieser `ping` entscheidet.
-2. **Name:** Der Stick kann kein DynDNS. Der Pi meldet seine IPv6 deshalb selbst beim Domain-Anbieter, mit dessen Update-URL, z. B. alle 5 Minuten per systemd-Timer oder cron:
+   If it reports "Erreichbar (direkt)" (reachable, direct), IPv6 arrives from outside. In the private network the node does not check this itself (the field `reachability_by_family` in the status only exists in the open network); this `ping` decides.
+2. **Name:** the stick cannot do DynDNS. The Pi therefore reports its IPv6 to the domain provider itself, with its update URL, e.g. every 5 minutes via a systemd timer or cron:
    ```sh
    IP6=$(ip -6 -o addr show scope global | grep -v temporary | awk '{print $4}' | cut -d/ -f1 | head -1)
-   curl -fsS "https://<update-url-des-anbieters>?hostname=swarm.example.de&myipv6=$IP6"
+   curl -fsS "https://<update-url-of-the-provider>?hostname=swarm.example.de&myipv6=$IP6"
    ```
-   Gemeldet wird die dauerhafte Adresse, nicht eine der temporären, die das System regelmäßig wechselt. Der genaue Aufbau der URL steht beim Anbieter. `announce` dann auf `/dns/swarm.example.de/tcp/4711`.
-3. Die Knoten zu Hause erreichen den Pi so nur über IPv6.
+   The permanent address is reported, not one of the temporary ones that the system changes regularly. The exact structure of the URL is documented by the provider. Then set `announce` to `/dns/swarm.example.de/tcp/4711`.
+3. The nodes at home then reach the Pi only via IPv6.
 
-Kommt IPv6 nicht durch, bleibt Variante B2.
+If IPv6 does not get through, variant B2 remains.
 
-### 6.4 Variante B2: Knoten hinter CGNAT
+### 6.4 Variant B2: node behind CGNAT
 
-1. Pi als Helfer in Testumgebung A betreiben.
-2. Das Notebook (oder einen anderen Knoten des Schwarms) mit dem WLAN des Sticks verbinden.
-3. Prüfen, wie es den Helfer und die Knoten zu Hause erreicht:
+1. Run the Pi as a helper in test environment A.
+2. Connect the notebook (or another node of the swarm) to the stick's Wi-Fi.
+3. Check how it reaches the helper and the nodes at home:
    ```sh
-   swarmainet ping <Peer-ID des Pi>
-   swarmainet status          # peers: via relay, nach Hole Punching direct
+   swarmainet ping <peer ID of the Pi>
+   swarmainet status          # peers: via relay, after hole punching direct
    ```
 
-### 6.5 Datenvolumen
+### 6.5 Data volume
 
-Ein Helfer überträgt in Ruhe wenig: Verbindungserhalt, DHT und Statusabfragen, grob einige zehn MB am Tag. Über das Relay laufende Aufträge kommen hinzu, je Verbindung höchstens 8 MiB. Das Datenvolumen der O2-Karte im Blick behalten.
+At rest, a helper transfers little: keep-alives, DHT and status queries, roughly a few tens of MB per day. Tasks running via the relay come on top, at most 8 MiB per connection. Keep an eye on the data volume of the O2 SIM.
 
-## 7. Knoten verbinden
+## 7. Connecting nodes
 
-Alle Knoten, zu Hause und an anderen Standorten, erreichen den Pi über **seinen öffentlichen Namen**. So nehmen alle denselben Weg, und genau der soll sich bewähren.
+All nodes, at home and at other sites, reach the Pi via **its public name**. That way all take the same path, and that is exactly the one that should prove itself.
 
-**Knoten mit Schlüssel** (die zu Hause) tragen nur die Adresse ein:
+**Nodes with the key** (those at home) only enter the address:
 
 ```yaml
 node:
   static_peers:
-    - /dns/swarm.example.de/tcp/4711/p2p/<Peer-ID des Pi>
+    - /dns/swarm.example.de/tcp/4711/p2p/<peer ID of the Pi>
 ```
 
-**Neue Knoten** treten per Einladung bei, erzeugt auf dem Pi:
+**New nodes** join via an invitation, created on the Pi:
 
 ```sh
 sudo -u swarmainet swarmainet invite -config /var/lib/swarmainet/config.yaml -with-key
 ```
 
-und auf dem neuen Knoten `swarmainet join '<link>'`. Der Link enthält dank `announce` den öffentlichen Namen und den Netzschlüssel; er muss **vertraulich** weitergegeben werden.
+and on the new node `swarmainet join '<link>'`. Thanks to `announce`, the link contains the public name and the network key; it must be passed on **confidentially**.
 
-**Zielaufbau, aus dem Heimnetz (NAT-Loopback):** Ein Knoten zu Hause löst `swarm.example.de` zur öffentlichen IP der eigenen FritzBox auf, und die FritzBox muss die Verbindung an die eigene Portfreigabe zurückleiten. Dabei geht der Verkehr nicht wirklich ins Internet. Klappt das Zurückleiten nicht, ist der Ausweichweg die WAN-Adresse von Router 2, `/ip4/192.168.178.2/tcp/4711/p2p/<Peer-ID des Pi>`. In den Testumgebungen stellt sich die Frage nicht, denn dort liegt der Pi an einem anderen Anschluss.
+**Target setup, from the home network (NAT loopback):** a node at home resolves `swarm.example.de` to the public IP of its own FritzBox, and the FritzBox has to route the connection back to its own port forwarding. The traffic does not really go to the internet. If routing back does not work, the fallback is the WAN address of router 2, `/ip4/192.168.178.2/tcp/4711/p2p/<peer ID of the Pi>`. In the test environments the question does not arise, because there the Pi is at another connection.
 
-Danach reservieren alle Knoten beim Pi einen Relay-Platz und finden die anderen Standorte über den Peer-Austausch. Verbindungen zwischen den Standorten laufen über den Pi oder, wenn Hole Punching gelingt, direkt.
+After that, all nodes reserve a relay slot at the Pi and find the other sites via peer exchange. Connections between the sites run via the Pi or, if hole punching succeeds, directly.
 
-## 8. Prüfen
+## 8. Checking
 
-- **Port von außen offen?** Von einem Gerät außerhalb, etwa dem Notebook am Handy-Hotspot: `nc -vz swarm.example.de 4711` (bei IPv6 `nc -6 -vz …`). Die Verbindung muss zustande kommen; ohne Netzschlüssel bricht danach der Handshake ab, und das ist richtig so.
-- **Von zu Hause:** `swarmainet ping /dns/swarm.example.de/tcp/4711/p2p/<Peer-ID des Pi>` meldet „Erreichbar (direkt)“.
-- **An anderen Standorten:** `swarmainet ping <Peer-ID des Pi>` meldet „Erreichbar (direkt)“; `swarmainet status` zeigt unter `networks[].relay_reservations` den Pi und für die Knoten zu Hause `via: relay` oder nach Hole Punching `direct`.
-- **Auf dem Pi:** `swarmainet status` listet die Peers aller Standorte; `hints` sollte leer sein.
-- **Zielaufbau, Abschottung:** die beiden `ping`-Befehle aus Abschnitt 4.3.
+- **Port open from outside?** From a device outside, e.g. the notebook on a mobile hotspot: `nc -vz swarm.example.de 4711` (with IPv6 `nc -6 -vz …`). The connection must be established; without the network key the handshake then aborts, and that is correct.
+- **From home:** `swarmainet ping /dns/swarm.example.de/tcp/4711/p2p/<peer ID of the Pi>` reports "Erreichbar (direkt)" (reachable, direct).
+- **At other sites:** `swarmainet ping <peer ID of the Pi>` reports "Erreichbar (direkt)"; `swarmainet status` shows the Pi under `networks[].relay_reservations` and, for the nodes at home, `via: relay` or, after hole punching, `direct`.
+- **On the Pi:** `swarmainet status` lists the peers of all sites; `hints` should be empty.
+- **Target setup, isolation:** the two `ping` commands from section 4.3.
 
-## 9. Wenn keine öffentliche IPv4 da ist (DS-Lite, CGNAT)
+## 9. If there is no public IPv4 (DS-Lite, CGNAT)
 
-Normale Knoten stört das nicht: Sie verbinden sich ausgehend und werden über Relay oder IPv6 erreicht (siehe [Netzarten](../../docs/netze.md#ipv6-und-ds-lite)). Für den Helfer, der von außen erreichbar sein muss, gibt es diese Wege:
+Normal nodes are not bothered by this: they connect outgoing and are reached via relay or IPv6 (see [network types](../../docs/networks.md#ipv6-and-ds-lite)). For the helper, which must be reachable from outside, there are these options:
 
-- **IPv6-Freigabe**, wenn der Pi direkt an der FritzBox hängt (Test A) oder eine öffentliche IPv6 hat (Test B1).
-- **IPv6 im Zielaufbau:** Damit ein Gerät hinter Router 2 eine öffentliche IPv6 bekommt, muss Router 2 ein Präfix von der FritzBox beziehen (Prefix Delegation, *Heimnetz → Netzwerk → Netzwerkeinstellungen → IPv6-Einstellungen*) und das selbst unterstützen. Dann IPv6-Freigabe für 4711/tcp und AAAA-Eintrag. Das ist deutlich aufwendiger als IPv4.
-- **Brückenknoten** statt Portfreigabe, der beide Standorte ausgehend erreicht ([Netzarten](../../docs/netze.md#mehrere-standorte)).
-- **Helfer auf einem Server** mit öffentlicher Adresse ([deploy/docker](../docker/compose.yaml)).
+- **IPv6 forwarding**, if the Pi is connected directly to the FritzBox (test A) or has a public IPv6 (test B1).
+- **IPv6 in the target setup:** for a device behind router 2 to get a public IPv6, router 2 has to obtain a prefix from the FritzBox (prefix delegation, *Home Network → Network → Network Settings → IPv6 Settings*) and support this itself. Then an IPv6 forwarding for 4711/tcp and an AAAA record. This is considerably more complex than IPv4.
+- **Bridge node** instead of a port forwarding, which reaches both sites outgoing ([network types](../../docs/networks.md#several-sites)).
+- **Helper on a server** with a public address ([deploy/docker](../docker/compose.yaml)).
 
-## 10. Sicherheit
+## 10. Security
 
-- **Was von außen sichtbar ist:** nur 4711/tcp. Ohne Netzschlüssel kommt keine libp2p-Verbindung zustande. Der Pi nimmt keine Aufträge an, und das Gateway (`127.0.0.1:7711`) lauscht nur lokal.
-- **Der Pi kennt den Netzschlüssel.** Wer ihn übernimmt, ist Mitglied des Schwarms. Deshalb SSH nur mit Schlüssel, automatische Updates, und gerät er in falsche Hände: neuer Netzschlüssel für alle (`swarmainet psk`, neue Einladungen).
-- **Abschottung:** Im Zielaufbau hängt sie an der Firewall-Regel von Router 2; nach jeder Änderung dort mit `ping` prüfen. In Test A gibt es keine Abschottung. In Test B ist der Pi vom Heimnetz ohnehin vollständig getrennt.
+- **What is visible from outside:** only 4711/tcp. Without the network key, no libp2p connection is established. The Pi accepts no tasks, and the gateway (`127.0.0.1:7711`) listens locally only.
+- **The Pi knows the network key.** Whoever takes it over is a member of the swarm. Therefore SSH only with a key, automatic updates, and if it falls into the wrong hands: a new network key for everyone (`swarmainet psk`, new invitations).
+- **Isolation:** in the target setup it depends on the firewall rule of router 2; check with `ping` after every change there. In test A there is no isolation. In test B the Pi is completely separated from the home network anyway.
 
-## 11. Kann der Pi später abgeschaltet werden?
+## 11. Can the Pi be switched off later?
 
-Der Helfer ist eine **Rolle**, kein bestimmtes Gerät: ein Mitglied, das von allen Standorten aus erreichbar ist und `relay_service: true` hat.
+The helper is a **role**, not a specific device: a member that is reachable from all sites and has `relay_service: true`.
 
-**Privater Schwarm über mehrere Standorte:** Ist der Pi das einzige erreichbare Mitglied, gilt nach dem Abschalten:
+**Private swarm across several sites:** if the Pi is the only reachable member, the following applies after switching it off:
 
-- Innerhalb eines Standorts läuft alles weiter (LAN, mDNS).
-- Direkte Verbindungen zwischen den Standorten, die per Hole Punching entstanden sind, bleiben bestehen, bis sie abreißen.
-- Verbindungen über den Pi als Relay brechen ab, spätestens nach der Grenze von 10 Minuten.
-- **Neue Verbindungen zwischen den Standorten kommen nicht mehr zustande.** Die Adressen im Peer-Cache zeigen auf Geräte hinter NAT, und auch Hole Punching braucht zum Verabreden ein Relay.
+- Within a site, everything keeps running (LAN, mDNS).
+- Direct connections between the sites that were created by hole punching remain until they break.
+- Connections via the Pi as a relay break off, at the latest after the limit of 10 minutes.
+- **New connections between the sites are no longer established.** The addresses in the peer cache point to devices behind NAT, and hole punching also needs a relay to coordinate.
 
-Der Pi wird überflüssig, sobald ein anderes Mitglied erreichbar ist und `relay_service: true` hat, etwa ein Knoten mit öffentlichem IPv6 und Firewall-Freigabe oder ein Server. Zwei solche Mitglieder an verschiedenen Orten sichern zugleich gegen den Ausfall eines einzelnen ab.
+The Pi becomes superfluous as soon as another member is reachable and has `relay_service: true`, e.g. a node with public IPv6 and a firewall forwarding, or a server. Two such members at different places also protect against the failure of a single one.
 
-**Offenes Netz:** Hier ist der Helfer nur Starthilfe, wie die Bootstrap-Knoten bei BitTorrent. Sobald genug andere Knoten öffentlich erreichbar sind und Relay anbieten, tragen Peer-Cache, Peer-Austausch und DHT das Netz; neue Knoten steigen über eine Einladung eines beliebigen Mitglieds oder einen Tracker ein. Dafür braucht es Freiwillige mit `relay_service`; die Portfreigabe per UPnP (`port_mapping`) erhöht die Zahl erreichbarer Knoten.
+**Open network:** here the helper is only a jump start, like the bootstrap nodes in BitTorrent. As soon as enough other nodes are publicly reachable and offer a relay, peer cache, peer exchange and DHT carry the network; new nodes enter via an invitation from any member or a tracker. This needs volunteers with `relay_service`; port forwarding via UPnP (`port_mapping`) increases the number of reachable nodes.
 
-## 12. Später: offenes Netz und Tracker
+## 12. Later: open network and tracker
 
-- **Offenes Netz zusätzlich:** einen zweiten Port freigeben und weiterleiten (z. B. 4712, TCP und UDP) und in der Pi-Konfiguration ein weiteres Netz eintragen:
+- **Open network in addition:** forward and open a second port (e.g. 4712, TCP and UDP) and enter a further network in the Pi configuration:
   ```yaml
   node:
     networks:
@@ -333,5 +337,5 @@ Der Pi wird überflüssig, sobald ein anderes Mitglied erreichbar ist und `relay
         listen: [/ip4/0.0.0.0/tcp/4712, /ip4/0.0.0.0/udp/4712/quic-v1, /ip6/::/tcp/4712, /ip6/::/udp/4712/quic-v1]
         announce: [/dns/swarm.example.de/tcp/4712, /dns/swarm.example.de/udp/4712/quic-v1]
   ```
-  Das offene Netz bekommt automatisch eine eigene Peer-ID.
-- **Tracker:** `swarmainet tracker` braucht HTTPS, also einen Reverse-Proxy mit Zertifikat (z. B. Caddy) und die Ports 443/tcp und meist 80/tcp. Für einen Schwarm mit einem festen Helfer ist er nicht nötig, weil Einladung und Peer-Austausch genügen.
+  The open network automatically gets a peer ID of its own.
+- **Tracker:** `swarmainet tracker` needs HTTPS, i.e. a reverse proxy with a certificate (e.g. Caddy) and the ports 443/tcp and usually 80/tcp. For a swarm with one fixed helper it is not needed, because invitation and peer exchange are sufficient.

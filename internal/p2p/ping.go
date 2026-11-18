@@ -16,7 +16,7 @@ import (
 	"github.com/libp2p/go-libp2p/p2p/protocol/ping"
 )
 
-// Diagnose eines einzelnen Peers für `swarmainet ping` (spec/p2p-schicht.md § 10).
+// Diagnose eines einzelnen Peers für `swarmainet ping` (spec/p2p-layer.md § 10).
 const (
 	pingDHTTimeout     = 15 * time.Second
 	pingConnectTimeout = 20 * time.Second

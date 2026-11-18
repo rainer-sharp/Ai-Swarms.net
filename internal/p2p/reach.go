@@ -11,7 +11,7 @@ import (
 	ma "github.com/multiformats/go-multiaddr"
 )
 
-// Erreichbarkeit je Adressfamilie (spec/p2p-schicht.md § 3, § 10). AutoNAT
+// Erreichbarkeit je Adressfamilie (spec/p2p-layer.md § 3, § 10). AutoNAT
 // prüft jede Adresse einzeln; hinter DS-Lite ist typischerweise IPv6
 // erreichbar, IPv4 nie.
 

@@ -1,0 +1,89 @@
+# Usage
+
+**English** · [Deutsch](de/usage.md)
+
+Every node provides an OpenAI-compatible API and a status page at `http://127.0.0.1:7711`. The gateway listens on localhost only. Any application that knows an OpenAI endpoint can use the swarm: Open WebUI, an IDE or a coding agent. Enter `http://127.0.0.1:7711/v1` as the endpoint; the gateway does not need an API key.
+
+## Model names: how the swarm works
+
+The model name selects the pattern by which the models work together:
+
+| Model name | Pattern |
+|---|---|
+| `swarmainet` | Default from `tasks.pattern` (draft + verifier + synthesis) |
+| `swarmainet/single` | Best specialist, the next one if it fails |
+| `swarmainet/parallel` | Up to three models of different families independently, synthesis locally |
+| `swarmainet/draft_verify_synthesize` | Draft, review by a different family, synthesis only if flaws are found |
+| `swarmainet/parallel_verify` | Like `parallel`, then the synthesis is reviewed by a different family, revision only if flaws are found |
+
+```sh
+curl -s http://127.0.0.1:7711/v1/chat/completions \
+  -H 'Content-Type: application/json' \
+  -H 'X-SwarmAiNet-Privacy: trusted' \
+  -d '{"model":"swarmainet","messages":[{"role":"user","content":"Write a Python function for prime numbers"}]}'
+```
+
+The response additionally contains the field `swarmainet` with the procedure, the review verdict, the flaws found and limitations. `steps[]` lists agent, peer, duration and tokens for each step.
+
+## Optional headers
+
+| Header | Meaning |
+|---|---|
+| `X-SwarmAiNet-Privacy` | Privacy class `local`, `trusted`, `reduced` or `public`: who may see the request ([privacy classes](../spec/privacy-classes.md)) |
+| `X-SwarmAiNet-Skill` | Skill, e.g. `code.python`; if omitted, the router decides |
+| `X-SwarmAiNet-Agents` | Comma-separated agent IDs to which the selection is restricted (for measurements) |
+| `X-SwarmAiNet-Trace: 1` | Texts of the intermediate steps in `steps[].output` |
+
+Without the header, `tasks.privacy_class` from the configuration applies (default `trusted`): the request only goes to your own or trusted devices. Only what is marked `public` goes to foreign nodes in the open network. If the privacy class excludes all known agents, the gateway responds with 400 and states the reason, e.g. for `trusted` without your own model and without trusted nodes.
+
+## Open WebUI
+
+1. *Settings → Connections → OpenAI API*: URL `http://127.0.0.1:7711/v1`, any key.
+2. The models `swarmainet`, `swarmainet/single` etc. appear in the model selection.
+3. For tools (e.g. Open Terminal): in the model's *Advanced Params*, set **Function Calling to "Native"**.
+
+If Open WebUI runs in Docker, it only reaches the computer's localhost with host networking (`network_mode: host`) or via `host.docker.internal` with a forwarding. The gateway itself stays on localhost.
+
+## Coding agents and tools
+
+Requests with `tools` (e.g. from pi or Open WebUI with function calling "Native") go to exactly one model that has `tools: true` in the configuration; the pattern is always `single`, regardless of the model name. The response contains `tool_calls` and `finish_reason: "tool_calls"`, also when streaming.
+
+The tools are executed by the **application itself**, i.e. Open WebUI or the agent on your computer, not by the model. But every result goes back to the model. That is why `allowed_tools` defines per network which tools its models may see:
+
+| Network | without `allowed_tools` | with a list |
+|---|---|---|
+| own node | all | all |
+| private network (PSK) | all | only the list |
+| membership network | none | only the list |
+| open network, foreign nodes | none | only the list |
+| `trusted_peers` | all | all |
+
+If no agent with the required permission is found, the gateway responds with 400. If a model calls a tool that was not shown to it, the response is discarded. Details: [privacy classes, rule 6](../spec/privacy-classes.md).
+
+Content given as a list of text parts is joined. Images are not supported yet (400).
+
+## Commands
+
+| Command | Purpose |
+|---|---|
+| `init` | Create configuration and key |
+| `run` | Start the node |
+| `status` | Status of the running node (JSON) |
+| `pause`, `resume`, `stop` | Pause, resume foreign tasks, emergency stop |
+| `ping [-net ID] <peer>` | Check the path to a peer |
+| `psk FILE` | Create a key for a private network |
+| `invite [-with-key] [-lan] [-peer ADDR] [-net ID] [-qr]` | Create an invitation link (the node must be running), with `-qr` also as a QR code |
+| `join [-key FILE] <link>` | Join a network from an invitation |
+| `network create` | Create a membership network with a root key |
+| `member invite\|request\|issue\|install\|revoke\|import-crl\|list` | Admit members and manage certificates |
+| `tracker [-listen ADDR] [-tls-cert F -tls-key F] [-trust-proxy]` | Run an address mailbox |
+| `bench run\|report\|hash` | Benchmark, see [`bench/`](../bench/README.md) |
+
+All commands accept `-config PATH` (default `~/.swarmainet/config.yaml`) and `-v` for verbose logs; options come before the other arguments. The program's own messages and help texts are in German.
+
+## Diagnostics
+
+- **`swarmainet status`:** per network (`networks[]`) peer ID, addresses, `reachability` (open network), relay service and reservations, DHT mode and size, published capabilities and `hints` with plain-text advice; per peer network, role and `via: direct|relay`.
+- **`swarmainet ping <peer-id>`** (or `/ip4/…/tcp/4711/p2p/<peer-id>`, `-net` for a specific network): known addresses, DHT lookup, connection setup directly or via relay (with a short wait for hole punching), round-trip time, offered agents; on failure with hints on firewall, network key or missing relay.
+- **Status page** at `http://127.0.0.1:7711`: resources, own agents, connected nodes, own addresses and receipts; a peer can also be dialled manually there.
+- **"kein passender agent verfügbar"** (no suitable agent available): no connected model has the requested skill and privacy class, or all are currently declining (time window, load). `status` shows which agents are known. If the privacy class is the reason, the message says so.

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
 
-// Package invite kodiert Einladungslinks nach spec/p2p-schicht.md § 2.2:
+// Package invite kodiert Einladungslinks nach spec/p2p-layer.md § 2.2:
 //
 //	swarmainet://join?v=1&net=<network_id>&peer=<multiaddr>[&peer=…][&tracker=<url>][&psk=<base64url>]
 //
-// und in ein Mitgliedsnetz nach spec/mitgliedschaft.md § 4:
+// und in ein Mitgliedsnetz nach spec/membership.md § 4:
 //
 //	swarmainet://join?v=2&net=<network_id>&root=<wurzelschlüssel>&issuer=<peer-id>&peer=<multiaddr>[&peer=…]&token=<base64url>
 package invite
@@ -34,7 +34,7 @@ type Invite struct {
 	Peers    []string // Multiadressen mit /p2p/<peer-id>
 	Trackers []string
 	PSK      []byte // 32 Byte; nur bei Einladungen mit Schlüssel
-	// Mitgliedsnetz (spec/mitgliedschaft.md § 4): Wurzelschlüssel und Einmal-Token.
+	// Mitgliedsnetz (spec/membership.md § 4): Wurzelschlüssel und Einmal-Token.
 	Root  string
 	Token string
 	// Issuer ist die Peer-ID des Ausstellers. Nur er bekommt das Token; die

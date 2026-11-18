@@ -32,7 +32,7 @@ type Node struct {
 	REM   *rem.Manager
 	Local *Local
 	// P2P ist das erste Netz, Nets alle Netze (Nets[0] == P2P), je mit
-	// eigenem Host (spec/p2p-schicht.md § 9).
+	// eigenem Host (spec/p2p-layer.md § 9).
 	P2P      *p2p.Node
 	Nets     []*p2p.Node
 	Receipts *receipt.Store
@@ -140,7 +140,7 @@ func (n *Node) Close() error {
 	return errors.Join(errs...)
 }
 
-// relayMode: Helferknoten bieten immer Relay an (spec/p2p-schicht.md § 6.1).
+// relayMode: Helferknoten bieten immer Relay an (spec/p2p-layer.md § 6.1).
 func relayMode(helper bool, mode string) string {
 	if helper {
 		return p2p.RelayOn
@@ -148,7 +148,7 @@ func relayMode(helper bool, mode string) string {
 	return mode
 }
 
-// dhtServer: Helferknoten sind immer DHT-Server (spec/p2p-schicht.md § 6.1).
+// dhtServer: Helferknoten sind immer DHT-Server (spec/p2p-layer.md § 6.1).
 func dhtServer(helper bool, mode string) string {
 	if helper && mode == "auto" {
 		return "true"

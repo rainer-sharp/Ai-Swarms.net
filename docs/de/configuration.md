@@ -1,6 +1,8 @@
 # Konfiguration
 
-Die Konfiguration liegt in `~/.swarmainet/config.yaml` (anlegen mit `swarmainet init`, andere Datei mit `-config PFAD`). Ein vollständiges, kommentiertes Beispiel mit allen Abschnitten ist [`config.example.yaml`](../config.example.yaml):
+[English](../configuration.md) · **Deutsch**
+
+Die Konfiguration liegt in `~/.swarmainet/config.yaml` (anlegen mit `swarmainet init`, andere Datei mit `-config PFAD`). Ein vollständiges, kommentiertes Beispiel mit allen Abschnitten ist [`config.example.yaml`](../../config.example.yaml):
 
 | Abschnitt | Inhalt |
 |---|---|
@@ -36,7 +38,7 @@ Geheimnisse gehören nicht in die Datei: Der Home-Assistant-Token kommt aus eine
 | `announce` | `[]` | zusätzlich bekannt gegebene Adressen ohne `/p2p`, z. B. `/dns4/swarm.example.de/tcp/4711` hinter einer Portfreigabe |
 | `announce_private` | `false` | interne Adressen auch im offenen Netz veröffentlichen (nur Testnetze) |
 | `port_mapping` | `false` | Portfreigabe per UPnP/NAT-PMP beim Router anfordern; Status unter `networks[].port_mapping` |
-| `networks` | – | weitere Netze, je mit eigenem Port und `identity: separate` (Standard) oder `shared`; siehe [Netzarten](netze.md#mehrere-netze-gleichzeitig) |
+| `networks` | – | weitere Netze, je mit eigenem Port und `identity: separate` (Standard) oder `shared`; siehe [Netzarten](networks.md#mehrere-netze-gleichzeitig) |
 
 ## Dateien unter `~/.swarmainet/`
 

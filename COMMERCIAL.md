@@ -37,7 +37,7 @@ Als Dokumentation gelten:
 
 - alles unter `docs/`, einschließlich des Gesamtkonzepts (`docs/gesamtkonzept.pdf`),
 - alles unter `spec/`,
-- die Anleitungen `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `deploy/*/README.md`, `bench/README.md` und `bench/report-r1.md`,
+- die Anleitungen `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `deploy/*/README.md`, `bench/README.md` und `bench/report-r1.md` sowie ihre deutschen Fassungen in den Unterordnern `de/` (z. B. `de/README.md`, `deploy/vps/de/README.md`),
 - die Grafiken `deploy/raspberry-pi/*.svg`,
 - die Testvektoren der Mitgliedschaft unter `internal/membership/testdata/`, damit andere Umsetzungen sie frei verwenden können.
 

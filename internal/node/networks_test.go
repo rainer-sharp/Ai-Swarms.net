@@ -14,7 +14,7 @@ import (
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
 )
 
-// TestTwoNetworks bildet spec/p2p-schicht.md § 9 nach: H ist im privaten
+// TestTwoNetworks bildet spec/p2p-layer.md § 9 nach: H ist im privaten
 // Netz p-home und im offenen Netz, dort mit eigener Peer-ID. P (privat) und
 // O (offen) sehen nur ihren Teil; trusted-Aufträge verlassen das private
 // Netz nicht, public-Aufträge dürfen ins offene.

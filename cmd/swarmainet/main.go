@@ -62,7 +62,7 @@ Befehle:
               -qr        Link zusätzlich als QR-Code im Terminal anzeigen
   join      Netz aus einer Einladung beitreten, auch Mitgliedsnetze: join [-key DATEI] <link>;
             gehört der Knoten schon zu einem Netz, kommt es unter node.networks dazu
-  network   network create: Mitgliedsnetz mit Wurzelschlüssel anlegen (spec/mitgliedschaft.md)
+  network   network create: Mitgliedsnetz mit Wurzelschlüssel anlegen (spec/membership.md)
   member    Zertifikate eines Mitgliedsnetzes verwalten:
               invite -net ID [-role R] [-name N] [-ttl D] [-peer ADR] [-qr]   Einladung, einmalig, höchstens 24h
               request -net ID                Peer-ID dieses Knotens im Netz nennen
@@ -73,7 +73,7 @@ Befehle:
               list -net ID
               -root-key DATEI  Wurzelschlüssel, etwa vom Wechseldatenträger
               -dir VERZ.       statt node.data_dir
-  tracker   Adressbriefkasten für Knoten betreiben (spec/p2p-schicht.md § 2.3)
+  tracker   Adressbriefkasten für Knoten betreiben (spec/p2p-layer.md § 2.3)
               -listen ADR      Standard 127.0.0.1:7720 (hinter einem TLS-Reverse-Proxy)
               -tls-cert DATEI, -tls-key DATEI   selbst per HTTPS lauschen
               -trust-proxy     Absender-IP aus X-Forwarded-For

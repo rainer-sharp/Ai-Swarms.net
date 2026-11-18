@@ -11,7 +11,7 @@ import (
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
 )
 
-// Werkzeugrechte nach spec/freigabeklassen.md. Der eigene Knoten setzt sie durch,
+// Werkzeugrechte nach spec/privacy-classes.md. Der eigene Knoten setzt sie durch,
 // weil nur er gefährdet ist: Die Aufrufe eines Modells führt die Anwendung auf
 // diesem Rechner aus, und jedes Ergebnis geht zurück an das Modell.
 

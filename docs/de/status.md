@@ -1,28 +1,30 @@
 # Stand der Entwicklung
 
+[English](../status.md) · **Deutsch**
+
 SwarmAiNet ist ein **Forschungsprototyp**. Die Netzschicht ist weiter entwickelt als die Zusammenarbeit der Modelle: Die Auswahl folgt bisher festen Regeln, und ein Qualitätsvorteil des Schwarms gegenüber dem besten Einzelmodell ist noch nicht nachgewiesen (siehe [Benchmark](#benchmark)).
 
 ## Phasen
 
 | Phase | Inhalt | Stand |
 |---|---|---|
-| 0 · Spezifikation | Protokoll, Freigabeklassen, Bedrohungsmodell, Messplan | Entwurf v0.1 in [`spec/`](../spec/README.md) |
+| 0 · Spezifikation | Protokoll, Freigabeklassen, Bedrohungsmodell, Messplan | Entwurf v0.1 in [`spec/`](../../spec/de/README.md) |
 | 1 · Lokaler Schwarm | mDNS, statische Peers, OpenAI-Backends, Ressourcenmanager, Muster, Lastverteilung, Modellstärke, Quittungen | **abgeschlossen**, auf echter Hardware getestet: 3 Geräte, 3 Modellfamilien, Ollama, llama.cpp und vLLM |
 | 2 · P2P-Schicht | DHT, Einstiegsquellen, AutoNAT, Hole Punching, Relay; private, Mitglieds- und offene Netze, auch gleichzeitig | **privates Netz, Mitgliedsnetz und offenes Netz auf Hardware über zwei Standorte bestätigt** |
-| 3 · Selbstorganisierte Kooperation | Kompetenzprofil, Bandit, PI-Regler, Task-Graph, Lease-Koordinator | Spezifikation im Entwurf: [`spec/kooperation.md`](../spec/kooperation.md) |
+| 3 · Selbstorganisierte Kooperation | Kompetenzprofil, Bandit, PI-Regler, Task-Graph, Lease-Koordinator | Spezifikation im Entwurf: [`spec/de/cooperation.md`](../../spec/de/cooperation.md) |
 | 4 · Offenes Testnetz | Ein-Klick-Client, Kredit, Sandbox, Benchmark-Pool | offen |
 
 ## Erprobung auf Hardware
 
 - **Lokaler Schwarm:** *„Zwei Modelle je Auftrag, Peer-Ausfall blockiert nicht“* – abgedeckt durch `internal/node/node_test.go` und im Betrieb mit drei Geräten bestätigt, einschließlich Ausweichen bei Absagen und Backend-Fehlern.
-- **Privates Netz über Standorte:** Ein Notebook im Mobilfunknetz (CGNAT) und eine VM hinter einer FritzBox ohne Portfreigabe fanden sich über einen Helfer an einem anderen Anschluss. Ein Auftrag lief über das Relay, und nach einem Ausfall des Helfers verbanden sich alle Knoten von selbst wieder. Einzelheiten: [`spec/p2p-schicht.md`](../spec/p2p-schicht.md) § 14.
-- **Mitgliedsnetz über Standorte:** Aussteller im Heimnetz, Helfer auf einem VPS, neues Mitglied am Mobilfunk-Router. Beitritt per Einladung und Auftrag über das Relay gelangen; ein gesperrtes Mitglied verlor seine Zulassung nach 0,4 s. Einzelheiten: [`spec/mitgliedschaft.md`](../spec/mitgliedschaft.md) § 11.
-- **Offenes Netz über Standorte:** VM hinter einer FritzBox und Notebook im Mobilfunknetz fanden sich allein über den DNS-Seed und einen Startknoten auf einem VPS, ohne Einladung. Ein öffentlicher Auftrag lief, ein vertraulicher blieb auf dem Notebook. Hole Punching über IPv6/QUIC gelang, die Verbindung lief direkt. Fremde Modelle sahen nur die mit `allowed_tools` freigegebenen Werkzeuge. Einzelheiten: [`spec/p2p-schicht.md`](../spec/p2p-schicht.md) § 15.
+- **Privates Netz über Standorte:** Ein Notebook im Mobilfunknetz (CGNAT) und eine VM hinter einer FritzBox ohne Portfreigabe fanden sich über einen Helfer an einem anderen Anschluss. Ein Auftrag lief über das Relay, und nach einem Ausfall des Helfers verbanden sich alle Knoten von selbst wieder. Einzelheiten: [`spec/de/p2p-layer.md`](../../spec/de/p2p-layer.md) § 14.
+- **Mitgliedsnetz über Standorte:** Aussteller im Heimnetz, Helfer auf einem VPS, neues Mitglied am Mobilfunk-Router. Beitritt per Einladung und Auftrag über das Relay gelangen; ein gesperrtes Mitglied verlor seine Zulassung nach 0,4 s. Einzelheiten: [`spec/de/membership.md`](../../spec/de/membership.md) § 11.
+- **Offenes Netz über Standorte:** VM hinter einer FritzBox und Notebook im Mobilfunknetz fanden sich allein über den DNS-Seed und einen Startknoten auf einem VPS, ohne Einladung. Ein öffentlicher Auftrag lief, ein vertraulicher blieb auf dem Notebook. Hole Punching über IPv6/QUIC gelang, die Verbindung lief direkt. Fremde Modelle sahen nur die mit `allowed_tools` freigegebenen Werkzeuge. Einzelheiten: [`spec/de/p2p-layer.md`](../../spec/de/p2p-layer.md) § 15.
 - **Werkzeuge:** Open WebUI mit Open Terminal über den Schwarm, Werkzeug-Aufrufe und Streaming.
 
 ## Benchmark
 
-Runde 1 (80 Aufgaben aus HumanEval und GSM8K, [Bericht](../bench/report-r1.md)): Der Schwarm schadet kaum, kostet aber das 3- bis 8-Fache an Tokens. Die Aufgaben waren für das beste Einzelmodell zu leicht, kein Unterschied ist signifikant. Runde 2 mit schwereren Aufgaben und unterschiedlicheren Modellen steht aus.
+Runde 1 (80 Aufgaben aus HumanEval und GSM8K, [Bericht](../../bench/de/report-r1.md)): Der Schwarm schadet kaum, kostet aber das 3- bis 8-Fache an Tokens. Die Aufgaben waren für das beste Einzelmodell zu leicht, kein Unterschied ist signifikant. Runde 2 mit schwereren Aufgaben und unterschiedlicheren Modellen steht aus.
 
 ## Bekannte Lücken
 

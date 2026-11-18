@@ -10,7 +10,7 @@ import (
 	bhost "github.com/libp2p/go-libp2p/p2p/host/basic"
 )
 
-// Portfreigabe per UPnP oder NAT-PMP (spec/p2p-schicht.md § 3), Opt-in über
+// Portfreigabe per UPnP oder NAT-PMP (spec/p2p-layer.md § 3), Opt-in über
 // port_mapping. libp2p fordert die Freigaben mit kurzer Laufzeit an und
 // erneuert sie laufend; endet der Knoten, laufen sie beim Router aus.
 

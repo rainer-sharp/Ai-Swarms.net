@@ -1,27 +1,29 @@
-# Startknoten und Demo-Netz auf einem VPS
+# Start node and demo network on a VPS
 
-Ein kleiner VPS mit fester IPv4 und IPv6 (z. B. netcup VPS nano: 2 vCPU, 2 GB RAM) trägt mehrere getrennte Helfer, je in einem eigenen Container:
+**English** · [Deutsch](de/README.md)
 
-| Container | Netz | Port | Gateway | Name | Aufgabe |
+A small VPS with a fixed IPv4 and IPv6 (e.g. netcup VPS nano: 2 vCPU, 2 GB RAM) carries several separate helpers, each in its own container:
+
+| Container | Network | Port | Gateway | Name | Task |
 |---|---|---|---|---|---|
-| `seed` | offenes Netz (`swarmainet`, ohne Schlüssel) | 4712/tcp + 4712/udp (QUIC) | 7712 | `seed.ai-swarms.net` | Startknoten: Einstieg über den DNS-Seed, DHT-Server, Relay. Er wird mit dem Wachstum des Netzes entbehrlich ([spec/p2p-schicht.md](../../spec/p2p-schicht.md) § 6.1). |
-| `private` | der eigene private Schwarm (Kennung und Schlüssel per Einladung) | 4711/tcp | 7711 | `helper.ai-swarms.net` | Helfer, über den sich die Standorte des eigenen Schwarms verbinden |
-| `demo` (optional) | Gruppennetz (Mitgliedsnetz `m-…`, kein Netzschlüssel) | 4713/tcp + 4713/udp (QUIC) | 7713 | `demo.ai-swarms.net` | Helfer einer Gruppe: trägt das Netz, sieht keine Aufträge |
+| `seed` | open network (`swarmainet`, without a key) | 4712/tcp + 4712/udp (QUIC) | 7712 | `seed.ai-swarms.net` | Start node: entry via the DNS seed, DHT server, relay. It becomes dispensable as the network grows ([spec/p2p-layer.md](../../spec/p2p-layer.md) § 6.1). |
+| `private` | your own private swarm (ID and key via invitation) | 4711/tcp | 7711 | `helper.ai-swarms.net` | Helper through which the sites of your own swarm connect |
+| `demo` (optional) | group network (membership network `m-…`, no network key) | 4713/tcp + 4713/udp (QUIC) | 7713 | `demo.ai-swarms.net` | Helper of a group: carries the network, sees no tasks |
 
-Getrennte Container statt eines Knotens mit mehreren Netzen, damit jeder Helfer unabhängig eingerichtet, neu aufgesetzt oder entfernt werden kann und jeder Netzschlüssel nur in seinem eigenen Datenverzeichnis liegt. Alle nutzen das Host-Netz und brauchen deshalb verschiedene Ports und Gateway-Ports.
+Separate containers instead of one node with several networks, so that each helper can be set up, rebuilt or removed independently and each network key is only stored in its own data directory. All of them use the host network and therefore need different ports and gateway ports.
 
-> Der VPS kennt den Schlüssel des eigenen privaten Schwarms und ist dort vertrautes Mitglied. Für den eigenen Schwarm auf dem eigenen Server ist das vertretbar, solange er gut abgesichert ist. In einem **Gruppennetz** hält er dagegen nur ein Zertifikat mit Rolle `helper`: Er bekommt keine Aufträge und sieht nur, wer online ist und wie viel übertragen wird ([Mitgliedsnetze](../../spec/mitgliedschaft.md)).
+> The VPS knows the key of your own private swarm and is a trusted member there. For your own swarm on your own server that is acceptable as long as it is well secured. In a **group network**, by contrast, it only holds a certificate with role `helper`: it gets no tasks and only sees who is online and how much is transferred ([membership networks](../../spec/membership.md)).
 
-## 1. VPS bestellen und einrichten
+## 1. Ordering and setting up the VPS
 
-1. Beim Bestellen als Betriebssystem **Debian 13** wählen und einen SSH-Schlüssel hinterlegen.
-2. Anmelden und aktualisieren:
+1. When ordering, choose **Debian 13** as the operating system and add an SSH key.
+2. Log in and update:
    ```sh
-   ssh root@<IPv4 des VPS>
+   ssh root@<IPv4 of the VPS>
    apt update && apt full-upgrade -y
    apt install -y unattended-upgrades git ufw
    ```
-3. Einen eigenen Benutzer anlegen, SSH nur mit Schlüssel und ohne root:
+3. Create a user of your own, SSH only with a key and without root:
    ```sh
    adduser admin && usermod -aG sudo admin
    mkdir -p /home/admin/.ssh && cp ~/.ssh/authorized_keys /home/admin/.ssh/
@@ -29,25 +31,25 @@ Getrennte Container statt eines Knotens mit mehreren Netzen, damit jeder Helfer 
    printf 'PasswordAuthentication no\nPermitRootLogin no\n' > /etc/ssh/sshd_config.d/10-haerten.conf
    systemctl reload ssh
    ```
-   Vor dem Abmelden in einem zweiten Terminal prüfen, dass `ssh admin@<IPv4>` funktioniert.
-4. **Firewall:** nur SSH und die beiden Netzports öffnen.
+   Before logging out, check in a second terminal that `ssh admin@<IPv4>` works.
+4. **Firewall:** only open SSH and the network ports.
    ```sh
    ufw allow 22/tcp
    ufw allow 4711/tcp      # private
    ufw allow 4712/tcp      # seed
    ufw allow 4712/udp
-   ufw allow 4713/tcp      # demo, nur wenn genutzt
+   ufw allow 4713/tcp      # demo, only if used
    ufw allow 4713/udp
    ufw enable
    ```
-   Bietet der Anbieter zusätzlich eine eigene Firewall an (bei netcup im Server Control Panel), dort dieselben Ports freigeben oder sie ausgeschaltet lassen.
+   If the provider additionally offers a firewall of its own (at netcup in the Server Control Panel), open the same ports there or leave it switched off.
 5. **Docker:**
    ```sh
    sudo apt install -y docker.io docker-compose docker-buildx
-   sudo usermod -aG docker admin          # danach neu anmelden
+   sudo usermod -aG docker admin          # then log in again
    ```
 
-## 2. Vorlage holen
+## 2. Getting the template
 
 ```sh
 git clone https://github.com/rainer-sharp/Ai-Swarms.net.git
@@ -58,19 +60,19 @@ cp private.yaml data-private/config.yaml
 cp demo.yaml data-demo/config.yaml
 ```
 
-Die Container laufen als Benutzer `nonroot` (UID 65532); er muss in die Datenverzeichnisse schreiben dürfen:
+The containers run as user `nonroot` (UID 65532); it must be allowed to write to the data directories:
 
 ```sh
 sudo chown -R 65532:65532 data-open data-private data-demo
 ```
 
-Statt `git clone` geht auch: Image auf einem anderen Rechner bauen und übertragen (`docker save swarmainet:latest | gzip | ssh vps 'gunzip | docker load'`), dann nur die Dateien aus `deploy/vps/` kopieren und `docker compose up -d --no-build …` verwenden. Der VPS braucht so keinen Zugriff auf das Repository.
+Instead of `git clone`, this also works: build the image on another computer and transfer it (`docker save swarmainet:latest | gzip | ssh vps 'gunzip | docker load'`), then only copy the files from `deploy/vps/` and use `docker compose up -d --no-build …`. This way the VPS needs no access to the repository.
 
-## 3. Namen eintragen
+## 3. Entering names
 
-In den Konfigurationen stehen die Namen `seed.ai-swarms.net`, `helper.ai-swarms.net` und `demo.ai-swarms.net` unter `announce`. Wer andere Namen nimmt, ändert sie dort (`sudoedit data-open/config.yaml`).
+The configurations list the names `seed.ai-swarms.net`, `helper.ai-swarms.net` and `demo.ai-swarms.net` under `announce`. If you use other names, change them there (`sudoedit data-open/config.yaml`).
 
-## 4. Startknoten starten
+## 4. Starting the start node
 
 ```sh
 docker compose build seed
@@ -78,9 +80,9 @@ docker compose up -d seed
 docker compose exec seed swarmainet status -config /data/config.yaml | grep -m1 peer_id
 ```
 
-## 5. Helfer des eigenen privaten Schwarms
+## 5. Helper of your own private swarm
 
-Auf einem Knoten des Schwarms eine Einladung erzeugen (`swarmainet invite -with-key`) und auf dem VPS damit beitreten. Der Link enthält den Netzschlüssel: nicht in Dateien liegen lassen, die gesichert oder geteilt werden.
+Create an invitation on a node of the swarm (`swarmainet invite -with-key`) and join with it on the VPS. The link contains the network key: do not leave it in files that are backed up or shared.
 
 ```sh
 docker compose run --rm --no-deps private join -config /data/config.yaml '<link>'
@@ -88,83 +90,83 @@ docker compose up -d private
 docker compose exec private swarmainet status -config /data/config.yaml | grep -m1 peer_id
 ```
 
-Danach auf allen Knoten des Schwarms den Helfer eintragen:
+Then enter the helper on all nodes of the swarm:
 
 ```yaml
 node:
   static_peers:
-    - /dns/helper.ai-swarms.net/tcp/4711/p2p/<Peer-ID von private>
+    - /dns/helper.ai-swarms.net/tcp/4711/p2p/<peer ID of private>
 ```
 
-## 5a. Helfer eines Gruppennetzes (optional)
+## 5a. Helper of a group network (optional)
 
-Das Netz entsteht auf einem Rechner der Gruppe, nicht auf dem VPS. Der Wurzelschlüssel gehört nie hierher.
+The network is created on a computer of the group, not on the VPS. The root key never belongs here.
 
 ```sh
-# Rechner der Gruppe
-swarmainet network create                # nennt Kennung m-… und Wurzelschlüssel
+# computer of the group
+swarmainet network create                # names the ID m-… and the root key
 
-# VPS: Kennung und Wurzelschlüssel in data-demo/config.yaml eintragen, dann
+# VPS: enter ID and root key in data-demo/config.yaml, then
 docker compose --profile demo run --rm --no-deps demo member request -dir /data -net m-…
 
-# Rechner der Gruppe: auf die genannte Peer-ID ausstellen, Datei auf den VPS kopieren
-swarmainet member issue -net m-… -role helper -name vps-helfer -out helper.cert <peer-id>
+# computer of the group: issue for the peer ID shown, copy the file to the VPS
+swarmainet member issue -net m-… -role helper -name vps-helper -out helper.cert <peer-id>
 
-# VPS: Datei für den Container bereitstellen, übernehmen, starten
+# VPS: provide the file for the container, install it, start
 sudo install -o 65532 -g 65532 -m 600 helper.cert data-demo/helper.cert
-docker compose --profile demo run --rm --no-deps demo member install -dir /data -root <wurzelschlüssel> /data/helper.cert
+docker compose --profile demo run --rm --no-deps demo member install -dir /data -root <root key> /data/helper.cert
 docker compose --profile demo up -d --no-build --no-deps demo
 ```
 
-Danach auf dem Aussteller `node.static_peers` auf den Helfer setzen. Die Einladung für alle weiteren Knoten nennt ihn dann von selbst: `swarmainet member invite -net m-…`.
+Then set `node.static_peers` on the issuer to the helper. The invitation for all further nodes then names it on its own: `swarmainet member invite -net m-…`.
 
-## 6. DNS-Einträge
+## 6. DNS records
 
-Beim Domain-Anbieter, mit der festen IPv4 und IPv6 des VPS:
+At the domain provider, with the fixed IPv4 and IPv6 of the VPS:
 
 ```
-seed.ai-swarms.net.            300  IN  A     <IPv4 des VPS>
-seed.ai-swarms.net.            300  IN  AAAA  <IPv6 des VPS>
-helper.ai-swarms.net.          300  IN  A     <IPv4 des VPS>
-helper.ai-swarms.net.          300  IN  AAAA  <IPv6 des VPS>
-demo.ai-swarms.net.            300  IN  A     <IPv4 des VPS>   (nur mit Demo)
-demo.ai-swarms.net.            300  IN  AAAA  <IPv6 des VPS>   (nur mit Demo)
-_dnsaddr.seed.ai-swarms.net.   300  IN  TXT   "dnsaddr=/dns/seed.ai-swarms.net/tcp/4712/p2p/<Peer-ID von seed>"
-_dnsaddr.seed.ai-swarms.net.   300  IN  TXT   "dnsaddr=/dns/seed.ai-swarms.net/udp/4712/quic-v1/p2p/<Peer-ID von seed>"
+seed.ai-swarms.net.            300  IN  A     <IPv4 of the VPS>
+seed.ai-swarms.net.            300  IN  AAAA  <IPv6 of the VPS>
+helper.ai-swarms.net.          300  IN  A     <IPv4 of the VPS>
+helper.ai-swarms.net.          300  IN  AAAA  <IPv6 of the VPS>
+demo.ai-swarms.net.            300  IN  A     <IPv4 of the VPS>   (only with demo)
+demo.ai-swarms.net.            300  IN  AAAA  <IPv6 of the VPS>   (only with demo)
+_dnsaddr.seed.ai-swarms.net.   300  IN  TXT   "dnsaddr=/dns/seed.ai-swarms.net/tcp/4712/p2p/<peer ID of seed>"
+_dnsaddr.seed.ai-swarms.net.   300  IN  TXT   "dnsaddr=/dns/seed.ai-swarms.net/udp/4712/quic-v1/p2p/<peer ID of seed>"
 ```
 
-Die beiden TXT-Einträge sind der **DNS-Seed**: Jeder neue Knoten im offenen Netz fragt `_dnsaddr.seed.ai-swarms.net` und findet so den Startknoten. Kommen später weitere öffentliche Helfer hinzu, bekommen sie hier eigene TXT-Einträge; fällt der VPS weg, werden seine entfernt. Die Software muss dafür nicht neu ausgeliefert werden.
+The two TXT records are the **DNS seed**: every new node in the open network asks `_dnsaddr.seed.ai-swarms.net` and thus finds the start node. If further public helpers are added later, they get TXT records of their own here; if the VPS goes away, its records are removed. The software does not have to be shipped again for this.
 
-> **Global Village (domreg):** Der Quick-Modus legt die **ganze Zone neu** an. Bestehende Einträge, etwa `helper` (CNAME auf MyFRITZ!) und die Hauptdomain, müssen dort mit angegeben werden, sonst sind sie weg. Besser im Expert-Modus nur die Zeilen oben hinzufügen. Ziele von CNAMEs brauchen den Punkt am Ende.
+> **Global Village (domreg):** the quick mode creates the **whole zone anew**. Existing records, e.g. `helper` (CNAME to MyFRITZ!) and the main domain, must be specified there as well, otherwise they are gone. Better add only the lines above in expert mode. CNAME targets need the trailing dot.
 
-Prüfen:
+Checking:
 
 ```sh
 dig +short A seed.ai-swarms.net
 dig +short TXT _dnsaddr.seed.ai-swarms.net
 ```
 
-## 7. Prüfen
+## 7. Checking
 
-- **Ports von außen** (von einem anderen Rechner): `nc -vz seed.ai-swarms.net 4712`, `nc -vz helper.ai-swarms.net 4711` und gegebenenfalls `nc -vz demo.ai-swarms.net 4713`.
-- **Startknoten:** Ein Knoten im offenen Netz mit Standardkonfiguration (ohne `dns_seeds`) findet ihn von selbst. Direkt: `swarmainet ping /dns/seed.ai-swarms.net/tcp/4712/p2p/<Peer-ID von seed>`.
-- **Status auf dem VPS:** `docker compose exec seed swarmainet status -config /data/config.yaml`, dort `relay_service: true`, `dht.mode: server`, nach einiger Zeit `reachability: public`.
+- **Ports from outside** (from another computer): `nc -vz seed.ai-swarms.net 4712`, `nc -vz helper.ai-swarms.net 4711` and, if applicable, `nc -vz demo.ai-swarms.net 4713`.
+- **Start node:** a node in the open network with the default configuration (without `dns_seeds`) finds it on its own. Directly: `swarmainet ping /dns/seed.ai-swarms.net/tcp/4712/p2p/<peer ID of seed>`.
+- **Status on the VPS:** `docker compose exec seed swarmainet status -config /data/config.yaml`, there `relay_service: true`, `dht.mode: server`, after some time `reachability: public`.
 
-## 8. Mitglieder aufnehmen und entfernen
+## 8. Admitting and removing members
 
-Das geschieht auf dem Aussteller der Gruppe, nicht auf dem VPS: `swarmainet member invite` und `swarmainet member revoke` ([Netzarten](../../docs/netze.md#mitgliedsnetz-gruppen-und-firmen)). Der Helfer bekommt die Sperrliste von selbst und trennt Gesperrte.
+This happens on the group's issuer, not on the VPS: `swarmainet member invite` and `swarmainet member revoke` ([network types](../../docs/networks.md#membership-network-groups-and-companies)). The helper gets the revocation list on its own and disconnects revoked nodes.
 
-## 9. Betrieb
+## 9. Operation
 
-- **Protokolle:** `docker compose logs -f seed` bzw. `demo`
-- **Aktualisieren:** `git pull && docker compose up -d --build`
-- **Neustart nach Änderung einer Konfiguration:** `docker compose restart seed` bzw. `private` oder `demo`
-- **Gruppennetz-Helfer beenden:** `docker compose rm -sf demo`, `sudo rm -rf data-demo`, DNS-Eintrag `demo` entfernen, auf dem Aussteller `member revoke`. Der Startknoten läuft unberührt weiter.
-- **Sicherung:** Die Peer-IDs hängen an `data-open/identity.key`, `data-private/identity.key` und `data-demo/identity.key`. Mit ihnen kann ein neuer VPS dieselben Peer-IDs übernehmen, sodass der DNS-Seed gültig bleibt.
+- **Logs:** `docker compose logs -f seed` or `demo`
+- **Updating:** `git pull && docker compose up -d --build`
+- **Restart after changing a configuration:** `docker compose restart seed` or `private` or `demo`
+- **Ending the group network helper:** `docker compose rm -sf demo`, `sudo rm -rf data-demo`, remove the DNS record `demo`, `member revoke` on the issuer. The start node keeps running unaffected.
+- **Backup:** the peer IDs depend on `data-open/identity.key`, `data-private/identity.key` and `data-demo/identity.key`. With them, a new VPS can take over the same peer IDs, so that the DNS seed stays valid.
 
-## 10. Sicherheit
+## 10. Security
 
-- Von außen erreichbar sind nur SSH (mit Schlüssel) und die Netzports. Die Gateways lauschen nur auf `127.0.0.1`.
-- Beide Helfer rechnen nicht und nehmen keine Aufträge an.
-- Im offenen Netz sieht der Startknoten als Relay, wer mit wem wie viel austauscht, aber keine Inhalte (Ende-zu-Ende verschlüsselt).
-- Der VPS kennt den Schlüssel des eigenen Schwarms und ist dort vertrautes Mitglied. Wird er übernommen, ist dieses Netz kompromittiert: Schlüssel neu erzeugen und neue Einladungen verteilen. Im Gruppennetz genügt es dagegen, seinen Helfer zu widerrufen.
+- Only SSH (with a key) and the network ports are reachable from outside. The gateways listen on `127.0.0.1` only.
+- Both helpers do not compute and accept no tasks.
+- In the open network, the start node as a relay sees who exchanges how much with whom, but no content (end-to-end encrypted).
+- The VPS knows the key of your own swarm and is a trusted member there. If it is compromised, that network is compromised: generate a new key and distribute new invitations. In the group network, by contrast, it is sufficient to revoke its helper.

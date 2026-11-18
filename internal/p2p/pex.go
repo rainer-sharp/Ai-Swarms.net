@@ -20,7 +20,7 @@ import (
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
 )
 
-// Peer-Austausch nach spec/p2p-schicht.md § 2.4.
+// Peer-Austausch nach spec/p2p-layer.md § 2.4.
 const (
 	pexMaxPeers   = 32
 	pexMaxDials   = 8

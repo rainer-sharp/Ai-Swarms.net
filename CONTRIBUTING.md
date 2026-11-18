@@ -1,14 +1,16 @@
-# Mitwirken
+# Contributing
 
-Danke für Ihr Interesse. SwarmAiNet ist ein Forschungsprototyp; besonders hilfreich sind:
+**English** · [Deutsch](de/CONTRIBUTING.md)
 
-- **Fehlerberichte** mit Ausgabe von `swarmainet status`, dem Protokoll (`-v`) und einer Beschreibung des Netzes (Netzart, NAT, IPv6). Peer-IDs, Adressen und Einladungslinks vorher unkenntlich machen.
-- **Erfahrungen aus anderen Netzen:** andere Router, Mobilfunk, DS-Lite, Firmennetze, Windows und macOS.
-- **Messungen** mit anderen Modellen nach [`spec/messplan.md`](spec/messplan.md) und [`bench/`](bench/README.md).
+Thank you for your interest. SwarmAiNet is a research prototype; the following are especially helpful:
 
-Für größere Änderungen bitte zuerst ein Issue eröffnen, damit wir den Weg abstimmen können.
+- **Bug reports** with the output of `swarmainet status`, the log (`-v`) and a description of the network (network type, NAT, IPv6). Please redact peer IDs, addresses and invitation links first.
+- **Experience from other networks:** other routers, mobile networks, DS-Lite, corporate networks, Windows and macOS.
+- **Measurements** with other models following [`spec/measurement-plan.md`](spec/measurement-plan.md) and [`bench/`](bench/README.md).
 
-## Bauen und testen
+For larger changes, please open an issue first so we can agree on the approach.
+
+## Build and test
 
 ```sh
 go build -o swarmainet ./cmd/swarmainet
@@ -16,27 +18,27 @@ go vet ./...
 go test -race ./...
 ```
 
-Die Tests starten mehrere Knoten im selben Prozess und brauchen weder Netz noch Modelle. `internal/node` läuft etwa eine Minute.
+The tests start several nodes in the same process and need neither a network nor models. `internal/node` takes about a minute.
 
-## Konventionen
+## Conventions
 
-- **Sprache:** Bezeichner im Code, Konfigurationsschlüssel und -werte, Protokoll- und API-Namen auf Englisch (z. B. `node.trusted_peers`, `tasks.pattern: draft_verify_synthesize`). Protokollmeldungen, Texte für Nutzer und Dokumentation auf Deutsch.
-- **Protokoll:** Änderungen an `internal/protocol` und an den libp2p-Protokollen gegen [`spec/`](spec/README.md) abgleichen und die Spezifikation im selben Pull Request anpassen.
-- **Sicherheit:** Das Gateway lauscht nur auf localhost; das bleibt so. Jede neue Prüfung (Zulassung, Rechte, Signaturen) bekommt einen Test, der fehlschlägt, wenn man die Prüfung entfernt.
-- **Abhängigkeiten:** sparsam; neue Abhängigkeiten im Pull Request begründen, Lizenz siehe unten.
-- **Formatierung:** `gofmt`.
+- **Language:** identifiers in code, configuration keys and values, protocol and API names in English (e.g. `node.trusted_peers`, `tasks.pattern: draft_verify_synthesize`). Log messages, user-facing texts and code comments in German. The documentation exists in English and German: the English version sits at the main path, the German one under the same file name in the `de/` subfolder next to it (e.g. `docs/networks.md` and `docs/de/networks.md`). Please change both versions, or mention in the pull request that the other one still needs updating.
+- **Protocol:** check changes to `internal/protocol` and to the libp2p protocols against [`spec/`](spec/README.md) and update the specification in the same pull request.
+- **Security:** the gateway listens on localhost only; that stays so. Every new check (admission, rights, signatures) gets a test that fails when the check is removed.
+- **Dependencies:** sparingly; justify new dependencies in the pull request, see below for licensing.
+- **Formatting:** `gofmt`.
 
-## Lizenz und Beitragsvereinbarung
+## License and contributor agreement
 
-SwarmAiNet steht unter der [GNU AGPL-3.0](LICENSE) und zusätzlich unter einer [kommerziellen Lizenz](COMMERCIAL.md). Damit beide möglich bleiben, nehmen wir Beiträge nur mit der [Beitragsvereinbarung](CLA.md) auf: Sie behalten Ihre Rechte, räumen dem Projekt aber ein Nutzungsrecht ein, das auch die kommerzielle Lizenz abdeckt. Zustimmung per Kommentar im ersten Pull Request.
+SwarmAiNet is licensed under the [GNU AGPL-3.0](LICENSE) and additionally under a [commercial license](COMMERCIAL.md) (in German). To keep both possible, we only accept contributions under the [contributor agreement](CLA.md) (in German): you keep your rights but grant the project a right of use that also covers the commercial license. Agree by commenting in your first pull request.
 
-Beiträge zur Dokumentation (`docs/`, `spec/`, Anleitungen) stehen unter [CC BY 4.0](LICENSE-DOCS); auch für sie gilt die Beitragsvereinbarung.
+Contributions to the documentation (`docs/`, `spec/`, guides) are licensed under [CC BY 4.0](LICENSE-DOCS); the contributor agreement applies to them as well.
 
-Neue Quelldateien beginnen mit:
+New source files start with:
 
 ```go
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
 ```
 
-Neue Abhängigkeiten müssen mit der AGPL-3.0 und mit der kommerziellen Lizenz verträglich sein, also etwa MIT, BSD, ISC, Apache-2.0 oder MPL-2.0; GPL- und AGPL-Bibliotheken anderer gehen nicht.
+New dependencies must be compatible with the AGPL-3.0 and with the commercial license, e.g. MIT, BSD, ISC, Apache-2.0 or MPL-2.0; third-party GPL and AGPL libraries are not possible.

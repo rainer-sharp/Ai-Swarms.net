@@ -30,7 +30,7 @@ import (
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
 )
 
-// Zulassung in Mitgliedsnetzen (spec/mitgliedschaft.md § 5). Fremde können eine
+// Zulassung in Mitgliedsnetzen (spec/membership.md § 5). Fremde können eine
 // Verbindung aufbauen, weil kein PSK davor liegt; die Trennung liegt hier.
 const (
 	admitTimeout    = 10 * time.Second // so lange darf ein Peer ohne Zulassung verbunden bleiben

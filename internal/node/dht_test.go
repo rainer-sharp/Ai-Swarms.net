@@ -15,7 +15,7 @@ import (
 
 // TestDHTDiscovery: Im offenen Netz kennt A nur den DHT-Server B. Den
 // Anbieter C findet A über dessen Fähigkeitsverweis in der DHT
-// (spec/p2p-schicht.md § 5); Peer-Austausch ist abgeschaltet.
+// (spec/p2p-layer.md § 5); Peer-Austausch ist abgeschaltet.
 func TestDHTDiscovery(t *testing.T) { overLoopback(t, testDHTDiscovery) }
 
 func testDHTDiscovery(t *testing.T, listen string) {

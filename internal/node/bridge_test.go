@@ -34,7 +34,7 @@ func writePSK(t *testing.T) string {
 	return path
 }
 
-// TestBridgeNodeConnectsSites bildet spec/p2p-schicht.md § 6.1 nach: A und C
+// TestBridgeNodeConnectsSites bildet spec/p2p-layer.md § 6.1 nach: A und C
 // lauschen nicht (hinter NAT), erreichen nur den Brückenknoten B und finden
 // sich über Peer-Austausch; der Auftrag läuft über B als Relay. C kommt erst
 // hinzu, als A schon verbunden ist, und holt sich A beim Peer-Austausch.

@@ -1,31 +1,33 @@
-# Dokumentation
+# Documentation
 
-**Für Nutzer**
+**English** · [Deutsch](de/README.md)
 
-| Seite | Inhalt |
+**For users**
+
+| Page | Contents |
 |---|---|
-| [Installation](installation.md) | Bauen, erster Knoten, wichtigste Einstellungen, Dauerbetrieb |
-| [Nutzung](nutzung.md) | API, Modellnamen und Muster, Open WebUI, Coding-Agenten und Werkzeuge, Befehle, Diagnose |
-| [Netzarten](netze.md) | Privates Netz, Mitgliedsnetz, offenes Netz; mehrere Standorte, Einladungen, Helfer |
-| [Konfiguration](konfiguration.md) | Schlüssel der Konfiguration und Dateien des Knotens |
-| [Stand](stand.md) | Was erprobt ist, was fehlt, Benchmark |
+| [Installation](installation.md) | Building, first node, most important settings, continuous operation |
+| [Usage](usage.md) | API, model names and patterns, Open WebUI, coding agents and tools, commands, diagnostics |
+| [Network types](networks.md) | Private network, membership network, open network; multiple sites, invitations, helpers |
+| [Configuration](configuration.md) | Configuration keys and the node's files |
+| [Status](status.md) | What has been tested, what is missing, benchmark |
 
-**Betrieb**
+**Operation**
 
-| Anleitung | Inhalt |
+| Guide | Contents |
 |---|---|
-| [`deploy/linux/`](../deploy/linux/README.md) | systemd-Benutzerdienst; Skript für den Beitritt zu einem Gruppennetz |
-| [`deploy/docker/`](../deploy/docker/compose.yaml) | Image und Compose-Vorlage für Helferknoten und Tracker |
-| [`deploy/vps/`](../deploy/vps/README.md) | Startknoten des offenen Netzes und Helfer auf einem VPS |
-| [`deploy/raspberry-pi/`](../deploy/raspberry-pi/README.md) | Helfer hinter einer Portfreigabe, abgeschottet vom Heimnetz |
+| [`deploy/linux/`](../deploy/linux/README.md) | systemd user service; script for joining a group network |
+| [`deploy/docker/`](../deploy/docker/compose.yaml) | Image and Compose template for helper nodes and trackers |
+| [`deploy/vps/`](../deploy/vps/README.md) | Start node of the open network and helpers on a VPS |
+| [`deploy/raspberry-pi/`](../deploy/raspberry-pi/README.md) | Helper behind a port forwarding, isolated from the home network |
 
-**Für Entwickler**
+**For developers**
 
-| Seite | Inhalt |
+| Page | Contents |
 |---|---|
-| [Aufbau](architektur.md) | Module und Pakete |
-| [Spezifikation](../spec/README.md) | Protokoll, P2P-Schicht, Mitgliedschaft, Freigabeklassen, Bedrohungsmodell, Kooperation, Messplan |
-| [Benchmark](../bench/README.md) | Aufgaben, Ablauf, Ergebnisse |
-| [Gesamtkonzept](gesamtkonzept.pdf) | Ursprüngliches Konzept (PDF) |
-| [Mitwirken](../CONTRIBUTING.md) | Bauen, Testen, Konventionen, Beitragsvereinbarung |
-| [Lizenzen](../COMMERCIAL.md) | Code: AGPL-3.0 und kommerzielle Lizenz; Dokumentation: CC BY 4.0 |
+| [Architecture](architecture.md) | Modules and packages |
+| [Specification](../spec/README.md) | Protocol, P2P layer, membership, privacy classes, threat model, cooperation, measurement plan |
+| [Benchmark](../bench/README.md) | Tasks, procedure, results |
+| [Overall concept](gesamtkonzept.pdf) | Original concept (PDF, in German) |
+| [Contributing](../CONTRIBUTING.md) | Building, testing, conventions, contributor agreement |
+| [Licenses](../COMMERCIAL.md) | Code: AGPL-3.0 and commercial license; documentation: CC BY 4.0 (in German) |

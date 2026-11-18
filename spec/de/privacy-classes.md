@@ -1,5 +1,7 @@
 # Freigabeklassen
 
+[English](../privacy-classes.md) · **Deutsch**
+
 Transportverschlüsselung schützt den Weg, nicht den Inhalt vor dem ausführenden Peer. Wer einen Prompt verarbeitet, kann ihn lesen. Die Freigabeklasse legt deshalb fest, wer einen Auftrag überhaupt sehen darf.
 
 | Klasse | Wert | Verarbeitung | Umsetzung Phase 1 |

@@ -1,20 +1,24 @@
-# Spezifikation (Phase 0)
+# Specification (phase 0)
 
-Versionierte, sprachunabhängige Spezifikation von SwarmAiNet. Grundlage ist das [Gesamtkonzept](../docs/gesamtkonzept.pdf).
+**English** · [Deutsch](de/README.md)
 
-| Dokument | Inhalt |
+Versioned, language-independent specification of SwarmAiNet. It is based on the [overall concept](../docs/gesamtkonzept.pdf) (in German).
+
+| Document | Contents |
 |---|---|
-| [protokoll-v0.1.md](protokoll-v0.1.md) | Identität, Transport, Envelope, Nachrichten, Ablauf, Zustände |
-| [p2p-schicht.md](p2p-schicht.md) | Phase 2: private und offene Netze, Netzeintritt, Erreichbarkeit, DHT, Relay, Ergebnis auf Hardware |
-| [mitgliedschaft.md](mitgliedschaft.md) | Entwurf: Mitgliedsnetze für Gruppen und Firmen, Zertifikate statt Netzschlüssel, Rollen, Widerruf |
-| [kooperation.md](kooperation.md) | Phase 3 (Entwurf): Kompetenzprofil, Bandit über Rezepte, PI-Regler, Kaskade, Task-Graph, Lease-Koordinator |
-| [freigabeklassen.md](freigabeklassen.md) | Wer darf welche Daten sehen |
-| [bedrohungsmodell.md](bedrohungsmodell.md) | Angreifer, Angriffe, Gegenmaßnahmen, Umsetzungsstand |
-| [messplan.md](messplan.md) | Einzelmodell gegen Schwarm bei gleichem Budget |
-| [benchmark.md](benchmark.md) | Erste Benchmark-Runde: Aufbau, Aufgaben, Ablauf, Ergebnis, offene Fragen |
+| [protocol-v0.1.md](protocol-v0.1.md) | Identity, transport, envelope, messages, flow, states |
+| [p2p-layer.md](p2p-layer.md) | Phase 2: private and open networks, network entry, reachability, DHT, relay, results on hardware |
+| [membership.md](membership.md) | Draft: membership networks for groups and companies, certificates instead of a network key, roles, revocation |
+| [cooperation.md](cooperation.md) | Phase 3 (draft): competence profile, bandit over recipes, PI controller, cascade, task graph, lease coordinator |
+| [privacy-classes.md](privacy-classes.md) | Who may see which data |
+| [threat-model.md](threat-model.md) | Attackers, attacks, countermeasures, implementation status |
+| [measurement-plan.md](measurement-plan.md) | Single model versus swarm at equal budget |
+| [benchmark.md](benchmark.md) | First benchmark round: setup, tasks, procedure, result, open questions |
 
-**Versionierung:** `MAJOR.MINOR`. Inkompatible Änderungen erhöhen die Protokoll-ID (`/swarmainet/<version>`). Neue optionale Payload-Felder sind kompatibel. Eine zweite, unabhängige Implementierung (z. B. Rust) prüft die Spezifikation auf Interoperabilität.
+The specification exists in English and German ([`de/`](de/README.md)); both versions have the same section numbers. The normative keywords are MUST, SHOULD and MAY (German: MUSS, SOLL, KANN).
 
-**Lizenz:** Die Spezifikation steht unter [CC BY 4.0](../LICENSE-DOCS). Eigene Umsetzungen des Protokolls sind ausdrücklich erwünscht.
+**Versioning:** `MAJOR.MINOR`. Incompatible changes increase the protocol ID (`/swarmainet/<version>`). New optional payload fields are compatible. A second, independent implementation (e.g. in Rust) is to check the specification for interoperability.
 
-**Gate Phase 0:** Spezifikation versioniert, Testfälle und Bedrohungsmodell vorhanden. Die Testfälle liegen als Go-Tests neben dem Code (`go test ./...`).
+**License:** the specification is licensed under [CC BY 4.0](../LICENSE-DOCS). Independent implementations of the protocol are expressly welcome.
+
+**Gate phase 0:** specification versioned, test cases and threat model available. The test cases are Go tests next to the code (`go test ./...`).

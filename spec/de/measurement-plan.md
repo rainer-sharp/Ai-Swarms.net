@@ -1,5 +1,7 @@
 # Messplan: Einzelmodell gegen Schwarm
 
+[English](../measurement-plan.md) · **Deutsch**
+
 Kernhypothese: Der Schwarm liefert **bei gleichem Budget** eine höhere geprüfte Qualität als der beste Einzelknoten und als ein fester Multi-Modell-Ablauf – oder erkennt zuverlässig, dass ein Einzelmodell genügt. Das ist das Gate von Phase 3; wird es verfehlt, wird das Konzept vor Phase 4 überarbeitet.
 
 ## Aufgabensätze

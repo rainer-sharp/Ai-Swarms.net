@@ -209,7 +209,7 @@ func (e privacyError) Is(target error) bool { return target == ErrNoAgent || tar
 
 // ErrToolsNotAllowed: Die Werkzeug-Aufrufe eines Modells führt die Anwendung auf
 // dem eigenen Rechner aus. Ohne Agent, dem die Werkzeuge freigegeben sind, läuft
-// ein solcher Auftrag nicht (spec/freigabeklassen.md).
+// ein solcher Auftrag nicht (spec/privacy-classes.md).
 var ErrToolsNotAllowed = errors.New("kein agent mit freigabe für diese werkzeuge")
 
 // hasTools: Bringt die Anfrage Werkzeuge mit?

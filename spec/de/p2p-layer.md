@@ -1,8 +1,10 @@
 # P2P-Schicht (Phase 2)
 
-Status: umgesetzt, Gate für den privaten Schwarm am 29.10.2026 auf echter Hardware erfüllt (§ 14); das offene Netz am 18.11.2026 über zwei Standorte (§ 15). Umgesetzt: Peer-Cache (§ 2.1), Peer-Austausch (§ 2.4), Erreichbarkeit (§ 3, Portfreigabe per UPnP/NAT-PMP ohne PCP), DHT (§ 4), Fähigkeitsverweise (§ 5), Relay (§ 6), Helfer- und Brückenknoten (§ 6.1), Missbrauchsschutz (§ 8), Diagnose (§ 10), Einladung (§ 2.2), Tracker (§ 2.3), mehrere Netze gleichzeitig (§ 9). Ergänzt [Protokoll v0.1](protokoll-v0.1.md) um Netzeintritt, Erreichbarkeit und Auffinden von Peers über das LAN hinaus. Die Nachrichten, der Envelope und der Ablauf eines Teilauftrags bleiben unverändert. Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
+[English](../p2p-layer.md) · **Deutsch**
 
-Grundsatz aus dem Gesamtkonzept: DHT und Relay liefern nur Kontakte, Adressen und Verweise, **keine Steuerung und kein Vertrauen**. Ob ein Peer vertraut ist und was er sehen darf, entscheiden weiterhin PSK, `trusted_peers` und die [Freigabeklassen](freigabeklassen.md).
+Status: umgesetzt, Gate für den privaten Schwarm am 29.10.2026 auf echter Hardware erfüllt (§ 14); das offene Netz am 18.11.2026 über zwei Standorte (§ 15). Umgesetzt: Peer-Cache (§ 2.1), Peer-Austausch (§ 2.4), Erreichbarkeit (§ 3, Portfreigabe per UPnP/NAT-PMP ohne PCP), DHT (§ 4), Fähigkeitsverweise (§ 5), Relay (§ 6), Helfer- und Brückenknoten (§ 6.1), Missbrauchsschutz (§ 8), Diagnose (§ 10), Einladung (§ 2.2), Tracker (§ 2.3), mehrere Netze gleichzeitig (§ 9). Ergänzt [Protokoll v0.1](protocol-v0.1.md) um Netzeintritt, Erreichbarkeit und Auffinden von Peers über das LAN hinaus. Die Nachrichten, der Envelope und der Ablauf eines Teilauftrags bleiben unverändert. Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
+
+Grundsatz aus dem Gesamtkonzept: DHT und Relay liefern nur Kontakte, Adressen und Verweise, **keine Steuerung und kein Vertrauen**. Ob ein Peer vertraut ist und was er sehen darf, entscheiden weiterhin PSK, `trusted_peers` und die [Freigabeklassen](privacy-classes.md).
 
 **Leitbild für das offene Netz: selbstverwaltend wie BitTorrent.** Kein Knoten und kein Betreiber ist unverzichtbar. Nach dem ersten Kontakt trägt sich das Netz selbst:
 - Jeder öffentlich erreichbare Knoten wird automatisch DHT-Server.
@@ -260,7 +262,7 @@ Ein Helferknoten ist ein Knoten ohne Backends, der nur das Netz trägt: Einstieg
 
 ## 8. Missbrauchsschutz
 
-Ergänzt das [Bedrohungsmodell](bedrohungsmodell.md):
+Ergänzt das [Bedrohungsmodell](threat-model.md):
 
 - **libp2p-Ressourcenmanager** mit festen Grenzen für Verbindungen, Streams und Speicher, pro Peer und gesamt. Zusätzlich gelten weiterhin höchstens 4 Auftrags-Streams pro Peer und 4 MiB pro Nachricht.
 - **Ratenlimit für fremde Aufträge** (nur offenes Netz, nicht vertraute Peers): 10 `TASK_PROPOSE` pro Minute und Peer, 60 pro Minute gesamt. Danach folgt `TASK_REJECT` mit `reason: "busy"`, ohne Prüfung durch den Ressourcenmanager (REM).
@@ -327,7 +329,7 @@ node:
 
 ## 12. Offene Fragen
 
-1. **Mitgliedschaft ohne gemeinsamen Schlüssel:** Ein PSK lässt sich nicht einzeln widerrufen und erzwingt TCP. Entwurf einer dritten Netzart mit Zertifikaten je Knoten: [Mitgliedsnetze](mitgliedschaft.md).
+1. **Mitgliedschaft ohne gemeinsamen Schlüssel:** Ein PSK lässt sich nicht einzeln widerrufen und erzwingt TCP. Entwurf einer dritten Netzart mit Zertifikaten je Knoten: [Mitgliedsnetze](membership.md).
 2. **Mitgelieferte Starthilfen** für das offene Netz: Am Anfang gibt es nur eigene Helfer und Tracker. Nach welchen Regeln werden Helfer anderer Betreiber in die mitgelieferte Liste aufgenommen (Laufzeit, Erreichbarkeit, Unabhängigkeit)? Das Netz selbst braucht die Liste nach dem ersten Kontakt nicht (Leitbild).
 3. **Shard-Zahl `S`:** 4 ist geschätzt. Überprüfen, sobald es Messwerte zur Verteilung gibt.
 4. **WebTransport/WebSocket über 443** für Firmennetze: in Phase 2 nur vorgesehen, Umsetzung bei Bedarf.
@@ -409,4 +411,4 @@ Nicht gemessen wurde die Zeit bis zur ersten Verbindung beim Start. **Noch offen
 | zweite Runde mit Ergebnis von `get_current_timestamp` | Antwort mit der Uhrzeit |
 | Verlauf mit Aufruf und Ergebnis von `run_command` | abgelehnt, der Verlauf geht nicht an den Fremden |
 
-Beobachtungen: Globale IPv6-Adressen werden veröffentlicht, bevor AutoNAT sie bestätigt; für das Hole Punching ist das nötig. `trusted`-Anfragen ohne vertraute Peers sollten eine verständlichere Meldung bekommen. **Noch offen:** mehrere unabhängige Startknoten, Dauerbetrieb. Das Verwerfen von Aufrufen nicht gezeigter Werkzeuge war auf Hardware nicht zu provozieren, das Modell hielt sich an die gezeigte Liste; geprüft ist es im Prozess.
+Beobachtungen: Globale IPv6-Adressen werden veröffentlicht, bevor AutoNAT sie bestätigt; für das Hole Punching ist das nötig. `trusted`-Anfragen ohne vertraute Peers bekommen inzwischen eine Meldung mit Grund und HTTP 400 (nach dem Test umgesetzt). **Noch offen:** mehrere unabhängige Startknoten, Dauerbetrieb. Das Verwerfen von Aufrufen nicht gezeigter Werkzeuge war auf Hardware nicht zu provozieren, das Modell hielt sich an die gezeigte Liste; geprüft ist es im Prozess.

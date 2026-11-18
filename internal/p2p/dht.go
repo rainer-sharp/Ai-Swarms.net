@@ -21,7 +21,7 @@ import (
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
 )
 
-// DHT nach spec/p2p-schicht.md § 4 und § 5.
+// DHT nach spec/p2p-layer.md § 4 und § 5.
 const (
 	skillShards     = 4
 	anyTag          = "*" // Sammelschlüssel „bietet überhaupt etwas an“

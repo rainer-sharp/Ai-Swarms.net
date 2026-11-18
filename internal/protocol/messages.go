@@ -7,7 +7,7 @@ import "encoding/json"
 
 import "time"
 
-// Freigabeklassen (spec/freigabeklassen.md). Die Reihenfolge ist relevant:
+// Freigabeklassen (spec/privacy-classes.md). Die Reihenfolge ist relevant:
 // eine Delegation darf nur gleich streng oder strenger sein.
 type PrivacyClass string
 

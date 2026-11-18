@@ -34,7 +34,7 @@ services:
       - ./data-demo:/data
     profiles: ["demo"]
 
-  # Optional: Adressbriefkasten (spec/p2p-schicht.md § 2.3), nur auf
+  # Optional: Adressbriefkasten (spec/p2p-layer.md § 2.3), nur auf
   # 127.0.0.1:7720 hinter einem TLS-Reverse-Proxy.
   tracker:
     image: swarmainet:latest

@@ -14,7 +14,7 @@ import (
 	madns "github.com/multiformats/go-multiaddr-dns"
 )
 
-// DNS-Seeds (spec/p2p-schicht.md § 2): Unter _dnsaddr.<domain> stehen
+// DNS-Seeds (spec/p2p-layer.md § 2): Unter _dnsaddr.<domain> stehen
 // TXT-Einträge der Form "dnsaddr=/ip4/…/tcp/4711/p2p/<peer-id>". Sie sind nur
 // ein Hinweis; die Peer-ID prüft der Verbindungsaufbau.
 const seedMaxDials = 8

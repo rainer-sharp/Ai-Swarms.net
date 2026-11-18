@@ -19,7 +19,7 @@ node:
   trackers: []                      # HTTPS-Adressbriefkästen (swarmainet tracker), z. B. https://example.org/swarmainet
   trusted_peers: []                 # Peer-IDs, denen Aufträge der Klasse "trusted" zugehen dürfen
   provide: false                    # eigene Modelle im Schwarm anbieten (Opt-in)
-  # Phase 2 (spec/p2p-schicht.md):
+  # Phase 2 (spec/p2p-layer.md):
   relay_service: auto               # auto: im offenen Netz bei öffentlicher Erreichbarkeit; true: immer
                                     # (Helfer, Brückenknoten ohne Portfreigabe); false: nie
   # relay_limits: {reservations: 32, circuits_per_peer: 2, data_mib: 8, duration_s: 600}
@@ -32,7 +32,7 @@ node:
   port_mapping: false               # Portfreigabe per UPnP/NAT-PMP anfordern (Opt-in, ändert Router-Einstellungen)
   announce: []                      # zusätzliche Adressen ohne /p2p, z. B. /dns4/swarm.example.de/tcp/4711 hinter einer Portfreigabe
   announce_private: false           # interne Adressen auch im offenen Netz veröffentlichen (nur Testnetze im LAN)
-  # Weitere Netze, je mit eigenem Port und standardmäßig eigener Peer-ID (spec/p2p-schicht.md § 9).
+  # Weitere Netze, je mit eigenem Port und standardmäßig eigener Peer-ID (spec/p2p-layer.md § 9).
   # Felder ohne Angabe übernehmen die Werte von oben; swarmainet join trägt sie automatisch ein.
   # networks:
   #   - network_id: swarmainet        # offenes Netz zusätzlich zum privaten oben

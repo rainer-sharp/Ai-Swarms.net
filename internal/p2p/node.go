@@ -71,7 +71,7 @@ type Options struct {
 	MDNS          bool
 	StaticPeers   []string
 	Bootstrap     []string // Einstieg, solange needEntry gilt (ohne Peers, DHT oder Relay-Platz)
-	Trackers      []string // HTTPS-Adressbriefkästen (spec/p2p-schicht.md § 2.3)
+	Trackers      []string // HTTPS-Adressbriefkästen (spec/p2p-layer.md § 2.3)
 	TrustedPeers  []string
 	Provide       bool // Fähigkeitsanzeige und Auftragsannahme aktivieren
 	AcceptsPublic bool
@@ -84,7 +84,7 @@ type Options struct {
 	PeerCache string // Datei des Peer-Caches; leer = keiner
 	DHTServer string // auto | true | false
 	// AnnouncePrivate: private Adressen auch im offenen Netz veröffentlichen
-	// (nur für Testnetze im LAN; spec/p2p-schicht.md § 3).
+	// (nur für Testnetze im LAN; spec/p2p-layer.md § 3).
 	AnnouncePrivate bool
 	// Announce: zusätzlich bekannt gegebene Adressen (ohne /p2p), etwa der
 	// DNS-Name einer Portfreigabe.
@@ -93,10 +93,10 @@ type Options struct {
 	PortMapping bool
 	Provider    Provider
 	Receipts    *receipt.Store
-	// Membership macht das Netz zu einem Mitgliedsnetz (spec/mitgliedschaft.md).
+	// Membership macht das Netz zu einem Mitgliedsnetz (spec/membership.md).
 	Membership *Membership
 	// AllowedTools: Werkzeuge, die Modelle dieses Netzes sehen dürfen
-	// (spec/freigabeklassen.md). Im PSK-Netz heißt nil: alle.
+	// (spec/privacy-classes.md). Im PSK-Netz heißt nil: alle.
 	AllowedTools []string
 }
 
@@ -503,7 +503,7 @@ func (n *Node) connectStatic(ctx context.Context) {
 
 // needEntry: Einstiegsknoten werden gebraucht, solange kein Peer verbunden
 // ist, die DHT-Routing-Tabelle leer ist oder ein Knoten ohne öffentliche
-// Erreichbarkeit keinen Relay-Platz hat (spec/p2p-schicht.md § 2). Sonst
+// Erreichbarkeit keinen Relay-Platz hat (spec/p2p-layer.md § 2). Sonst
 // bleiben zwei Knoten hinter NAT, die nach dem Ausfall des Startknotens nur
 // noch einander kennen, eine Insel, auch wenn er zurückkommt.
 func (n *Node) needEntry() bool {

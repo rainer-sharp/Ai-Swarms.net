@@ -1,6 +1,8 @@
 # Mitgliedsnetze (Zertifikate statt Netzschlüssel)
 
-Status: In Umsetzung (§ 11). Zertifikate, Befehle, Zulassung, Rollen, Einladungen, Sperrlisten und Verlängerung laufen. Im Prozess getestet, auf echter Hardware über zwei Standorte und einen Helfer im Internet bestanden (§ 11), Dauerbetrieb steht aus. Beantwortet die offene Frage 1 aus der [P2P-Schicht](p2p-schicht.md) § 12.
+[English](../membership.md) · **Deutsch**
+
+Status: In Umsetzung (§ 11). Zertifikate, Befehle, Zulassung, Rollen, Einladungen, Sperrlisten und Verlängerung laufen. Im Prozess getestet, auf echter Hardware über zwei Standorte und einen Helfer im Internet bestanden (§ 11), Dauerbetrieb steht aus. Beantwortet die offene Frage 1 aus der [P2P-Schicht](p2p-layer.md) § 12.
 
 Ein privates Netz mit PSK passt für die eigenen Geräte, aber nicht für Gruppen und Firmen: Wer den Schlüssel hat, ist Mitglied. Einzelne lassen sich nicht entfernen, und ein gemeinsamer Helfer kennt den Schlüssel und wäre vollwertiges Mitglied. Ein **Mitgliedsnetz** ersetzt den gemeinsamen Schlüssel durch ein Zertifikat je Knoten.
 
@@ -11,7 +13,7 @@ Ein privates Netz mit PSK passt für die eigenen Geräte, aber nicht für Gruppe
 3. Kein Dienst außerhalb der Gruppe wird gebraucht: keine Zertifizierungsstelle und kein zentraler Server.
 4. QUIC und damit besseres Hole Punching wie im offenen Netz.
 
-**Keine Ziele:** Ein Mitglied, das einen Auftrag verarbeitet, kann dessen Inhalt lesen und weitergeben; das verhindert auch ein Zertifikat nicht ([Freigabeklassen](freigabeklassen.md)). Die Teilnahme an sich bleibt für Fremde nicht vollständig unsichtbar (§ 8).
+**Keine Ziele:** Ein Mitglied, das einen Auftrag verarbeitet, kann dessen Inhalt lesen und weitergeben; das verhindert auch ein Zertifikat nicht ([Freigabeklassen](privacy-classes.md)). Die Teilnahme an sich bleibt für Fremde nicht vollständig unsichtbar (§ 8).
 
 PSK-Netze bleiben bestehen. Dies ist eine dritte Netzart, keine Änderung an `pnet`.
 
@@ -77,10 +79,10 @@ Signiert wird `"swarmainet/member-cert/v1\n" + JSON(Zertifikat ohne sig)`. Die K
 - `issuer` DARF nur von der Wurzel ausgestellt werden. Ein Zertifikat DARF nicht länger gelten als das seines Ausstellers. Aussteller-Zertifikate verlängert die Wurzel von Hand, weil sie offline liegt.
 - `subject` MUSS der Peer-ID der Gegenstelle entsprechen. libp2p weist den Besitz des Schlüssels beim Verbindungsaufbau nach, ein zusätzlicher Nachweis entfällt.
 - Der private Schlüssel eines Knotens verlässt das Gerät nie. Ausgestellt wird nur auf seine Peer-ID.
-- Jedes Netz hat wie in [§ 9 der P2P-Schicht](p2p-schicht.md) eine eigene Identität. `identity: shared` ist hier nicht erlaubt, sonst wäre die Mitgliedschaft mit anderen Netzen verknüpfbar.
+- Jedes Netz hat wie in [§ 9 der P2P-Schicht](p2p-layer.md) eine eigene Identität. `identity: shared` ist hier nicht erlaubt, sonst wäre die Mitgliedschaft mit anderen Netzen verknüpfbar.
 - Uhrzeiten werden mit 5 Minuten Toleranz geprüft. Knoten ohne verlässliche Uhr (etwa ein Raspberry Pi ohne RTC kurz nach dem Start) MÜSSEN mit der Prüfung warten, bis die Zeit synchronisiert ist, und das in `swarmainet status` anzeigen.
 
-**Verlängerung:** Ab der Hälfte der Laufzeit bittet ein Knoten erreichbare Aussteller über `/swarmainet/member-renew/0.1` um ein neues Zertifikat, nur Peers mit Rolle `issuer`. Der Aussteller stellt es aus, wenn das bisherige gültig und nicht widerrufen ist; Rolle und Name stammen aus dem geprüften Zertifikat, nicht aus einer Anfrage. Der Knoten prüft das Ergebnis gegen die Wurzel und übernimmt es nur mit gleicher Rolle und späterem Ablauf, danach nennt er es allen Zugelassenen. Zertifikate gelten höchstens 365 Tage. Aussteller-Zertifikate verlängert die Wurzel von Hand. Die kurze Laufzeit begrenzt den Schaden, falls eine Sperrliste einen Knoten nicht erreicht. Der Preis ist, dass mindestens ein Aussteller innerhalb von 15 Tagen online sein muss.
+**Verlängerung:** Ab der Hälfte der Laufzeit bittet ein Knoten erreichbare Aussteller über `/swarmainet/member-renew/0.1` um ein neues Zertifikat, nur Peers mit Rolle `issuer`. Der Aussteller stellt es aus, wenn das bisherige gültig und nicht widerrufen ist; Rolle und Name stammen aus dem geprüften Zertifikat, nicht aus einer Anfrage. Der Knoten prüft das Ergebnis gegen die Wurzel und übernimmt es nur mit gleicher Rolle und späterem Ablauf, danach nennt er es allen Zugelassenen. Zertifikate gelten höchstens 365 Tage. Aussteller-Zertifikate verlängert die Wurzel von Hand. Die kurze Laufzeit begrenzt den Schaden, falls eine Sperrliste einen Knoten nicht erreicht. Der Preis ist, dass mindestens ein Aussteller innerhalb von 15 Tagen online sein muss, und zwar gleichzeitig mit dem Knoten.
 
 ## 4. Aufnahme in das Netz
 
@@ -125,7 +127,7 @@ Jeder Handler dieser Protokolle MUSS die Zulassung selbst prüfen, bevor er lies
 
 Beide Seiten prüfen. Ein Koordinator gibt Aufträge nur an zugelassene `member` und `issuer`, ein Anbieter nimmt sie nur von diesen an. Die Freigabeklassen gelten unverändert: `trusted` und `reduced` nur an diese Rollen, `public` wird in Mitgliedsnetzen wie im PSK-Netz behandelt, und `local` verlässt den Knoten nie.
 
-**Werkzeuge:** Im Mitgliedsnetz sehen Modelle nur die Werkzeuge aus `allowed_tools`, ohne Liste keine ([Freigabeklassen](freigabeklassen.md), Regel 6). Mitglieder können andere Personen sein, und die Modellantwort löst beim Auftraggeber Befehle aus.
+**Werkzeuge:** Im Mitgliedsnetz sehen Modelle nur die Werkzeuge aus `allowed_tools`, ohne Liste keine ([Freigabeklassen](privacy-classes.md), Regel 6). Mitglieder können andere Personen sein, und die Modellantwort löst beim Auftraggeber Befehle aus.
 
 **Reihenfolge:** Die annehmende Seite vermerkt die Zulassung, bevor sie antwortet, weil der Peer gleich danach beim Relay reserviert. Eigene Folgeanfragen sendet sie erst, wenn der Peer den Stream geschlossen hat und damit seinerseits fertig ist.
 
@@ -208,7 +210,7 @@ node:
 
 ## 11. Umsetzung und Gate
 
-1. ✅ `internal/membership`: Zertifikate, Ketten, Sperrlisten, sprachunabhängige [Testvektoren](../internal/membership/testdata/README.md) (CC BY 4.0).
+1. ✅ `internal/membership`: Zertifikate, Ketten, Sperrlisten, sprachunabhängige [Testvektoren](../../internal/membership/testdata/de/README.md) (CC BY 4.0).
 2. ✅ Befehle: `network create`, `member invite|issue|install|request|revoke|list`.
 3. ✅ Knoten: Zulassung an einer Stelle (§ 5), Rollen statt `n.private`, Einladung, Werkzeuglisten. Tests im Prozess, einschließlich gezielt abgeschalteter Prüfungen.
 4. ✅ Sperrlisten verteilen und speichern, Verlängerung. Tests im Prozess, auch mit böswilligem Aussteller und Gesperrtem.

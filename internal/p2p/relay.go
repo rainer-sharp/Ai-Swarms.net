@@ -40,7 +40,7 @@ type RelayLimits struct {
 	DurationS       int
 }
 
-// relayResources sind die Grenzen aus spec/p2p-schicht.md § 6. Die
+// relayResources sind die Grenzen aus spec/p2p-layer.md § 6. Die
 // libp2p-Vorgabe von 128 KiB je Verbindung reicht für Aufträge nicht. Im
 // privaten Schwarm (Vollvermaschung über einen Brückenknoten) erreicht jedes
 // Mitglied der einen Seite jedes der anderen, daher mehr Verbindungen je Peer
@@ -206,7 +206,7 @@ func (n *Node) Reachability() string {
 // Private: Teilnahme an einem privaten Schwarm (PSK)?
 func (n *Node) Private() bool { return n.private }
 
-// Hints sind Diagnosehinweise für `swarmainet status` (spec/p2p-schicht.md § 10).
+// Hints sind Diagnosehinweise für `swarmainet status` (spec/p2p-layer.md § 10).
 func (n *Node) Hints() []string {
 	peers := n.host.Network().Peers()
 	var out []string

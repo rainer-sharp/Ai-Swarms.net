@@ -16,7 +16,7 @@ import (
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/tracker"
 )
 
-// Tracker nach spec/p2p-schicht.md § 2.3: eigene Adressen hinterlegen und
+// Tracker nach spec/p2p-layer.md § 2.3: eigene Adressen hinterlegen und
 // Adressen anderer abholen. Im privaten Netz verschlüsselt, sodass der
 // Tracker weder Netz noch Mitglieder erfährt.
 

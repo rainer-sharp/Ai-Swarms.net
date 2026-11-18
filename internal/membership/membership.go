@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
 
 // Package membership prüft Zertifikate und Sperrlisten der Mitgliedsnetze
-// (spec/mitgliedschaft.md). Es kennt keine Verbindungen und keine Dateien;
+// (spec/membership.md). Es kennt keine Verbindungen und keine Dateien;
 // Zulassung und Verteilung liegen in der P2P-Schicht.
 package membership
 

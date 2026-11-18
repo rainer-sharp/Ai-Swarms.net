@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
 
 // Package protocol definiert die Nachrichten des SwarmAiNet-Protokolls v0.1
-// (siehe spec/protokoll-v0.1.md).
+// (siehe spec/protocol-v0.1.md).
 package protocol
 
 import (

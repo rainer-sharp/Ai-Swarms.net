@@ -10,7 +10,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 )
 
-// Ratenlimits für nicht vertraute Peers im offenen Netz (spec/p2p-schicht.md § 8).
+// Ratenlimits für nicht vertraute Peers im offenen Netz (spec/p2p-layer.md § 8).
 const (
 	limitWindow    = time.Minute
 	taskLimitPeer  = 10

@@ -1,99 +1,101 @@
-# Benchmark: erste Runde
+# Benchmark: first round
 
-Konkretisiert die Versuchsstufen 1 und 2 aus dem [Messplan](messplan.md) für den Testaufbau aus Phase 1. Status: **durchgeführt** am 17.10.2026 (`swarmainet bench`, Aufgaben, Plan und Ergebnis in [`bench/`](../bench/README.md)); Frage 1 am Ende ist offen.
+**English** · [Deutsch](de/benchmark.md)
 
-## Ausgangslage
+Makes stages 1 and 2 of the [measurement plan](measurement-plan.md) concrete for the test setup from phase 1. Status: **carried out** on 17 Oct 2026 (`swarmainet bench`, tasks, plan and result in [`bench/`](../bench/README.md)); question 1 at the end is open.
 
-Drei Knoten (VM, Host, Notebook), aber nur zwei Rechenserver:
+## Starting point
 
-| Server | Backend | Modelle | Familie |
+Three nodes (VM, host, notebook), but only two compute servers:
+
+| Server | Backend | Models | Family |
 |---|---|---|---|
-| `192.168.101.94` | vLLM | qwen3.8-flash-next (dauerhaft geladen) | qwen |
-| `192.168.101.95` | llama.cpp (Router, lädt bei Bedarf) | Qwen3.8-27B Q4 | qwen |
-| `192.168.101.95` | Ollama, **ein Modell zur Zeit** | gpt-oss:20b, llama3.1:8b, qwen2.5-coder:7b, qwen3-vl:8b | gpt-oss, llama, qwen |
+| `192.168.101.94` | vLLM | qwen3.8-flash-next (permanently loaded) | qwen |
+| `192.168.101.95` | llama.cpp (router, loads on demand) | Qwen3.8-27B Q4 | qwen |
+| `192.168.101.95` | Ollama, **one model at a time** | gpt-oss:20b, llama3.1:8b, qwen2.5-coder:7b, qwen3-vl:8b | gpt-oss, llama, qwen |
 
-Folgen für die Messung:
+Consequences for the measurement:
 
-1. **Gleichzeitig heißt auf `.95` nicht parallel.** Treffen zwei Ollama-Modelle im selben Auftrag aufeinander, wartet eines, und Ollama lädt bei jedem Wechsel neu. Die Laufzeit misst dann vor allem das Laden.
-2. **Die Knoten verteilen nur, gerechnet wird auf zwei GPUs.** Für den Benchmark genügt ein Koordinator (die VM).
-3. **GPU-Sekunden sind nicht sauber messbar** (Ladezeiten, geteilte GPU auf `.95`). Primäres Budget sind daher **Tokens** (Prompt + Completion über alle Schritte). Die Laufzeit wird zusätzlich erfasst, getrennt nach „mit Modellwechsel“ und „warm“.
+1. **On `.95`, simultaneous does not mean parallel.** If two Ollama models meet in the same task, one waits, and Ollama reloads at every switch. The runtime then mainly measures loading.
+2. **The nodes only distribute; computation happens on two GPUs.** One coordinator (the VM) is sufficient for the benchmark.
+3. **GPU seconds cannot be measured cleanly** (loading times, shared GPU on `.95`). The primary budget is therefore **tokens** (prompt + completion across all steps). Runtime is recorded in addition, separated into "with model switch" and "warm".
 
-## Modellauswahl
+## Model selection
 
-Pro Auftrag höchstens **ein** Ollama-Modell:
+At most **one** Ollama model per task:
 
-| Rolle | Modell | Server |
+| Role | Model | Server |
 |---|---|---|
 | qwen | qwen3.8-flash-next | `.94` vLLM |
-| qwen (stark) | Qwen3.8-27B Q4 | `.95` llama.cpp |
-| zweite Familie | gpt-oss:20b | `.95` Ollama |
-| dritte Familie | llama3.1:8b | eigener Versuchsblock, siehe offene Frage 1 |
+| qwen (strong) | Qwen3.8-27B Q4 | `.95` llama.cpp |
+| second family | gpt-oss:20b | `.95` Ollama |
+| third family | llama3.1:8b | separate experiment block, see open question 1 |
 
-Ohne llama3.1 stehen zwei Familien ohne Ollama-Wechsel zur Verfügung. Das genügt für `draft_verify_synthesize`, ist für `parallel` und `parallel_verify` aber knapp.
+Without llama3.1, two families are available without an Ollama switch. That is sufficient for `draft_verify_synthesize`, but tight for `parallel` and `parallel_verify`.
 
-## Aufgaben
+## Tasks
 
-Erste Runde nur mit automatisch prüfbaren Aufgaben:
+First round only with automatically checkable tasks:
 
-| Kategorie | Anzahl | Bewertung |
+| Category | Number | Assessment |
 |---|---|---|
-| Code (Python) | 40 | Unit-Tests mit Zeitlimit, ohne Netz, in einem Wegwerf-Verzeichnis |
-| Mathematik | 40 | exakte Zahl, aus der Antwort extrahiert |
+| Code (Python) | 40 | unit tests with a time limit, without network, in a throwaway directory |
+| Mathematics | 40 | exact number, extracted from the answer |
 
-Vorgeschlagene Quellen: Teilmengen aus HumanEval (Code) und GSM8K (Textaufgaben), beide frei verwendbar, englisch. Faktenprüfung, multimodale Analyse und offene Planung folgen später, da sie blinde oder menschliche Bewertung brauchen.
+Proposed sources: subsets of HumanEval (code) and GSM8K (word problems), both freely usable, in English. Fact checking, multimodal analysis and open planning follow later, as they need blind or human assessment.
 
-Der Aufgabensatz liegt als JSONL unter `bench/` und wird vor dem Lauf per SHA-256 festgeschrieben (Commit-Reveal, siehe Messplan).
+The task set is stored as JSONL under `bench/` and fixed by SHA-256 before the run (commit-reveal, see measurement plan).
 
-## Ablauf
+## Procedure
 
-**Stufe 1 – Einzelmodelle.** Jedes Modell löst alle Aufgaben direkt am Backend, ohne Schwarm. Läufe sind nach Modell gruppiert (erst alle Aufgaben mit gpt-oss, dann mit llama3.1 …), damit Ollama nur einmal wechselt. Vor jedem Block ein Aufwärm-Aufruf.
+**Stage 1 – single models.** Each model solves all tasks directly at the backend, without the swarm. Runs are grouped by model (first all tasks with gpt-oss, then with llama3.1 …) so that Ollama switches only once. A warm-up call precedes each block.
 
-**Stufe 2 – Schwarm.** Über das Gateway der VM mit den Mustern `single`, `draft_verify_synthesize`, `parallel` und `parallel_verify`. Aufträge strikt nacheinander. Pro Aufgabe erfasst: gelöst ja/nein, Tokens und Dauer je Schritt, beteiligte Modelle, Modellwechsel.
+**Stage 2 – swarm.** Via the VM's gateway with the patterns `single`, `draft_verify_synthesize`, `parallel` and `parallel_verify`. Tasks strictly one after another. Recorded per task: solved yes/no, tokens and duration per step, participating models, model switches.
 
-**Budget-Gleichheit.** Das beste Einzelmodell erhält dasselbe Token-Budget für Self-Consistency:
+**Equal budget.** The best single model gets the same token budget for self-consistency:
 
-- Mathematik: mehrfach lösen, Mehrheitsentscheid.
-- Code: mehrere Versuche; gewertet wird der erste, der die *sichtbaren* Beispieltests besteht (die verdeckten Tests entscheiden über „gelöst“).
+- Mathematics: solve several times, majority vote.
+- Code: several attempts; the first one that passes the *visible* example tests counts (the hidden tests decide on "solved").
 
-**Auswertung** wie im Messplan:
+**Evaluation** as in the measurement plan:
 
-- Erfolgsquote je Muster, gepaarter McNemar-Test gegen das beste Einzelmodell
-- Tokens pro gelöster Aufgabe, Bootstrap-Konfidenzintervall
-- Latenz (warm und mit Modellwechsel getrennt)
-- Fehlerkorrelation: machen unabhängige Modelle dieselben Fehler?
+- Success rate per pattern, paired McNemar test against the best single model
+- Tokens per solved task, bootstrap confidence interval
+- Latency (warm and with model switch separately)
+- Error correlation: do independent models make the same errors?
 
-Geschätzte Dauer: Stufe 1 etwa 2 h, Stufe 2 etwa 5–6 h. Ein Probelauf mit einer Aufgabe je Art und Lauf deutet eher auf 3–4 h insgesamt hin.
+Estimated duration: stage 1 about 2 h, stage 2 about 5–6 h. A trial run with one task per type and run rather points to 3–4 h in total.
 
-## Umsetzung
+## Implementation
 
-1. **Tokens pro Schritt:** `steps[]` der Gateway-Antwort enthält `prompt_tokens` und `completion_tokens`.
-2. **Agenten pro Anfrage begrenzen:** Header `X-SwarmAiNet-Agents` mit kommagetrennten Agent-IDs; der Orchestrator wählt nur aus diesen. Vermeidet Ollama-Wechsel und erlaubt die Ablation pro Familie.
-3. **`swarmainet bench run | report | hash`** (`internal/bench`): prüft den SHA-256 des Aufgabensatzes, führt die Läufe strikt nacheinander und fortsetzbar aus, prüft Code in einer `bwrap`-Sandbox (nur `/usr`, kein Netz, 1 GiB, 10 s CPU), schreibt `results.jsonl` und erzeugt den Bericht (Quote, Tokens pro gelöster Aufgabe mit Bootstrap-Intervall, Median-Latenz, gepaarter Vergleich mit McNemar, Fehlerüberlappung der Einzelmodelle).
-4. **Aufgaben:** `bench/tasks-r1.jsonl`, Plan: `bench/plan-r1.yaml`.
-5. **Zwischentexte** (nach Runde 1): Header `X-SwarmAiNet-Trace: 1` liefert in `steps[].output` die Texte der Schritte. `bench run` bewertet Entwürfe, Teillösungen und Synthesen einzeln (`step_solved`) und speichert den Prüferbefund (`issues`). Der Bericht zeigt je Lauf berechtigte Mängelbefunde, Fehlalarme und übersehene Fehler des Prüfers, ob die Überarbeitung repariert oder verschlechtert hat und wie oft die Synthese eine richtige Teillösung verliert oder aus falschen eine richtige macht.
-6. **Mathe-Prüfer** (nach Runde 1): Bei `reasoning.math` löst der Prüfer die Aufgabe zuerst selbst, meldet nur Fehler, die das Ergebnis verfälschen, und gibt sein eigenes Ergebnis (`result`) an. Stimmt es mit dem Endergebnis des Entwurfs überein, verwirft der Orchestrator den Mängelbefund und überarbeitet nicht. Gegenprobe am 17.10.2026 (40 Matheaufgaben aus Runde 1, gleicher Aufbau, nur der Prompt verschieden): In `parallel_verify` sinken die Mängelbefunde von 11 auf 1 von 40, alle Fehlalarme (die Qwen-Prüfer melden besonders oft zu Unrecht), die Median-Latenz von 24,8 auf 18,9 s. In `draft_verify_synthesize` prüft in beiden Läufen gpt-oss und meldet nie Mängel. Der verbliebene Fehlalarm hat ein abweichendes Ergebnis und verschlechtert die Antwort (39/40 statt 40/40); die Verwerfungsregel hat nie gegriffen. Ob echte Fehler nun übersehen werden, zeigt erst Runde 2.
+1. **Tokens per step:** `steps[]` of the gateway response contains `prompt_tokens` and `completion_tokens`.
+2. **Restrict agents per request:** header `X-SwarmAiNet-Agents` with comma-separated agent IDs; the orchestrator only chooses from these. Avoids Ollama switches and allows the ablation per family.
+3. **`swarmainet bench run | report | hash`** (`internal/bench`): checks the SHA-256 of the task set, executes the runs strictly one after another and resumably, checks code in a `bwrap` sandbox (only `/usr`, no network, 1 GiB, 10 s CPU), writes `results.jsonl` and generates the report (rate, tokens per solved task with bootstrap interval, median latency, paired comparison with McNemar, error overlap of the single models).
+4. **Tasks:** `bench/tasks-r1.jsonl`, plan: `bench/plan-r1.yaml`.
+5. **Intermediate texts** (after round 1): header `X-SwarmAiNet-Trace: 1` returns the texts of the steps in `steps[].output`. `bench run` assesses drafts, partial solutions and syntheses individually (`step_solved`) and stores the verifier's findings (`issues`). The report shows per run justified findings, false alarms and errors missed by the verifier, whether the revision repaired or worsened the result, and how often the synthesis loses a correct partial solution or turns wrong ones into a correct one.
+6. **Math verifier** (after round 1): for `reasoning.math`, the verifier first solves the task itself, only reports errors that falsify the result and states its own result (`result`). If it matches the final result of the draft, the orchestrator discards the findings and does not revise. Cross-check on 17 Oct 2026 (40 maths tasks from round 1, same setup, only the prompt differs): in `parallel_verify`, findings drop from 11 to 1 of 40, all of them false alarms (the Qwen verifiers report wrongly particularly often), and the median latency from 24.8 to 18.9 s. In `draft_verify_synthesize`, gpt-oss verifies in both runs and never reports flaws. The remaining false alarm has a deviating result and worsens the answer (39/40 instead of 40/40); the discard rule never applied. Whether real errors are now overlooked will only be shown by round 2.
 
-## Ergebnis Runde 1
+## Result of round 1
 
-Vollständiger Bericht: [`bench/report-r1.md`](../bench/report-r1.md). Laufzeit knapp 4 h, 800 Ergebnisse.
+Full report: [`bench/report-r1.md`](../bench/report-r1.md). Runtime just under 4 h, 800 results.
 
-| Lauf | Code | Mathe | Tokens/gelöst (Code / Mathe) |
+| Run | Code | Maths | Tokens/solved (code / maths) |
 |---|---|---|---|
-| einzel-flash (Referenz) | 39/40 | 40/40 | 472 / 484 |
+| einzel-flash (reference) | 39/40 | 40/40 | 472 / 484 |
 | schwarm-draft-verify | 39/40 | 40/40 | 1776 / 1532 |
 | schwarm-parallel | 37/40 | 40/40 | 2293 / 2001 |
 | schwarm-parallel-verify | 40/40 | 40/40 | 3776 / 2933 |
 | sc3-flash | 40/40 | 40/40 | 1051 / 1558 |
 
-- **Deckeneffekt:** Das beste Einzelmodell löst 79 von 80 Aufgaben; kein Unterschied ist signifikant. Der Schwarm schadet kaum, kostet aber das 3- bis 8-Fache an Tokens; Self-Consistency erreicht dieselbe Quote günstiger.
-- `parallel` ohne Prüfer verschlechtert (Synthese macht richtigen Code falsch), der Prüfer in `parallel_verify` fängt das ab.
-- Der Prüfer meldet vermutlich zu oft Mängel (17-mal in `draft-verify`, überwiegend bei Mathe-Entwürfen eines Modells, das allein alle Matheaufgaben löst).
-- Die Fehler der Einzelmodelle überlappen kaum – die Voraussetzung für einen Schwarm-Vorteil bleibt bestehen.
+- **Ceiling effect:** the best single model solves 79 of 80 tasks; no difference is significant. The swarm hardly does harm but costs 3 to 8 times the tokens; self-consistency reaches the same rate more cheaply.
+- `parallel` without a verifier makes things worse (synthesis turns correct code into wrong code), the verifier in `parallel_verify` catches that.
+- The verifier probably reports flaws too often (17 times in `draft-verify`, mostly on maths drafts of a model that solves all maths tasks on its own).
+- The errors of the single models hardly overlap – the precondition for a swarm advantage remains.
 
-**Für Runde 2:** schwerere Aufgaben (Ziel: bestes Einzelmodell bei 50–70 %), Zwischentexte mitschreiben (umgesetzt, siehe Umsetzung Punkt 5), `reasoning.math` auch bei den Qwen-Modellen, zurückhaltenderer Prüfer bei Mathe (umgesetzt, siehe Umsetzung Punkt 6).
+**For round 2:** harder tasks (goal: best single model at 50–70 %), record intermediate texts (implemented, see implementation item 5), `reasoning.math` also for the Qwen models, a more restrained verifier for maths (implemented, see implementation item 6).
 
-## Offene Fragen
+## Open questions
 
-1. **llama3.1:8b als dritte Familie:** auf `.95` als GGUF über llama.cpp betreiben, oder reicht der VRAM für zwei geladene Ollama-Modelle (`OLLAMA_MAX_LOADED_MODELS=2`)? Bis dahin ist es ein eigener Block mit Modellwechseln (`schwarm-parallel-verify-llama` im Plan); in Runde 1 hob das die Median-Latenz von 24 auf 39 s ohne Qualitätsgewinn.
-2. ~~Aufgabenquelle~~ – entschieden: HumanEval und GSM8K.
-3. ~~Laufzeit~~ – entschieden: Lauf über Nacht.
+1. **llama3.1:8b as a third family:** run it on `.95` as GGUF via llama.cpp, or is the VRAM sufficient for two loaded Ollama models (`OLLAMA_MAX_LOADED_MODELS=2`)? Until then it is a separate block with model switches (`schwarm-parallel-verify-llama` in the plan); in round 1 this raised the median latency from 24 to 39 s without a quality gain.
+2. ~~Task source~~ – decided: HumanEval and GSM8K.
+3. ~~Runtime~~ – decided: run overnight.

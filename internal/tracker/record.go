@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
 
 // Package tracker implementiert den HTTPS-Adressbriefkasten nach
-// spec/p2p-schicht.md § 2.3: Einträge, Server und Client.
+// spec/p2p-layer.md § 2.3: Einträge, Server und Client.
 package tracker
 
 import (

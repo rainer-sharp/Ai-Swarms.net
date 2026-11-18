@@ -1,12 +1,14 @@
-# Installation und erster Start
+# Installation and first start
 
-## Voraussetzungen
+**English** · [Deutsch](de/installation.md)
 
-- **Ein Inferenz-Server mit OpenAI-kompatibler API** auf jedem Gerät, das Modelle beisteuert: Ollama, llama.cpp, vLLM, LM Studio oder MLX. Geräte ohne eigene Modelle können trotzdem Aufträge stellen oder das Netz tragen.
-- **Go 1.27** zum Bauen (Version siehe `go.mod`). Fertige Programmdateien gibt es noch nicht.
-- Linux ist das Hauptsystem. macOS sollte laufen, ist aber nicht geprüft. Windows ist ebenfalls nicht geprüft.
+## Requirements
 
-## Bauen
+- **An inference server with an OpenAI-compatible API** on every device that contributes models: Ollama, llama.cpp, vLLM, LM Studio or MLX. Devices without their own models can still submit tasks or carry the network.
+- **Go 1.27** for building (version see `go.mod`). There are no prebuilt binaries yet.
+- Linux is the main platform. macOS should work but has not been tested. Windows has not been tested either.
+
+## Building
 
 ```sh
 git clone https://github.com/rainer-sharp/Ai-Swarms.net.git
@@ -15,46 +17,46 @@ go build -o swarmainet ./cmd/swarmainet
 go test ./...          # optional
 ```
 
-Oder ohne Klonen, direkt nach `~/go/bin`:
+Or without cloning, directly into `~/go/bin`:
 
 ```sh
 go install github.com/rainer-sharp/Ai-Swarms.net/cmd/swarmainet@latest
 ```
 
-Unter Ubuntu ohne installiertes Go erledigt [`deploy/linux/gruppe-beitreten.sh`](../deploy/linux/README.md#knoten-für-ein-gruppennetz-einrichten) die Installation von Go mit, allerdings nur für den Beitritt zu einem Gruppennetz.
+On Ubuntu without Go installed, [`deploy/linux/gruppe-beitreten.sh`](../deploy/linux/README.md#setting-up-a-node-for-a-group-network) also installs Go, but only for joining a group network.
 
-## Ersten Knoten einrichten
+## Setting up the first node
 
 ```sh
-./swarmainet init               # legt ~/.swarmainet/config.yaml und den Schlüssel an, zeigt die Peer-ID
+./swarmainet init               # creates ~/.swarmainet/config.yaml and the key, shows the peer ID
 $EDITOR ~/.swarmainet/config.yaml
 ./swarmainet run
 ```
 
-Danach steht die OpenAI-kompatible API unter `http://127.0.0.1:7711/v1` bereit, und unter `http://127.0.0.1:7711` erscheint eine Status-Seite. Wie man sie nutzt, steht in [Nutzung](nutzung.md).
+The OpenAI-compatible API is then available at `http://127.0.0.1:7711/v1`, and a status page appears at `http://127.0.0.1:7711`. How to use it is described in [Usage](usage.md).
 
-> **Hinweis:** Ohne Netzschlüssel oder Einladung ist ein neuer Knoten im **offenen Netz** und meldet sich beim eingebauten Startknoten. Andere Teilnehmer sehen dann seine Peer-ID und seine öffentliche Adresse. Fremde Aufträge nimmt er erst an, wenn Sie das ausdrücklich einschalten. Wer nur die eigenen Geräte verbinden will, richtet zuerst ein [privates Netz](netze.md#privates-netz-eigene-geräte) ein oder setzt `node.dns_seeds: [none]`.
+> **Note:** Without a network key or invitation, a new node is in the **open network** and contacts the built-in start node. Other participants then see its peer ID and its public address. It only accepts foreign tasks once you explicitly enable that. If you only want to connect your own devices, first set up a [private network](networks.md#private-network-own-devices) or set `node.dns_seeds: [none]`.
 
-## Die wichtigsten Einstellungen
+## The most important settings
 
-Ein vollständiges, kommentiertes Beispiel ist [`config.example.yaml`](../config.example.yaml); alle Netzschlüssel stehen in [Konfiguration](konfiguration.md).
+A complete, commented example is [`config.example.yaml`](../config.example.yaml); all network keys are listed in [Configuration](configuration.md).
 
-1. **Modelle eintragen:** Unter `backends[].models` die Modelle mit Familie (`family`), Fähigkeiten (`skills`) und Stärke (`strength`, 1–10) eintragen. Für einen Prüfer braucht der Schwarm mindestens zwei **verschiedene Modellfamilien**, etwa `qwen` und `llama`.
-2. **Modelle anbieten:** `node.provide: true` und bei den Modellen `offer: true` setzen, wenn das Gerät für andere rechnen soll.
-3. **Vertrauen herstellen:** Wie sich Geräte gegenseitig vertrauen, hängt von der Netzart ab, siehe [Netzarten](netze.md).
-4. **Geräte finden:** Im LAN finden sich die Geräte per mDNS. Sonst unter `node.static_peers` eine Adresse aus `swarmainet status` eintragen. Erfolgreich verbundene Peers merkt sich der Knoten in `~/.swarmainet/peers-<network_id>.json` und wählt sie nach einem Neustart zuerst an.
-5. **Zeitfenster beachten:** In der Standardkonfiguration nimmt ein Knoten fremde Aufträge nur werktags von 22 bis 7 Uhr und am Wochenende an. Zum Ausprobieren `resources.schedule.windows: []` setzen.
-6. **Werkzeuge:** Modelle, die Werkzeug-Aufrufe beherrschen, mit `tools: true` kennzeichnen. Sie bedienen dann Coding-Agenten, siehe [Nutzung](nutzung.md#coding-agenten-und-werkzeuge).
+1. **Add models:** under `backends[].models`, add the models with family (`family`), skills (`skills`) and strength (`strength`, 1–10). For a verifier, the swarm needs at least two **different model families**, e.g. `qwen` and `llama`.
+2. **Offer models:** set `node.provide: true` and `offer: true` on the models if the device should compute for others.
+3. **Establish trust:** how devices trust each other depends on the network type, see [Network types](networks.md).
+4. **Find devices:** on the LAN, devices find each other via mDNS. Otherwise add an address from `swarmainet status` under `node.static_peers`. The node remembers successfully connected peers in `~/.swarmainet/peers-<network_id>.json` and dials them first after a restart.
+5. **Mind the time windows:** in the default configuration, a node only accepts foreign tasks on weekdays from 22:00 to 07:00 and at weekends. To try things out, set `resources.schedule.windows: []`.
+6. **Tools:** mark models that can handle tool calls with `tools: true`. They then serve coding agents, see [Usage](usage.md#coding-agents-and-tools).
 
-Der Ressourcenmanager unter `resources` begrenzt, wie viel ein Knoten für andere rechnet: parallele Aufträge, GPU-Auslastung und -Minuten, Temperatur, RAM-Reserve und optional Überschuss aus einer PV-Anlage über Home Assistant. Eigene Anfragen haben immer Vorrang.
+The resource manager under `resources` limits how much a node computes for others: parallel tasks, GPU utilisation and minutes, temperature, RAM reserve and optionally surplus from a solar (PV) system via Home Assistant. Your own requests always take priority.
 
-## Dauerbetrieb
+## Continuous operation
 
-- **Linux:** als systemd-Benutzerdienst, siehe [`deploy/linux/`](../deploy/linux/README.md).
-- **Docker:** für Helferknoten ohne Modelle, siehe [Netzarten – Helfer mit Docker](netze.md#helferknoten-mit-docker).
-- **Raspberry Pi** als Helfer hinter einer Portfreigabe: [`deploy/raspberry-pi/`](../deploy/raspberry-pi/README.md).
-- **VPS** mit Startknoten und Helfer: [`deploy/vps/`](../deploy/vps/README.md).
+- **Linux:** as a systemd user service, see [`deploy/linux/`](../deploy/linux/README.md).
+- **Docker:** for helper nodes without models, see [Network types – helper nodes with Docker](networks.md#helper-nodes-with-docker).
+- **Raspberry Pi** as a helper behind a port forwarding: [`deploy/raspberry-pi/`](../deploy/raspberry-pi/README.md).
+- **VPS** with start node and helper: [`deploy/vps/`](../deploy/vps/README.md).
 
-## Aktualisieren
+## Updating
 
-Neu bauen und den Knoten neu starten. Konfiguration und Schlüssel unter `~/.swarmainet/` bleiben erhalten. Das Protokoll ist noch in Version 0.1; zwischen Entwicklungsständen kann es inkompatible Änderungen geben, deshalb sollten alle Knoten eines Netzes auf demselben Stand sein.
+Rebuild and restart the node. Configuration and keys under `~/.swarmainet/` are kept. The protocol is still at version 0.1; there may be incompatible changes between development states, so all nodes of a network should run the same version.

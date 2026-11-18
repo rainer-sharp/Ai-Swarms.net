@@ -40,14 +40,14 @@ type Node struct {
 	// Membership macht das erste Netz zu einem Mitgliedsnetz.
 	Membership *Membership `yaml:"membership,omitempty"`
 	// AllowedTools: Werkzeuge, die Modelle dieses Netzes sehen dürfen
-	// (spec/freigabeklassen.md). Fehlt die Liste, gilt im PSK-Netz: alle, im
+	// (spec/privacy-classes.md). Fehlt die Liste, gilt im PSK-Netz: alle, im
 	// Mitgliedsnetz und im offenen Netz: keine.
 	AllowedTools []string `yaml:"allowed_tools,omitempty"`
 	MDNS         bool     `yaml:"mdns"`
 	StaticPeers  []string `yaml:"static_peers"`
 	// Bootstrap: Einstiegsadressen (z. B. aus einer Einladung); angewählt,
 	// solange der Knoten keine Peers, keine DHT-Partner oder hinter NAT keinen
-	// Relay-Platz hat (spec/p2p-schicht.md § 2). static_peers halten dagegen dauerhaft
+	// Relay-Platz hat (spec/p2p-layer.md § 2). static_peers halten dagegen dauerhaft
 	// Verbindung.
 	Bootstrap []string `yaml:"bootstrap"`
 	// Trackers: HTTPS-Adressbriefkästen (swarmainet tracker), bei denen der
@@ -61,7 +61,7 @@ type Node struct {
 	// sparsamen Grenzen), im privaten Schwarm aus. true: immer, auch ohne
 	// öffentliche Erreichbarkeit (Helfer, Brückenknoten). false: nie.
 	RelayService string `yaml:"relay_service"`
-	// RelayLimits: Grenzen des Relays; 0 = Vorgabe (spec/p2p-schicht.md § 6).
+	// RelayLimits: Grenzen des Relays; 0 = Vorgabe (spec/p2p-layer.md § 6).
 	RelayLimits RelayLimits `yaml:"relay_limits,omitempty"`
 	// DNSSeeds: Domains mit _dnsaddr-TXT-Einträgen für den Einstieg (wann:
 	// wie Bootstrap). Ohne Angabe gilt im offenen Netz DefaultDNSSeeds;
@@ -87,7 +87,7 @@ type Node struct {
 	// die Listen-Ports anfordern (Opt-in, ändert Router-Einstellungen).
 	PortMapping bool `yaml:"port_mapping,omitempty"`
 	// Networks: weitere Netze neben dem oben beschriebenen ersten, je mit
-	// eigenem Host und Port (spec/p2p-schicht.md § 9).
+	// eigenem Host und Port (spec/p2p-layer.md § 9).
 	Networks []Network `yaml:"networks,omitempty"`
 }
 
@@ -98,7 +98,7 @@ type Network struct {
 	NetworkID      string   `yaml:"network_id"`
 	NetworkKeyFile string   `yaml:"network_key_file,omitempty"`
 	AllowedTools   []string `yaml:"allowed_tools,omitempty"`
-	// Membership macht es zu einem Mitgliedsnetz (spec/mitgliedschaft.md).
+	// Membership macht es zu einem Mitgliedsnetz (spec/membership.md).
 	Membership   *Membership `yaml:"membership,omitempty"`
 	Listen       []string    `yaml:"listen"`
 	Bootstrap    []string    `yaml:"bootstrap,omitempty"`
@@ -178,7 +178,7 @@ func (c Config) AllNetworks() []NetworkSettings {
 	}
 	for _, x := range n.Networks {
 		// dns_seeds gelten ohne eigene Angabe für alle Netze; ein Mitgliedsnetz
-		// fragt nie einen Seed (spec/mitgliedschaft.md).
+		// fragt nie einen Seed (spec/membership.md).
 		seedList := x.DNSSeeds
 		if seedList == nil && x.Membership == nil {
 			seedList = n.DNSSeeds
@@ -226,7 +226,7 @@ type RelayLimits struct {
 }
 
 // DefaultDNSSeeds: eingebaute Einstiegs-Domains des offenen Netzes
-// (spec/p2p-schicht.md § 2). Sie dienen nur dem ersten Kontakt; danach
+// (spec/p2p-layer.md § 2). Sie dienen nur dem ersten Kontakt; danach
 // tragen Peer-Cache, Peer-Austausch und DHT.
 var DefaultDNSSeeds = []string{"seed.ai-swarms.net"}
 
@@ -275,7 +275,7 @@ func validateMembership(n NetworkSettings, where string) error {
 // hostnameRe: Domain eines DNS-Seeds.
 var hostnameRe = regexp.MustCompile(`^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$`)
 
-// NetworkIDRe: zulässige Netz-Kennungen (spec/p2p-schicht.md § 1).
+// NetworkIDRe: zulässige Netz-Kennungen (spec/p2p-layer.md § 1).
 var NetworkIDRe = regexp.MustCompile(`^[a-z0-9-]{1,32}$`)
 
 type Backend struct {

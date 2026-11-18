@@ -12,7 +12,7 @@ import (
 )
 
 // TestOpenNetworkOutlivesStartNode: Das offene Netz beginnt mit einem
-// Startknoten S und trägt sich danach selbst (spec/p2p-schicht.md § 6.1):
+// Startknoten S und trägt sich danach selbst (spec/p2p-layer.md § 6.1):
 // R ist ein erreichbarer Freiwilliger mit Relay und DHT, A und C sind
 // hinter NAT (ohne Listen-Adresse) und kennen anfangs nur S. Nach dem Ende
 // von S erreicht A den Knoten C weiter über R, und ein neuer Knoten D kommt

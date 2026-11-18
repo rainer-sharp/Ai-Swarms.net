@@ -13,7 +13,7 @@ services:
     build: ../..
     image: swarmainet:latest
     # Host-Netz, damit AutoNAT, beobachtete Adressen und IPv6 stimmen
-    # (spec/p2p-schicht.md § 6.1); das Gateway bleibt auf 127.0.0.1.
+    # (spec/p2p-layer.md § 6.1); das Gateway bleibt auf 127.0.0.1.
     network_mode: host
     restart: unless-stopped
     volumes:

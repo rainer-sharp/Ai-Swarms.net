@@ -1,5 +1,7 @@
 # SwarmAiNet Protokoll v0.1
 
+[English](../protocol-v0.1.md) · **Deutsch**
+
 Status: Entwurf, Phase 0/1. Referenzimplementierung: `internal/protocol`, `internal/p2p`.
 Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
 
@@ -14,12 +16,12 @@ Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
 |---|---|
 | `/swarmainet/capability/0.1` | Abruf der signierten Fähigkeitsanzeige eines Peers |
 | `/swarmainet/task/0.1` | Ein Teilauftrag pro Stream: Angebot, Annahme, Ergebnis, Quittung |
-| `/swarmainet/pex/0.1` | Peer-Austausch (Phase 2, siehe [P2P-Schicht](p2p-schicht.md) § 2.4) |
+| `/swarmainet/pex/0.1` | Peer-Austausch (Phase 2, siehe [P2P-Schicht](p2p-layer.md) § 2.4) |
 
 - Rahmung: genau eine JSON-Nachricht (Envelope) pro Zeile, abgeschlossen mit `\n`, höchstens 4 MiB.
 - mDNS-Dienstname: `swarmainet-<network_id>`. Private Schwärme nutzen zusätzlich einen libp2p-PSK (dann nur TCP).
 - Inferenz-Backend und Verwaltungsport lauschen nur auf `localhost`; nach außen geht nur der P2P-Port.
-- Ab Phase 2 (Entwurf, siehe [P2P-Schicht](p2p-schicht.md)): Kademlia-DHT `/swarmainet/kad/1.0.0` (offenes Netz) bzw. `/swarmainet/<network_id>/kad/1.0.0` (privates Netz), AutoNAT v2, DCUtR und Circuit Relay v2. Die Protokolle oben MÜSSEN auch über Relay-Verbindungen (begrenzte Verbindungen) angeboten werden.
+- Ab Phase 2 (Entwurf, siehe [P2P-Schicht](p2p-layer.md)): Kademlia-DHT `/swarmainet/kad/1.0.0` (offenes Netz) bzw. `/swarmainet/<network_id>/kad/1.0.0` (privates Netz), AutoNAT v2, DCUtR und Circuit Relay v2. Die Protokolle oben MÜSSEN auch über Relay-Verbindungen (begrenzte Verbindungen) angeboten werden.
 
 ## 3. Envelope
 
@@ -106,7 +108,7 @@ Die Anzeige enthält keine Prompts, internen IPs, Hardware- oder Energiedaten un
 }
 ```
 
-`messages[]` folgt dem OpenAI-Format einschließlich `tool_calls` (Assistent), `tool_call_id` und `name` (Rolle `tool`). `tools` und `tool_choice` (optional) sind die Werkzeugbeschreibungen der aufrufenden Anwendung und werden unverändert an das Modell gegeben. Der Anbieter führt keine Werkzeuge aus; er liefert nur die Aufrufe zurück, ausgeführt werden sie beim Auftraggeber. Welche Werkzeuge ein Agent sehen darf, entscheidet deshalb der Auftraggeber ([Freigabeklassen](freigabeklassen.md), Regel 6). Ein Anbieter MUSS einen Auftrag mit `tools` ablehnen, wenn der gewählte Agent `tools` nicht anzeigt (`agent beherrscht keine werkzeuge`).
+`messages[]` folgt dem OpenAI-Format einschließlich `tool_calls` (Assistent), `tool_call_id` und `name` (Rolle `tool`). `tools` und `tool_choice` (optional) sind die Werkzeugbeschreibungen der aufrufenden Anwendung und werden unverändert an das Modell gegeben. Der Anbieter führt keine Werkzeuge aus; er liefert nur die Aufrufe zurück, ausgeführt werden sie beim Auftraggeber. Welche Werkzeuge ein Agent sehen darf, entscheidet deshalb der Auftraggeber ([Freigabeklassen](privacy-classes.md), Regel 6). Ein Anbieter MUSS einen Auftrag mit `tools` ablehnen, wenn der gewählte Agent `tools` nicht anzeigt (`agent beherrscht keine werkzeuge`).
 
 `depth` zählt die bisherigen Delegationen (beim ersten Empfänger 1). Ein Anbieter MUSS ablehnen, wenn `depth > max_depth`. Weiterdelegationen erben gleiche oder strengere Grenzen und verbrauchen dasselbe Budget.
 
@@ -148,4 +150,4 @@ Ein Übergang in denselben Zustand ist erlaubt (idempotente Wiederholung).
 | `reduced` | annehmen* | ablehnen |
 | `public` | annehmen* | nur mit `accept_public_tasks: true`* |
 
-\* sofern der Ressourcenmanager zustimmt. Lehnt er wegen fehlender Kapazität ab (`keine kapazität`) oder greift das Ratenlimit (`busy`), versucht der Koordinator es mit anderen Kandidaten und wartet, wenn alle ausgelastet sind, mit wachsendem Abstand (1 s bis 8 s, höchstens 2 Minuten bzw. bis zur Deadline) erneut. Vertraut ist ein Peer, dessen Schlüssel unter `trusted_peers` steht, jeder Teilnehmer eines privaten Schwarms (PSK) oder ein zugelassener Peer mit Rolle `member` oder `issuer` in einem [Mitgliedsnetz](mitgliedschaft.md).
+\* sofern der Ressourcenmanager zustimmt. Lehnt er wegen fehlender Kapazität ab (`keine kapazität`) oder greift das Ratenlimit (`busy`), versucht der Koordinator es mit anderen Kandidaten und wartet, wenn alle ausgelastet sind, mit wachsendem Abstand (1 s bis 8 s, höchstens 2 Minuten bzw. bis zur Deadline) erneut. Vertraut ist ein Peer, dessen Schlüssel unter `trusted_peers` steht, jeder Teilnehmer eines privaten Schwarms (PSK) oder ein zugelassener Peer mit Rolle `member` oder `issuer` in einem [Mitgliedsnetz](membership.md).

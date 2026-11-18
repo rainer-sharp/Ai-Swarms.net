@@ -1,17 +1,19 @@
-# Testvektoren der Mitgliedschaft
+# Membership test vectors
 
-`vectors.json` enthält sprachunabhängige Testvektoren für Mitgliedsnetze ([Spezifikation](../../../spec/mitgliedschaft.md)), damit andere Umsetzungen ihre Bytes gegen diese prüfen können:
+**English** · [Deutsch](de/README.md)
 
-| Feld | Inhalt |
+`vectors.json` contains language-independent test vectors for membership networks ([specification](../../../spec/membership.md)), so that other implementations can check their bytes against them:
+
+| Field | Contents |
 |---|---|
-| `root_seed_hex` | fester Ed25519-Seed des Wurzelschlüssels |
-| `root_pub` | dessen öffentlicher Schlüssel (base64url) |
-| `network_id` | daraus abgeleitete Netz-Kennung |
-| `node_peer_id` | Peer-ID des Knotens im Zertifikat |
-| `cert_signed_bytes`, `cert_sig` | signierte Bytes eines Zertifikats und die Signatur |
-| `crl_signed_bytes`, `crl_sig` | signierte Bytes einer Sperrliste und die Signatur |
-| `cert_json` | das Zertifikat, wie es übertragen wird |
+| `root_seed_hex` | fixed Ed25519 seed of the root key |
+| `root_pub` | its public key (base64url) |
+| `network_id` | network ID derived from it |
+| `node_peer_id` | peer ID of the node in the certificate |
+| `cert_signed_bytes`, `cert_sig` | signed bytes of a certificate and the signature |
+| `crl_signed_bytes`, `crl_sig` | signed bytes of a revocation list and the signature |
+| `cert_json` | the certificate as it is transmitted |
 
-Die Go-Umsetzung prüft sie in `TestVectors` (`membership_test.go`).
+The Go implementation checks them in `TestVectors` (`membership_test.go`).
 
-**Lizenz:** Diese Testvektoren stehen wie die Spezifikation unter [CC BY 4.0](../../../LICENSE-DOCS).
+**License:** like the specification, these test vectors are licensed under [CC BY 4.0](../../../LICENSE-DOCS).

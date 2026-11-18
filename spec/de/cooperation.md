@@ -1,6 +1,8 @@
 # Selbstorganisierte Kooperation (Phase 3)
 
-Status: **Entwurf**, noch nicht umgesetzt. Grundlage: Gesamtkonzept, Abschnitte „Fähigkeiten und Kompetenzmessung“, „Rollen und Kooperationsmuster“, „Auftragsprotokoll“ und „Auswahl und Regelung“. Ergänzt [Protokoll v0.1](protokoll-v0.1.md) und baut auf der [P2P-Schicht](p2p-schicht.md) auf. Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
+[English](../cooperation.md) · **Deutsch**
+
+Status: **Entwurf**, noch nicht umgesetzt. Grundlage: Gesamtkonzept, Abschnitte „Fähigkeiten und Kompetenzmessung“, „Rollen und Kooperationsmuster“, „Auftragsprotokoll“ und „Auswahl und Regelung“. Ergänzt [Protokoll v0.1](protocol-v0.1.md) und baut auf der [P2P-Schicht](p2p-layer.md) auf. Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
 
 Bisher entscheidet der Orchestrator nach festen Regeln: Er nimmt das Muster aus der Konfiguration oder der Anfrage und den Prüfer nach Familie und `strength` (eine Selbstauskunft). Phase 3 ersetzt das durch **gemessene Erfahrung**:
 
@@ -10,7 +12,7 @@ Bisher entscheidet der Orchestrator nach festen Regeln: Er nimmt das Muster aus 
 - Neue **Muster** (Kaskade, Zerlegen und Verteilen über einen Task-Graph) erweitern die Auswahl (§ 5, § 6).
 - Ein **Lease** macht die Koordination eines Auftrags ausfallsicher (§ 7).
 
-**Gate Phase 3** ist die Kernhypothese aus dem [Messplan](messplan.md): Der Schwarm liefert bei gleichem Budget eine höhere geprüfte Qualität als das beste Einzelmodell, oder er erkennt zuverlässig, dass ein Einzelmodell genügt. Wird das verfehlt, wird das Konzept vor Phase 4 überarbeitet (§ 10).
+**Gate Phase 3** ist die Kernhypothese aus dem [Messplan](measurement-plan.md): Der Schwarm liefert bei gleichem Budget eine höhere geprüfte Qualität als das beste Einzelmodell, oder er erkennt zuverlässig, dass ein Einzelmodell genügt. Wird das verfehlt, wird das Konzept vor Phase 4 überarbeitet (§ 10).
 
 Grundsätze, die für alles Folgende gelten:
 
@@ -126,7 +128,7 @@ u_k = u_0 + K_p·e_k + K_i·Σ e_j·Δt,   e_k = q* − q̄_k
 - **Gegen Schwingungen im Netz:** kleine Verstärkungen, Zufallsjitter, Absenken multiplikativ und Erhöhen additiv (AIMD).
 - Der Regler kann **die Ressourcen-Policy anderer Knoten nie überstimmen**; „keine Kapazität“ ist eine Begrenzung, kein Regelfehler.
 
-Sollwerte und Reglerparameter je Kategorie sind konfigurierbar (`cooperation.targets`). Ihre Kalibrierung ist eine offene Frage (§ 11).
+Sollwerte und Reglerparameter je Kategorie sind konfigurierbar (`cooperation.targets`). Ihre Kalibrierung ist eine offene Frage (§ 12).
 
 ## 5. Muster: Kaskade
 

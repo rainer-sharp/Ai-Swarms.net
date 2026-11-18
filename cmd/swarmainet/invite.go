@@ -75,7 +75,7 @@ func usableAddrs(st netInfo, lan bool) []string {
 }
 
 // cmdInvite erzeugt einen Einladungslink aus den Adressen des laufenden
-// Knotens (spec/p2p-schicht.md § 2.2).
+// Knotens (spec/p2p-layer.md § 2.2).
 func cmdInvite(path, network string, withKey, lan, showQR bool, extra []string) error {
 	cfg, err := config.Load(path)
 	if err != nil {

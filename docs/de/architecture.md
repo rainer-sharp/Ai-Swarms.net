@@ -1,5 +1,7 @@
 # Aufbau
 
+[English](../architecture.md) · **Deutsch**
+
 Ein Knoten ist ein einzelnes Go-Programm. Es nimmt Anfragen über eine lokale OpenAI-kompatible API an, zerlegt sie nach einem Muster in Teilaufträge, wählt dafür eigene und entfernte Modelle aus und lässt Ergebnisse von einer anderen Modellfamilie prüfen. Entfernte Modelle erreicht es über libp2p; jeder Teilauftrag ist eine signierte Nachricht, und beide Seiten quittieren ihn.
 
 ```
@@ -28,4 +30,4 @@ Anwendung (Open WebUI, IDE, Agent)
 | Benchmark | `internal/bench`, Daten in `bench/` |
 | Befehle | `cmd/swarmainet` |
 
-Die verbindliche Beschreibung von Protokoll, Netzschicht und Sicherheitsannahmen steht in der [Spezifikation](../spec/README.md). Das ursprüngliche [Gesamtkonzept](gesamtkonzept.pdf) beschreibt das Ziel einschließlich der späteren Phasen.
+Die verbindliche Beschreibung von Protokoll, Netzschicht und Sicherheitsannahmen steht in der [Spezifikation](../../spec/de/README.md). Das ursprüngliche [Gesamtkonzept](../gesamtkonzept.pdf) beschreibt das Ziel einschließlich der späteren Phasen.

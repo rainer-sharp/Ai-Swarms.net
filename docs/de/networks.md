@@ -1,5 +1,7 @@
 # Netzarten
 
+[English](../networks.md) · **Deutsch**
+
 SwarmAiNet kennt drei Arten von Netzen. Ein Knoten kann mehreren gleichzeitig angehören.
 
 | | Privates Netz | Mitgliedsnetz | Offenes Netz |
@@ -10,7 +12,7 @@ SwarmAiNet kennt drei Arten von Netzen. Ein Knoten kann mehreren gleichzeitig an
 | Vertrauen | alle Mitglieder | zugelassene Mitglieder, nicht Helfer | niemand außer `trusted_peers` |
 | Werkzeuge ohne Liste | alle | keine | keine |
 | Über Standorte hinweg | mit eigenem Helfer | mit eigenem Helfer, der nichts mitliest | über fremde Relays und DHT |
-| Erprobt auf Hardware | ja | ja, zwei Standorte | nein, nur im Prozess |
+| Erprobt auf Hardware | ja | ja, zwei Standorte | ja, zwei Standorte |
 | Netz-Kennung | frei, z. B. `p-3fa91c07` | `m-…` aus dem Wurzelschlüssel | `swarmainet` |
 
 ## Privates Netz: eigene Geräte
@@ -40,15 +42,15 @@ swarmainet join '<link>'                                      # auf dem neuen Ge
 
 Ein privates Netz kann wegen des Schlüssels keine fremden Relays nutzen. Liegen die Geräte an verschiedenen Standorten hinter NAT, braucht es **einen eigenen Helferknoten**, den alle Seiten erreichen:
 
-- **Helfer im Internet:** ein Helferknoten auf einem Server mit öffentlicher Adresse, z. B. per [Docker](#helferknoten-mit-docker). Alle Standorte verbinden sich ausgehend zu ihm. Anleitung für einen VPS mit Firewall und DNS: [`deploy/vps/`](../deploy/vps/README.md).
-- **Helfer hinter einer Portfreigabe:** etwa ein Raspberry Pi hinter einer FritzBox und einem zweiten Router, vom Heimnetz abgeschottet, erreichbar über einen DNS-Namen. Schritt-für-Schritt-Anleitung: [`deploy/raspberry-pi/`](../deploy/raspberry-pi/README.md).
+- **Helfer im Internet:** ein Helferknoten auf einem Server mit öffentlicher Adresse, z. B. per [Docker](#helferknoten-mit-docker). Alle Standorte verbinden sich ausgehend zu ihm. Anleitung für einen VPS mit Firewall und DNS: [`deploy/vps/`](../../deploy/vps/de/README.md).
+- **Helfer hinter einer Portfreigabe:** etwa ein Raspberry Pi hinter einer FritzBox und einem zweiten Router, vom Heimnetz abgeschottet, erreichbar über einen DNS-Namen. Schritt-für-Schritt-Anleitung: [`deploy/raspberry-pi/`](../../deploy/raspberry-pi/de/README.md).
 - **Brückenknoten:** ein Knoten an einer Stelle, die beide Seiten **von sich aus** erreichen, z. B. eine VM mit VPN zum anderen Standort. Er muss selbst nicht erreichbar sein, kein Port wird geöffnet. Dort `node.helper: true` (nur Relay und DHT-Server, ohne Modelle) oder `node.relay_service: true` (zusätzlich zu eigenen Modellen) setzen und unter `node.static_peers` je mindestens einen Knoten beider Seiten eintragen.
 
 Die übrigen Knoten reservieren beim Helfer automatisch einen Relay-Platz, finden die andere Seite über den Peer-Austausch und erreichen sie über ihn. Sobald ein direkter Weg möglich ist, ersetzt der Knoten die Relay-Verbindung durch eine direkte. Abgelaufene Relay-Verbindungen (Grenze 10 min bzw. 8 MiB) baut jeder Knoten von selbst neu auf. Ein einzelner Helfer ist ein Single Point of Failure zwischen den Standorten; ein zweiter behebt das.
 
 ## Mitgliedsnetz: Gruppen und Firmen
 
-Ein Mitgliedsnetz ersetzt den gemeinsamen Schlüssel durch ein **Zertifikat je Knoten**. Einzelne lassen sich aufnehmen und entfernen, ohne die übrigen anzufassen, und ein Helfer im Internet trägt das Netz, ohne Aufträge zu sehen oder anzunehmen. Es braucht keine Zertifizierungsstelle und keinen zentralen Server. Spezifikation: [`spec/mitgliedschaft.md`](../spec/mitgliedschaft.md).
+Ein Mitgliedsnetz ersetzt den gemeinsamen Schlüssel durch ein **Zertifikat je Knoten**. Einzelne lassen sich aufnehmen und entfernen, ohne die übrigen anzufassen, und ein Helfer im Internet trägt das Netz, ohne Aufträge zu sehen oder anzunehmen. Es braucht keine Zertifizierungsstelle und keinen zentralen Server. Spezifikation: [`spec/de/membership.md`](../../spec/de/membership.md).
 
 ```sh
 swarmainet network create                      # Wurzelschlüssel, danach offline lagern
@@ -61,13 +63,13 @@ swarmainet member invite -net m-… [-qr]        # Link: einmalig, höchstens 24
 swarmainet join '<link>'                       # auf dem neuen Knoten
 ```
 
-Unter Ubuntu nimmt [`deploy/linux/gruppe-beitreten.sh`](../deploy/linux/README.md#knoten-für-ein-gruppennetz-einrichten) einem neuen Mitglied alle Schritte nach dem `git clone` ab, einschließlich der Installation von Go.
+Unter Ubuntu nimmt [`deploy/linux/gruppe-beitreten.sh`](../../deploy/linux/de/README.md#knoten-für-ein-gruppennetz-einrichten) einem neuen Mitglied alle Schritte nach dem `git clone` ab, einschließlich der Installation von Go.
 
 **Rollen:** `issuer` nimmt auf, `member` gibt und bekommt Aufträge, `helper` trägt nur das Netz. Einen Helfer lädt man mit `member invite -role helper` ein. Ein Einladungslink gilt nur einmal und nennt den Aussteller; das Einmal-Token geht nur an ihn, nicht an den Helfer.
 
 **Entfernen:** `swarmainet member revoke -net m-… <peer-id|name>` beim Aussteller. Der laufende Knoten verteilt die Sperrliste binnen Sekunden, alle trennen den Gesperrten, und laufende Aufträge von ihm brechen ab. Wer gerade nicht erreichbar ist, erfährt es bei der nächsten Verbindung. Die Wurzel sperrt vom Wechseldatenträger aus mit `member revoke -root-key DATEI …`, danach auf einem laufenden Knoten `member import-crl`.
 
-**Laufzeit:** Mitglieder und Helfer gelten 30 Tage und verlängern sich ab der Hälfte selbst, wenn ein Aussteller erreichbar ist. Ein Aussteller muss also mindestens alle 15 Tage online sein. Aussteller-Zertifikate (365 Tage) erneuert die Wurzel von Hand; `swarmainet status` warnt 7 Tage vorher.
+**Laufzeit:** Mitglieder und Helfer gelten 30 Tage und verlängern sich ab der Hälfte selbst, wenn ein Aussteller erreichbar ist. Ein Aussteller muss also mindestens alle 15 Tage online sein, und zwar gleichzeitig mit dem Mitglied. Aussteller-Zertifikate (365 Tage) erneuert die Wurzel von Hand; `swarmainet status` warnt 7 Tage vorher.
 
 **Grenzen:** Mitgliedsnetze laufen ohne DHT, Tracker und DNS-Seeds und sind für bis zu etwa 64 Knoten gedacht. Sie brauchen eine richtig gehende Uhr, weil Zertifikate ablaufen.
 
@@ -87,22 +89,22 @@ Ohne Netzschlüssel und ohne Mitgliedschaft ist ein Knoten im offenen Netz (`net
 - **Ratenlimits** für fremde Peers: 10 Aufträge je Minute und Peer, 60 insgesamt; je 6 Fähigkeits- und Peer-Austausch-Abrufe je Minute und Peer.
 - **Diversitätsfilter** der DHT-Routing-Tabelle gegen Eclipse-Angriffe.
 - **Relay automatisch:** Öffentlich erreichbare Knoten leiten Verbindungen anderer weiter (`node.relay_service: auto`, mit sparsamen Grenzen, abschaltbar mit `false`). So trägt sich das Netz wie bei BitTorrent selbst, auch wenn der Startknoten wegfällt.
-- **Einstieg über DNS-Seeds:** Ein neuer Knoten ohne Peers fragt den eingebauten Seed `seed.ai-swarms.net` (TXT-Einträge unter `_dnsaddr.seed.ai-swarms.net`) nach Einstiegsknoten; danach tragen Peer-Cache, Peer-Austausch und DHT. Eigene Seeds mit `node.dns_seeds`, abschalten mit `[none]`.
+- **Einstieg über DNS-Seeds:** Ein neuer Knoten ohne Peers fragt den eingebauten Seed `seed.ai-swarms.net` (TXT-Einträge unter `_dnsaddr.seed.ai-swarms.net`) nach Einstiegsknoten; danach tragen Peer-Cache, Peer-Austausch und DHT. Er fragt erneut, wenn seine DHT-Routing-Tabelle leer wird oder er hinter NAT keinen Relay-Platz hat, etwa nach einem Ausfall des Startknotens. Eigene Seeds mit `node.dns_seeds`, abschalten mit `[none]`.
 - **Portfreigabe per UPnP/NAT-PMP** (`node.port_mapping: true`, Opt-in) macht einen Knoten hinter einem Heimrouter erreichbar, ohne den Router von Hand einzustellen. Die Freigaben laufen nach dem Ende des Knotens binnen einer Minute aus. Bei der FritzBox muss für das Gerät „Selbstständige Portfreigaben erlauben“ gesetzt sein; damit kann allerdings jedes Programm auf diesem Gerät Ports öffnen. Bei DS-Lite und CGNAT hilft es nicht.
 
 ## Mehrere Netze gleichzeitig
 
-Weitere Netze stehen unter `node.networks`, je mit eigenem Port, eigener DHT und standardmäßig eigener Peer-ID (`identity: separate`), damit die Teilnahme an einem privaten Netz im offenen nicht erkennbar ist. Backends, Ressourcenmanager und Quittungen sind gemeinsam; `provide`, `accept_public_tasks`, `trackers`, `allowed_tools` u. a. gelten je Netz und übernehmen ohne Angabe die Werte des ersten. Aufträge der Klassen `trusted` und `reduced` gehen nur an Peers privater Netze, Mitgliedsnetze oder an `trusted_peers`; `public` darf in jedes Netz. Beispiel in [`config.example.yaml`](../config.example.yaml); `ping` und `invite` wählen das Netz mit `-net`.
+Weitere Netze stehen unter `node.networks`, je mit eigenem Port, eigener DHT und standardmäßig eigener Peer-ID (`identity: separate`), damit die Teilnahme an einem privaten Netz im offenen nicht erkennbar ist. Backends, Ressourcenmanager und Quittungen sind gemeinsam; `provide`, `accept_public_tasks`, `trackers`, `allowed_tools`, `dns_seeds` u. a. gelten je Netz und übernehmen ohne Angabe die Werte des ersten. Aufträge der Klassen `trusted` und `reduced` gehen nur an Peers privater Netze, Mitgliedsnetze oder an `trusted_peers`; `public` darf in jedes Netz. Beispiel in [`config.example.yaml`](../../config.example.yaml); `ping` und `invite` wählen das Netz mit `-net`.
 
 ## Wie Knoten sich finden
 
-Ein Knoten findet andere über Peer-Cache, mDNS, Einladung, `bootstrap`-Adressen und Tracker; danach tragen Peer-Austausch (`node.pex`) und eine Kademlia-DHT je Netz (nicht in Mitgliedsnetzen). Verbunden wird direkt, per Hole Punching oder über ein Relay. Kein Knoten braucht dafür einen offenen Port, solange es irgendwo einen erreichbaren Helfer gibt. Spezifikation: [`spec/p2p-schicht.md`](../spec/p2p-schicht.md).
+Ein Knoten findet andere über Peer-Cache, mDNS, Einladung, `bootstrap`-Adressen und Tracker; danach tragen Peer-Austausch (`node.pex`) und eine Kademlia-DHT je Netz (nicht in Mitgliedsnetzen). Verbunden wird direkt, per Hole Punching oder über ein Relay. Kein Knoten braucht dafür einen offenen Port, solange es irgendwo einen erreichbaren Helfer gibt. Spezifikation: [`spec/de/p2p-layer.md`](../../spec/de/p2p-layer.md).
 
 ### IPv6 und DS-Lite
 
 Knoten lauschen standardmäßig auch auf IPv6 (`/ip6/::/tcp/4711`, im offenen Netz zusätzlich QUIC). Öffentliche IPv6-Adressen werden bekannt gegeben, ULA- und Link-Local-Adressen nur im privaten Netz.
 
-**Hinter DS-Lite oder CGNAT** teilt sich der Anschluss eine IPv4-Adresse mit anderen; per IPv4 ist ein Knoten dann von außen nie erreichbar, auch nicht mit Portfreigabe oder UPnP. Er funktioniert trotzdem: Ausgehend erreicht er Helfer, Relays und DHT über IPv4 und IPv6, und über einen Relay-Platz ist er für alle erreichbar. Zwischen zwei IPv6-fähigen Standorten gelingt Hole Punching meist, weil IPv6 keine Ports umschreibt. Ohne Relay erreichbar wird ein Knoten hinter DS-Lite nur über IPv6, mit einer IPv6-Freigabe für Port 4711 in der Firewall des Routers. `swarmainet status` zeigt das unter `reachability_by_family` (z. B. `ip4: private`, `ip6: public`), und `hints` erklärt es.
+**Hinter DS-Lite oder CGNAT** teilt sich der Anschluss eine IPv4-Adresse mit anderen; per IPv4 ist ein Knoten dann von außen nie erreichbar, auch nicht mit Portfreigabe oder UPnP. Er funktioniert trotzdem: Ausgehend erreicht er Helfer, Relays und DHT über IPv4 und IPv6, und über einen Relay-Platz ist er für alle erreichbar. Zwischen zwei IPv6-fähigen Standorten gelingt Hole Punching meist, weil IPv6 keine Ports umschreibt; auf Hardware mit QUIC bestätigt. Ohne Relay erreichbar wird ein Knoten hinter DS-Lite nur über IPv6, mit einer IPv6-Freigabe für Port 4711 in der Firewall des Routers. `swarmainet status` zeigt das unter `reachability_by_family` (z. B. `ip4: private`, `ip6: public`), und `hints` erklärt es.
 
 **Datenschutz:** Bildet das Betriebssystem die IPv6-Adresse aus der MAC-Adresse (EUI-64, erkennbar an `ff:fe` in der Mitte), ist sie im offenen Netz eine dauerhafte Gerätekennung. Unter NetworkManager hilft `ipv6.addr-gen-mode stable-privacy`.
 
@@ -112,7 +114,7 @@ Knoten lauschen standardmäßig auch auf IPv6 (`/ip6/::/tcp/4711`, im offenen Ne
 
 ## Helferknoten mit Docker
 
-Ein Helferknoten trägt das Netz (Einstieg, DHT-Server, Relay), braucht keine GPU und eignet sich für einen Server mit öffentlicher Adresse. Vorlage: [`deploy/docker/`](../deploy/docker/compose.yaml).
+Ein Helferknoten trägt das Netz (Einstieg, DHT-Server, Relay), braucht keine GPU und eignet sich für einen Server mit öffentlicher Adresse. Vorlage: [`deploy/docker/`](../../deploy/docker/compose.yaml).
 
 ```sh
 cd deploy/docker
@@ -126,4 +128,4 @@ docker compose exec helper swarmainet invite -config /data/config.yaml -with-key
 
 Der Container nutzt das Host-Netz (`network_mode: host`), damit Erreichbarkeit und IPv6 stimmen; eingehend muss nur 4711/tcp offen sein (offenes Netz zusätzlich 4712/tcp+udp, siehe Vorlage). Optional läuft ein Tracker mit: `docker compose --profile tracker up -d`. Statt eines Verzeichnisses geht auch ein benanntes Volume. Das Image allein: `docker build -t swarmainet .`
 
-Für den Helfer eines Mitgliedsnetzes siehe [`deploy/vps/`](../deploy/vps/README.md), Abschnitt zum Gruppennetz.
+Für den Helfer eines Mitgliedsnetzes siehe [`deploy/vps/`](../../deploy/vps/de/README.md), Abschnitt zum Gruppennetz.

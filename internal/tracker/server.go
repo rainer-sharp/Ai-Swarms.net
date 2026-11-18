@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// Grenzen des Servers (spec/p2p-schicht.md § 2.3).
+// Grenzen des Servers (spec/p2p-layer.md § 2.3).
 const (
 	maxPerNet     = 256
 	maxNets       = 1024

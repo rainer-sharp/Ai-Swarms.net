@@ -1,5 +1,7 @@
 # Nutzung
 
+[English](../usage.md) · **Deutsch**
+
 Jeder Knoten stellt auf `http://127.0.0.1:7711` eine OpenAI-kompatible API und eine Status-Seite bereit. Das Gateway lauscht nur auf localhost. Jede Anwendung, die einen OpenAI-Endpunkt kennt, kann den Schwarm nutzen: Open WebUI, eine IDE oder ein Coding-Agent. Als Endpunkt `http://127.0.0.1:7711/v1` eintragen; einen API-Schlüssel braucht das Gateway nicht.
 
 ## Modellnamen: Wie der Schwarm arbeitet
@@ -27,7 +29,7 @@ Die Antwort enthält zusätzlich das Feld `swarmainet` mit Ablauf, Prüfurteil, 
 
 | Header | Bedeutung |
 |---|---|
-| `X-SwarmAiNet-Privacy` | Freigabeklasse `local`, `trusted`, `reduced` oder `public`: wer die Anfrage sehen darf ([Freigabeklassen](../spec/freigabeklassen.md)) |
+| `X-SwarmAiNet-Privacy` | Freigabeklasse `local`, `trusted`, `reduced` oder `public`: wer die Anfrage sehen darf ([Freigabeklassen](../../spec/de/privacy-classes.md)) |
 | `X-SwarmAiNet-Skill` | Fähigkeit, z. B. `code.python`; ohne Angabe entscheidet der Router |
 | `X-SwarmAiNet-Agents` | kommagetrennte Agent-IDs, auf die die Auswahl beschränkt wird (für Messungen) |
 | `X-SwarmAiNet-Trace: 1` | Texte der Zwischenschritte in `steps[].output` |
@@ -56,7 +58,7 @@ Die Werkzeuge führt die **Anwendung selbst** aus, also Open WebUI oder der Agen
 | offenes Netz, fremde Knoten | keine | nur die Liste |
 | `trusted_peers` | alle | alle |
 
-Findet sich kein freigegebener Agent, antwortet das Gateway mit 400. Ruft ein Modell ein Werkzeug auf, das ihm nicht gezeigt wurde, wird die Antwort verworfen. Einzelheiten: [Freigabeklassen, Regel 6](../spec/freigabeklassen.md).
+Findet sich kein freigegebener Agent, antwortet das Gateway mit 400. Ruft ein Modell ein Werkzeug auf, das ihm nicht gezeigt wurde, wird die Antwort verworfen. Einzelheiten: [Freigabeklassen, Regel 6](../../spec/de/privacy-classes.md).
 
 Inhalte als Liste von Textteilen werden zusammengefügt. Bilder werden noch nicht unterstützt (400).
 
@@ -75,7 +77,7 @@ Inhalte als Liste von Textteilen werden zusammengefügt. Bilder werden noch nich
 | `network create` | Mitgliedsnetz mit Wurzelschlüssel anlegen |
 | `member invite\|request\|issue\|install\|revoke\|import-crl\|list` | Mitglieder aufnehmen und Zertifikate verwalten |
 | `tracker [-listen ADR] [-tls-cert F -tls-key F] [-trust-proxy]` | Adressbriefkasten betreiben |
-| `bench run\|report\|hash` | Benchmark, siehe [`bench/`](../bench/README.md) |
+| `bench run\|report\|hash` | Benchmark, siehe [`bench/`](../../bench/de/README.md) |
 
 Alle Befehle nehmen `-config PFAD` (Standard `~/.swarmainet/config.yaml`) und `-v` für ausführliche Protokolle; Optionen stehen vor den übrigen Argumenten.
 

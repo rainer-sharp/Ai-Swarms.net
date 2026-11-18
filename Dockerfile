@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # SwarmAiNet-Knoten als Container, vor allem für Helferknoten und Tracker
-# (spec/p2p-schicht.md § 6.1). Bauen: docker build -t swarmainet .
+# (spec/p2p-layer.md § 6.1). Bauen: docker build -t swarmainet .
 FROM golang:1.27.2-bookworm AS build
 WORKDIR /src
 COPY go.mod go.sum ./

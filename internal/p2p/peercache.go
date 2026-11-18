@@ -21,7 +21,7 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"
 )
 
-// Peer-Cache nach spec/p2p-schicht.md § 2.1: zuletzt erfolgreich verbundene
+// Peer-Cache nach spec/p2p-layer.md § 2.1: zuletzt erfolgreich verbundene
 // Peers, ab dem zweiten Start die Hauptquelle für den Netzeintritt.
 const (
 	cacheMaxEntries   = 128

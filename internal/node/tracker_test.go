@@ -17,7 +17,7 @@ import (
 
 // TestTrackerPrivateNetwork: A und C kennen sich nicht und haben weder mDNS
 // noch statische Peers; sie finden sich über den Tracker. Der Tracker sieht
-// dabei weder die Netz-Kennung noch Peer-IDs (spec/p2p-schicht.md § 2.3).
+// dabei weder die Netz-Kennung noch Peer-IDs (spec/p2p-layer.md § 2.3).
 func TestTrackerPrivateNetwork(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

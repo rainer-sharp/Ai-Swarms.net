@@ -1,12 +1,12 @@
 # SwarmAiNet
 
-**English** · [Deutsch](LIESMICH.md)
+**English** · [Deutsch](de/README.md)
 
 **Local AI models form a team.** SwarmAiNet connects the computers on which you run models with Ollama, llama.cpp, vLLM or LM Studio into a swarm. For each request it assembles a team: one model drafts, a model from a different family reviews, and revisions happen only if flaws are found. Your applications talk to the swarm as if it were a single OpenAI endpoint.
 
-> **Status: research prototype.** The local swarm as well as private networks, group networks and the open network run on real hardware across multiple sites. Whether the swarm delivers better answers than the best single model has not yet been shown. Protocol version 0.1; incompatible changes are possible. Details: [Status](docs/stand.md) (German).
+> **Status: research prototype.** The local swarm as well as private networks, group networks and the open network run on real hardware across multiple sites. Whether the swarm delivers better answers than the best single model has not yet been shown. Protocol version 0.1; incompatible changes are possible. Details: [Status](docs/status.md).
 
-> **Note:** The documentation and specification are currently available in German only.
+> The documentation and specification are available in English and German: each German version sits under the same file name in a `de/` subfolder, starting with [de/README.md](de/README.md).
 
 ## What it does
 
@@ -43,19 +43,19 @@ curl -s http://127.0.0.1:7711/v1/chat/completions -H 'Content-Type: application/
 
 Or in Open WebUI, enter the URL `http://127.0.0.1:7711/v1` under *Settings → Connections* and select the model `swarmainet`.
 
-> Without further settings, a new node joins the open network. It accepts no foreign tasks there and does not send your requests outside, but it is visible to others with its peer ID and address. For your own devices, you are better off setting up a [private network](docs/netze.md#privates-netz-eigene-geräte).
+> Without further settings, a new node joins the open network. It accepts no foreign tasks there and does not send your requests outside, but it is visible to others with its peer ID and address. For your own devices, you are better off setting up a [private network](docs/networks.md#private-network-own-devices).
 
-**Connecting more devices:** on a running node, run `swarmainet invite -with-key`, and on the new device `swarmainet join '<link>'`. On a LAN the devices then find each other on their own; for multiple sites see [Network types](docs/netze.md#mehrere-standorte).
+**Connecting more devices:** on a running node, run `swarmainet invite -with-key`, and on the new device `swarmainet join '<link>'`. On a LAN the devices then find each other on their own; for multiple sites see [Network types](docs/networks.md#several-sites).
 
-## Documentation (German)
+## Documentation
 
 | | |
 |---|---|
 | [Installation](docs/installation.md) | Building, setup, continuous operation on Linux and Docker |
-| [Usage](docs/nutzung.md) | Model names and patterns, Open WebUI, coding agents, commands, diagnostics |
-| [Network types](docs/netze.md) | Private network, group network, open network, multiple sites, helpers |
-| [Configuration](docs/konfiguration.md) | All keys and files |
-| [Status](docs/stand.md) | What has been tested, what is missing |
+| [Usage](docs/usage.md) | Model names and patterns, Open WebUI, coding agents, commands, diagnostics |
+| [Network types](docs/networks.md) | Private network, group network, open network, multiple sites, helpers |
+| [Configuration](docs/configuration.md) | All keys and files |
+| [Status](docs/status.md) | What has been tested, what is missing |
 | [Specification](spec/README.md) | Protocol, network layer, security model |
 
 ## Security
@@ -64,12 +64,12 @@ SwarmAiNet has not been audited. Share confidential content only with your own d
 
 ## Contributing
 
-Bug reports, measurements with other models and experience from other networks are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Code contributions require the [contributor agreement](CLA.md).
+Bug reports, measurements with other models and experience from other networks are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Code contributions require the [contributor agreement](CLA.md) (in German).
 
 ## License
 
-SwarmAiNet is free software under the [GNU AGPL-3.0](LICENSE). Anyone who modifies and distributes it, or offers it as a network service, must disclose the source code. A [commercial license](COMMERCIAL.md) is available for use in closed products.
+SwarmAiNet is free software under the [GNU AGPL-3.0](LICENSE). Anyone who modifies and distributes it, or offers it as a network service, must disclose the source code. A [commercial license](COMMERCIAL.md) (in German) is available for use in closed products.
 
-The documentation and specification are licensed under [CC BY 4.0](LICENSE-DOCS); for the distinction see [COMMERCIAL.md](COMMERCIAL.md#dokumentation-cc-by-40).
+The documentation and specification are licensed under [CC BY 4.0](LICENSE-DOCS); for the distinction see [COMMERCIAL.md](COMMERCIAL.md#dokumentation-cc-by-40) (in German).
 
 The benchmark tasks in `bench/` are taken from HumanEval and GSM8K (© OpenAI, MIT).
