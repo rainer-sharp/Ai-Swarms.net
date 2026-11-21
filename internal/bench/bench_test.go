@@ -120,10 +120,18 @@ func TestExecuteDirectSwarmAndResume(t *testing.T) {
 	}))
 	defer backendSrv.Close()
 	var agentsHeader, traceHeader string
+	var feedback []map[string]any
 	gatewaySrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/feedback" {
+			var fb map[string]any
+			_ = json.NewDecoder(r.Body).Decode(&fb)
+			feedback = append(feedback, fb)
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		agentsHeader, traceHeader = r.Header.Get("X-SwarmAiNet-Agents"), r.Header.Get("X-SwarmAiNet-Trace")
 		// Entwurf richtig, Prüfer meldet trotzdem Mängel, Überarbeitung falsch.
-		ans := orchestrator.Answer{Verdict: "issues", Issues: []string{"rechenfehler"}, Steps: []orchestrator.Step{
+		ans := orchestrator.Answer{TaskID: "s1", Verdict: "issues", Issues: []string{"rechenfehler"}, Steps: []orchestrator.Step{
 			{Role: "specialist", AgentID: "a", Status: "ok", PromptTokens: 100, CompletionTokens: 20, Output: "Answer: 1200"},
 			{Role: "verifier", AgentID: "b", Status: "ok", PromptTokens: 50, CompletionTokens: 10, Output: `{"verdict":"issues"}`},
 		}}
@@ -163,6 +171,10 @@ func TestExecuteDirectSwarmAndResume(t *testing.T) {
 	}
 	if r := byRun["schwarm"]; len(r.StepSolved) != 2 || r.StepSolved[0] == nil || !*r.StepSolved[0] || r.StepSolved[1] != nil || len(r.Issues) != 1 {
 		t.Fatalf("zwischenschritte %+v", r)
+	}
+	// Rückmeldung ans Kompetenzprofil: nur der bewertete Entwurf, objektiv.
+	if len(feedback) != 1 || feedback[0]["task_id"] != "s1" || feedback[0]["step"] != 0.0 || feedback[0]["good"] != true || feedback[0]["objective"] != true {
+		t.Fatalf("rückmeldungen %v", feedback)
 	}
 	st := StepAnalysis(res)
 	if len(st) != 1 || st[0].Checked != 1 || st[0].FalseAlarm != 1 || st[0].Broken != 1 || st[0].Justified != 0 {

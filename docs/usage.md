@@ -62,6 +62,25 @@ If no agent with the required permission is found, the gateway responds with 400
 
 Content given as a list of text parts is joined. Images are not supported yet (400).
 
+## Feedback and competence profile
+
+Every node keeps a competence profile of the agents it works with: a Glicko-2 rating per agent and skill, plus a verifier statistic (how often a verifier's `issues` or `ok` turned out to be right). It only collects data for now; the selection of agents does not use it yet ([cooperation](../spec/cooperation.md) § 2).
+
+Feedback on an answer uses its `task_id` from the field `swarmainet`:
+
+```sh
+curl -s http://127.0.0.1:7711/v1/feedback -H 'Content-Type: application/json' \
+  -d '{"task_id":"<task_id>","good":true}'
+```
+
+| Field | Meaning |
+|---|---|
+| `good` | the result was good (`true`) or not (`false`) |
+| `objective` | `true` for a checked result (tests, exact solution): full weight; otherwise user feedback with weight ¼ |
+| `step` | index in `steps[]`, e.g. to rate a draft separately; without it, the final result counts |
+
+The response is 204, or 404 for an unknown task, 409 if feedback was already given for this step, 400 for an invalid step. `swarmainet bench run` sends its assessments as objective feedback automatically. `GET http://127.0.0.1:7711/api/profile` shows the profile; it is stored in `~/.swarmainet/profile.json`. In the answer, `steps[].verdict` shows each verifier's verdict.
+
 ## Commands
 
 | Command | Purpose |

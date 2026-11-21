@@ -13,13 +13,15 @@ import (
 	"testing"
 
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/orchestrator"
+	"github.com/rainer-sharp/Ai-Swarms.net/internal/profile"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
 )
 
 type fakeBackend struct {
-	last  orchestrator.Request
-	calls []protocol.ToolCall // Antwort mit Werkzeug-Aufrufen statt Text
-	err   error               // Fehler statt Antwort
+	last     orchestrator.Request
+	calls    []protocol.ToolCall // Antwort mit Werkzeug-Aufrufen statt Text
+	err      error               // Fehler statt Antwort
+	feedback []profile.Feedback
 }
 
 func (f *fakeBackend) Ask(_ context.Context, r orchestrator.Request) (*orchestrator.Answer, error) {
@@ -32,7 +34,15 @@ func (f *fakeBackend) Ask(_ context.Context, r orchestrator.Request) (*orchestra
 	}
 	return &orchestrator.Answer{TaskID: "t1", Content: "hallo", Pattern: r.Pattern}, nil
 }
-func (f *fakeBackend) StatusJSON() any                       { return map[string]string{"ok": "1"} }
+func (f *fakeBackend) StatusJSON() any  { return map[string]string{"ok": "1"} }
+func (f *fakeBackend) ProfileJSON() any { return map[string]string{"profile": "1"} }
+func (f *fakeBackend) Feedback(fb profile.Feedback) error {
+	f.feedback = append(f.feedback, fb)
+	if fb.TaskID != "t1" {
+		return profile.ErrUnknownTask
+	}
+	return nil
+}
 func (f *fakeBackend) Pause()                                {}
 func (f *fakeBackend) Resume()                               {}
 func (f *fakeBackend) Stop()                                 {}
@@ -163,5 +173,34 @@ func TestNoAgentStatus(t *testing.T) {
 		if rec.Code != tc.code {
 			t.Errorf("%v: %d, erwartet %d", tc.err, rec.Code, tc.code)
 		}
+	}
+}
+
+// TestFeedbackEndpoint: POST /v1/feedback reicht die Rückmeldung durch, kennt
+// keine fremden Felder und meldet unbekannte Aufträge mit 404.
+func TestFeedbackEndpoint(t *testing.T) {
+	fb := &fakeBackend{}
+	h := Handler(fb)
+	for _, tc := range []struct {
+		body string
+		code int
+	}{
+		{`{"task_id":"t1","good":true,"objective":true,"step":0}`, 204},
+		{`{"task_id":"t2","good":false}`, 404},
+		{`{"task_id":"t1","gut":true}`, 400},
+		{`kein json`, 400},
+	} {
+		if rec := do(h, "POST", "/v1/feedback", tc.body, "127.0.0.1:5000", "127.0.0.1:7711"); rec.Code != tc.code {
+			t.Errorf("%s: %d, erwartet %d", tc.body, rec.Code, tc.code)
+		}
+	}
+	if len(fb.feedback) != 2 || !fb.feedback[0].Objective || fb.feedback[0].Step == nil || *fb.feedback[0].Step != 0 {
+		t.Fatalf("durchgereicht: %+v", fb.feedback)
+	}
+	if rec := do(h, "GET", "/api/profile", "", "127.0.0.1:5000", "127.0.0.1:7711"); rec.Code != 200 || !strings.Contains(rec.Body.String(), "profile") {
+		t.Fatalf("profil: %d %s", rec.Code, rec.Body)
+	}
+	if rec := do(h, "POST", "/v1/feedback", `{"task_id":"t1","good":true}`, "192.0.2.7:5000", "127.0.0.1:7711"); rec.Code == 204 {
+		t.Fatal("rückmeldung von außen angenommen")
 	}
 }

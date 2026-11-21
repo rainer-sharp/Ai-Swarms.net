@@ -2,7 +2,7 @@
 
 **English** · [Deutsch](de/cooperation.md)
 
-Status: **draft**, not implemented yet. Basis: the overall concept, sections "Capabilities and competence measurement", "Roles and cooperation patterns", "Task protocol" and "Selection and control". Supplements [protocol v0.1](protocol-v0.1.md) and builds on the [P2P layer](p2p-layer.md). The keywords MUST, SHOULD and MAY are normative.
+Status: **draft**; stage 1 (competence profile, § 2 and § 11) implemented on 21 Nov 2026, the profile does not influence selection yet. Basis: the overall concept, sections "Capabilities and competence measurement", "Roles and cooperation patterns", "Task protocol" and "Selection and control". Supplements [protocol v0.1](protocol-v0.1.md) and builds on the [P2P layer](p2p-layer.md). The keywords MUST, SHOULD and MAY are normative.
 
 So far the orchestrator decides by fixed rules: it takes the pattern from the configuration or the request and the verifier by family and `strength` (a self-declaration). Phase 3 replaces this with **measured experience**:
 
@@ -40,7 +40,7 @@ For every agent it works with, each node keeps a rating per skill according to *
 
 Glicko-2 instead of simple Elo, because it carries the uncertainty along. The bandit (§ 3) needs exactly this to distinguish between "bad" and "unknown".
 
-Storage: `<data_dir>/profile.json`, local only, separate per network (agents of different networks are different identities). Values of agents not observed for 90 days lose certainty (RD grows as provided for in Glicko-2).
+Storage: `<data_dir>/profile.json`, local only, written atomically. Agents are keyed by peer ID and agent ID (own agents as `local/<agent>`); since every network has its own peer ID, agents of different networks are kept apart. Values of agents not observed for 90 days lose certainty (RD grows by σ per day, as provided for in Glicko-2, at most back to the starting value 350).
 
 ### 2.2 Signals and weights
 
@@ -48,9 +48,11 @@ Storage: `<data_dir>/profile.json`, local only, separate per network (agents of 
 |---|---|---|---|
 | 1 | **objective**: unit tests passed, exact solution hit | match against a fixed reference (win/loss) with full weight | benchmark (`swarmainet bench`), canary tasks (§ 2.3), later code execution in the sandbox (phase 4) |
 | 2 | **canary**: task with a known solution, inconspicuously interspersed | like objective | § 2.3 |
-| 3 | **verifier verdict** of an agent of another family (`ok` / `issues`) | match with half weight; only if the verifier itself has a sufficient rating in the skill | every task with a verifier |
+| 3 | **verifier verdict** of an agent of another family (`ok` / `issues`) | match with half weight; only if the verifier's own verifier rating is sufficient: at least 5 objectively checked verdicts, at least 60 % of them correct | every task with a verifier |
 | 4 | **user feedback** on the final result (good / bad) | match with weight ¼ for all participating creators | gateway, § 8 |
 | – | self-declaration (`strength`, `confidence`) | starting value only, never a signal | capability announcement |
+
+Every match is played against a fixed reference (1500 ± 50); weights enter as fractions of a match. A rating thus says how often an agent succeeds in this skill, not how it compares to a particular other agent. A verifier verdict refers to the result it reviewed, i.e. the last successful creator step before it. Objective feedback on a step also counts for the verifiers that reviewed this step: `issues` on a correct result is a false alarm, `ok` on a wrong one a miss.
 
 Pairwise comparisons ("A is better than B") from parallel patterns are counted as a match between the two agents if a signal of ranks 1–3 decides them.
 
@@ -204,9 +206,9 @@ New messages and fields (versioning as before: new optional payload fields are c
 
 Gateway:
 
-- `POST /v1/feedback` with `{ "task_id": …, "good": true|false }`: user feedback (§ 2.2, rank 4).
+- `POST /v1/feedback` with `{ "task_id": …, "good": true|false, "objective": false, "step": <index> }`: feedback on a task of your own. Without `objective` it is user feedback (§ 2.2, rank 4, weight ¼), with `objective: true` a checked result (rank 1, full weight), as sent by `swarmainet bench run`. `step` refers to an entry in `steps[]` of the answer; without it, the final result counts. The task must be among the last 1024 of this node; each step accepts one feedback. Responses: 204, 404 (unknown task), 409 (already given), 400 (invalid step, e.g. a verifier). Implemented in stage 1.
 - In future, the model name `swarmainet` selects via the bandit; `swarmainet/<pattern>` still forces a pattern.
-- `GET /api/profile`: competence profile and controller state per category (diagnostics, "control stability" in the measurement plan).
+- `GET /api/profile`: competence profile and controller state per category (diagnostics, "control stability" in the measurement plan). Stage 1 shows the profile: rating per agent and skill (`r`, `rd`, `sigma`, `games`) and verifier statistics (`hit`, `false_alarm`, `correct_ok`, `miss`).
 
 Configuration (draft):
 
@@ -244,7 +246,7 @@ Metrics in addition to the measurement plan: convergence of the bandit (how many
 
 ## 11. Implementation in stages
 
-1. **Competence profile and signals:** Glicko-2 per agent and skill, verifier rating, signals from benchmark, verifier verdict and `POST /v1/feedback`; display via `GET /api/profile`. Testable with artificial agents of known quality.
+1. ✅ **Competence profile and signals:** Glicko-2 per agent and skill, verifier rating, signals from benchmark, verifier verdict and `POST /v1/feedback`; display via `GET /api/profile`. Testable with artificial agents of known quality. Implemented in `internal/profile`; prior knowledge from `strength`, verifier verdicts per step (`steps[].verdict`). Not yet: pairwise comparisons from parallel patterns.
 2. **Bandit over recipes** with today's selection as prior knowledge, and the pattern **cascade**.
 3. **PI controller** for the review effort per category.
 4. **Task graph:** planner, decompose and distribute, synthesis.

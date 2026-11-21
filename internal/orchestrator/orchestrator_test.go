@@ -74,6 +74,12 @@ func TestDraftVerifySynthesis(t *testing.T) {
 	if strings.Join(ex.calls, ",") != strings.Join(want, ",") {
 		t.Fatalf("ablauf %v, erwartet %v", ex.calls, want)
 	}
+	// Das Urteil steht am Prüfschritt, nicht an Entwurf oder Synthese.
+	for _, s := range ans.Steps {
+		if want := map[protocol.Role]string{protocol.RoleVerifier: "issues"}[s.Role]; s.Verdict != want {
+			t.Fatalf("schritt %s/%s: urteil %q, erwartet %q", s.Role, s.AgentID, s.Verdict, want)
+		}
+	}
 }
 
 func TestVerifierFromOtherFamilyAndOkSkipsSynthesis(t *testing.T) {

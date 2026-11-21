@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/orchestrator"
+	"github.com/rainer-sharp/Ai-Swarms.net/internal/profile"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
 )
 
@@ -28,6 +29,9 @@ type Backend interface {
 	Stop()
 	Connect(ctx context.Context, addr string) error
 	Ping(ctx context.Context, target, network string) (any, error)
+	// Feedback und ProfileJSON: Kompetenzprofil (spec/cooperation.md § 2, § 8).
+	Feedback(fb profile.Feedback) error
+	ProfileJSON() any
 }
 
 //go:embed index.html
@@ -96,6 +100,26 @@ func Handler(b Backend) http.Handler {
 		}
 		writeJSON(w, 200, rep)
 	})
+	mux.HandleFunc("POST /v1/feedback", func(w http.ResponseWriter, r *http.Request) {
+		var fb profile.Feedback
+		dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096))
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&fb); err != nil {
+			writeErr(w, http.StatusBadRequest, err)
+			return
+		}
+		switch err := b.Feedback(fb); {
+		case errors.Is(err, profile.ErrUnknownTask):
+			writeErr(w, http.StatusNotFound, err)
+		case errors.Is(err, profile.ErrDuplicate):
+			writeErr(w, http.StatusConflict, err)
+		case err != nil:
+			writeErr(w, http.StatusBadRequest, err)
+		default:
+			w.WriteHeader(http.StatusNoContent)
+		}
+	})
+	mux.HandleFunc("GET /api/profile", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, http.StatusOK, b.ProfileJSON()) })
 	return localOnly(mux)
 }
 

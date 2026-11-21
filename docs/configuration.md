@@ -48,6 +48,7 @@ Secrets do not belong in the file: the Home Assistant token comes from an enviro
 | `identity.key` | The node's private key, determines the peer ID |
 | `*.key` | Network keys of private networks |
 | `peers-<network_id>.json` | Most recently connected peers |
+| `profile.json` | Competence profile of the agents (see [usage](usage.md#feedback-and-competence-profile)) |
 | Files per membership network | Certificate, revocation lists, on an issuer its key and the register of open invitations |
 
 Never pass on key files and do not put them in a repository. Whoever has `identity.key` appears under your peer ID.

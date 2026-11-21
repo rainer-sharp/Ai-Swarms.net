@@ -111,6 +111,9 @@ type Step struct {
 	PromptTokens     int    `json:"prompt_tokens"`
 	CompletionTokens int    `json:"completion_tokens"`
 	Error            string `json:"error,omitempty"`
+	// Verdict: Urteil eines Prüfers ("ok" oder "issues"), nur bei gültigem
+	// Urteil; Grundlage für das Kompetenzprofil (spec/cooperation.md § 2.2).
+	Verdict string `json:"verdict,omitempty"`
 	// Output: Text des Schritts, nur bei Request.Trace und Erfolg.
 	Output string `json:"output,omitempty"`
 }
@@ -520,6 +523,19 @@ func (r *run) addStep(s Step) {
 	r.mu.Unlock()
 }
 
+// markVerdict trägt das Urteil am letzten Prüfschritt dieses Agenten ein.
+func (r *run) markVerdict(a Agent, verdict string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for i := len(r.ans.Steps) - 1; i >= 0; i-- {
+		s := &r.ans.Steps[i]
+		if s.Role == protocol.RoleVerifier && s.AgentID == a.ID && s.PeerID == a.PeerID && s.Status != protocol.StatusFailed {
+			s.Verdict = verdict
+			return
+		}
+	}
+}
+
 func (r *run) limit(s string) {
 	r.mu.Lock()
 	r.ans.Limitations = append(r.ans.Limitations, s)
@@ -574,6 +590,7 @@ func (r *run) verifyAndRevise(ctx context.Context, author Agent) {
 		schema = mathVerdictSchema
 	}
 	var v verdict
+	var judge Agent
 	valid, tried := false, 0
 	for len(verifiers) > 0 && tried < maxVerifyTries && !valid {
 		review, used, err := r.exec(ctx, protocol.RoleVerifier, verifiers, verifyPrompt(r.req.Messages, r.ans.Content, r.req.Skill), schema)
@@ -583,7 +600,7 @@ func (r *run) verifyAndRevise(ctx context.Context, author Agent) {
 		tried++
 		var perr error
 		if v, perr = parseVerdict(review.Result.Content); perr == nil {
-			valid = true
+			valid, judge = true, used
 			break
 		}
 		slog.Info("prüferurteil nicht auswertbar, nächster prüfer", "agent", used.ID, "peer", short(used.PeerID), "err", perr)
@@ -603,6 +620,7 @@ func (r *run) verifyAndRevise(ctx context.Context, author Agent) {
 		v.Verdict, v.Issues = "ok", nil
 	}
 	r.ans.Verdict, r.ans.Issues = v.Verdict, v.Issues
+	r.markVerdict(judge, v.Verdict)
 	if v.Verdict == "ok" {
 		return
 	}

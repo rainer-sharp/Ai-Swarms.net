@@ -2,7 +2,7 @@
 
 [English](../cooperation.md) · **Deutsch**
 
-Status: **Entwurf**, noch nicht umgesetzt. Grundlage: Gesamtkonzept, Abschnitte „Fähigkeiten und Kompetenzmessung“, „Rollen und Kooperationsmuster“, „Auftragsprotokoll“ und „Auswahl und Regelung“. Ergänzt [Protokoll v0.1](protocol-v0.1.md) und baut auf der [P2P-Schicht](p2p-layer.md) auf. Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
+Status: **Entwurf**; Stufe 1 (Kompetenzprofil, § 2 und § 11) am 21.11.2026 umgesetzt, das Profil beeinflusst die Auswahl noch nicht. Grundlage: Gesamtkonzept, Abschnitte „Fähigkeiten und Kompetenzmessung“, „Rollen und Kooperationsmuster“, „Auftragsprotokoll“ und „Auswahl und Regelung“. Ergänzt [Protokoll v0.1](protocol-v0.1.md) und baut auf der [P2P-Schicht](p2p-layer.md) auf. Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
 
 Bisher entscheidet der Orchestrator nach festen Regeln: Er nimmt das Muster aus der Konfiguration oder der Anfrage und den Prüfer nach Familie und `strength` (eine Selbstauskunft). Phase 3 ersetzt das durch **gemessene Erfahrung**:
 
@@ -40,7 +40,7 @@ Jeder Knoten führt für jeden Agenten, mit dem er arbeitet, je Fähigkeit eine 
 
 Glicko-2 statt einfachem Elo, weil es die Unsicherheit mitführt. Der Bandit (§ 3) braucht genau diese, um zwischen „schlecht“ und „unbekannt“ zu unterscheiden.
 
-Ablage: `<data_dir>/profile.json`, nur lokal, je Netz getrennt (Agenten verschiedener Netze sind verschiedene Identitäten). Werte von Agenten, die 90 Tage nicht beobachtet wurden, verlieren an Sicherheit (RD wächst wie in Glicko-2 vorgesehen).
+Ablage: `<data_dir>/profile.json`, nur lokal, atomar geschrieben. Agenten werden nach Peer-ID und Agent-ID geführt (eigene als `local/<agent>`); weil jedes Netz eine eigene Peer-ID hat, bleiben Agenten verschiedener Netze getrennt. Werte von Agenten, die 90 Tage nicht beobachtet wurden, verlieren an Sicherheit (RD wächst wie in Glicko-2 vorgesehen um σ je Tag, höchstens bis zum Startwert 350).
 
 ### 2.2 Signale und Gewichte
 
@@ -48,9 +48,11 @@ Ablage: `<data_dir>/profile.json`, nur lokal, je Netz getrennt (Agenten verschie
 |---|---|---|---|
 | 1 | **objektiv**: Unit-Tests bestanden, exakte Lösung getroffen | Partie gegen eine feste Referenz (Sieg/Niederlage) mit vollem Gewicht | Benchmark (`swarmainet bench`), Canary-Aufgaben (§ 2.3), später Code-Ausführung in der Sandbox (Phase 4) |
 | 2 | **Canary**: Aufgabe mit bekannter Lösung, unauffällig eingestreut | wie objektiv | § 2.3 |
-| 3 | **Prüferurteil** eines Agenten anderer Familie (`ok` / `issues`) | Partie mit halbem Gewicht; nur wenn der Prüfer selbst eine ausreichende Bewertung in der Fähigkeit hat | jeder Auftrag mit Prüfer |
+| 3 | **Prüferurteil** eines Agenten anderer Familie (`ok` / `issues`) | Partie mit halbem Gewicht; nur wenn die Prüferbewertung des Prüfers ausreicht: mindestens 5 objektiv überprüfte Urteile, davon mindestens 60 % zutreffend | jeder Auftrag mit Prüfer |
 | 4 | **Nutzerfeedback** zum Endergebnis (gut / schlecht) | Partie mit Gewicht ¼ für alle beteiligten Ersteller | Gateway, § 8 |
 | – | Selbstauskunft (`strength`, `confidence`) | nur Startwert, nie ein Signal | Fähigkeitsanzeige |
+
+Jede Partie wird gegen eine feste Referenz (1500 ± 50) gespielt; Gewichte gehen als Bruchteile einer Partie ein. Eine Bewertung sagt damit, wie oft ein Agent in dieser Fähigkeit Erfolg hat, nicht wie er im Vergleich zu einem bestimmten anderen Agenten abschneidet. Ein Prüferurteil bezieht sich auf das Ergebnis, das er geprüft hat, also den letzten erfolgreichen Erstellerschritt davor. Objektives Feedback zu einem Schritt zählt auch für die Prüfer dieses Schritts: `issues` bei richtigem Ergebnis ist ein Fehlalarm, `ok` bei falschem ein übersehener Fehler.
 
 Paarvergleiche („A ist besser als B“) aus parallelen Mustern werden als Partie zwischen den beiden Agenten gewertet, wenn ein Signal der Ränge 1–3 sie entscheidet.
 
@@ -204,9 +206,9 @@ Neue Nachrichten und Felder (Versionierung wie bisher: neue optionale Payload-Fe
 
 Gateway:
 
-- `POST /v1/feedback` mit `{ "task_id": …, "good": true|false }`: Nutzerfeedback (§ 2.2, Rang 4).
+- `POST /v1/feedback` mit `{ "task_id": …, "good": true|false, "objective": false, "step": <index> }`: Rückmeldung zu einem eigenen Auftrag. Ohne `objective` Nutzerfeedback (§ 2.2, Rang 4, Gewicht ¼), mit `objective: true` ein geprüftes Ergebnis (Rang 1, volles Gewicht), wie es `swarmainet bench run` sendet. `step` bezeichnet einen Eintrag in `steps[]` der Antwort; ohne Angabe zählt das Endergebnis. Der Auftrag muss zu den letzten 1024 dieses Knotens gehören; je Schritt gilt eine Rückmeldung. Antworten: 204, 404 (Auftrag unbekannt), 409 (schon gemeldet), 400 (ungültiger Schritt, etwa ein Prüfer). In Stufe 1 umgesetzt.
 - Modellname `swarmainet` wählt künftig über den Bandit; `swarmainet/<muster>` erzwingt weiterhin ein Muster.
-- `GET /api/profile`: Kompetenzprofil und Reglerzustand je Kategorie (Diagnose, „Regelungsstabilität“ im Messplan).
+- `GET /api/profile`: Kompetenzprofil und Reglerzustand je Kategorie (Diagnose, „Regelungsstabilität“ im Messplan). Stufe 1 zeigt das Profil: Bewertung je Agent und Fähigkeit (`r`, `rd`, `sigma`, `games`) und Prüferstatistik (`hit`, `false_alarm`, `correct_ok`, `miss`).
 
 Konfiguration (Entwurf):
 
@@ -244,7 +246,7 @@ Kennzahlen zusätzlich zum Messplan: Konvergenz des Bandits (wie viele Aufträge
 
 ## 11. Umsetzung in Stufen
 
-1. **Kompetenzprofil und Signale:** Glicko-2 je Agent und Fähigkeit, Prüferbewertung, Signale aus Benchmark, Prüferurteil und `POST /v1/feedback`; Anzeige über `GET /api/profile`. Prüfbar mit künstlichen Agenten bekannter Qualität.
+1. ✅ **Kompetenzprofil und Signale:** Glicko-2 je Agent und Fähigkeit, Prüferbewertung, Signale aus Benchmark, Prüferurteil und `POST /v1/feedback`; Anzeige über `GET /api/profile`. Prüfbar mit künstlichen Agenten bekannter Qualität. Umgesetzt in `internal/profile`; Vorwissen aus `strength`, Prüferurteile je Schritt (`steps[].verdict`). Noch nicht: Paarvergleiche aus parallelen Mustern.
 2. **Bandit über Rezepte** mit der heutigen Auswahl als Vorwissen, und Muster **Kaskade**.
 3. **PI-Regler** für den Prüfaufwand je Kategorie.
 4. **Task-Graph**: Planer, Zerlegen und Verteilen, Synthese.

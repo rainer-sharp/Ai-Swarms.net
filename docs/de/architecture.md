@@ -22,6 +22,7 @@ Anwendung (Open WebUI, IDE, Agent)
 | Auswahl | `internal/orchestrator` (`candidates`, `Route`) – regelbasiert: Fähigkeit, bei Gleichstand Lastverteilung (freie Slots, laufende Teilaufträge, im Wechsel), dann Kontextgröße; Prüfer nach Modellstärke (`strength`), dann Kontextgröße, dann eigene vor entfernten |
 | Orchestrierung | `internal/orchestrator` – Muster `single`, `parallel`, `draft_verify_synthesize`, `parallel_verify`; Werkzeugfreigaben je Netz |
 | Vertrauen | `internal/receipt` – beidseitig signierte Quittungen; `internal/membership` – Zertifikate, Ketten, Sperrlisten, Einladungen |
+| Kompetenzprofil | `internal/profile` – Glicko-2-Bewertung je Agent und Fähigkeit, Prüferstatistik, Rückmeldungen; noch nicht für die Auswahl genutzt |
 | Ressourcen | `internal/rem` – Slots, Zeitfenster, GPU-Minuten, mittlere GPU-Auslastung, Temperatur, RAM-Reserve, PV-Hysterese, Eigenbedarf, Sofort-Stopp |
 | P2P-Transport | `internal/p2p` – je Netz ein libp2p-Host (QUIC/TCP, PSK), mDNS, statische und Einstiegsadressen, Relay mit Reservierungen, Hole Punching, AutoNAT, Peer-Austausch, Peer-Cache, Kademlia-DHT, Zulassung in Mitgliedsnetzen, Tracker-Client, Ratenlimits, Diagnose |
 | Netzeintritt | `internal/invite` – Einladungslinks und Schlüsseldateien; `internal/tracker` – Tracker-Einträge, Server und Client |

@@ -84,7 +84,7 @@ The swarm does not ask "Who has model X?" but "Who can do task Y under condition
 
 **Capability taxonomy:** a shared basic vocabulary (`reasoning.math`, `code.<language>`, `code.review`, `vision.ocr`, `retrieval.embed`, `domain.engineering` …) plus free tags for new things. The DHT only contains references "peer X offers capability Y", spread over four keys per capability, so that no node becomes a bottleneck ([P2P layer](../spec/p2p-layer.md) § 5).
 
-**Measured profile** (phase 3): every node keeps a competence value per capability according to Glicko-2 for the agents it works with. Sources, by weight:
+**Measured profile** (phase 3; recorded since 21 Nov 2026, not yet used for selection): every node keeps a competence value per capability according to Glicko-2 for the agents it works with. Sources, by weight:
 
 1. Objectively checkable tasks: code with tests, maths with an exact solution, extraction with ground truth.
 2. Canary tasks with a known solution.

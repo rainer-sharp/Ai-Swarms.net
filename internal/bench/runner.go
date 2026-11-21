@@ -66,7 +66,9 @@ type Result struct {
 	Steps            []orchestrator.Step `json:"steps,omitempty"`
 	// StepSolved bewertet die Zwischentexte (Steps[i].Output) wie eine
 	// Endantwort; nil für Prüfer, fehlgeschlagene Schritte und ohne Text.
-	StepSolved  []*bool   `json:"step_solved,omitempty"`
+	StepSolved []*bool `json:"step_solved,omitempty"`
+	// SwarmTask: Auftrags-ID beim Knoten, für die Rückmeldung ans Kompetenzprofil.
+	SwarmTask   string    `json:"swarm_task,omitempty"`
 	Verdict     string    `json:"verdict,omitempty"`
 	Issues      []string  `json:"issues,omitempty"`
 	Limitations []string  `json:"limitations,omitempty"`
@@ -239,7 +241,49 @@ func runTask(ctx context.Context, p Plan, run Run, t Task) Result {
 	if res.Answer != "" {
 		res.Solved = solved(ctx, t, res.Answer, &res)
 	}
+	if run.Mode == "swarm" && res.SwarmTask != "" {
+		sendFeedback(ctx, run, res)
+	}
 	return res
+}
+
+// sendFeedback meldet die Bewertung als objektives Signal an das
+// Kompetenzprofil des Knotens (spec/cooperation.md § 2.2): je bewertetem
+// Zwischenschritt einzeln, sonst das Endergebnis. Fehler halten den Lauf nicht auf.
+func sendFeedback(ctx context.Context, run Run, res Result) {
+	type fb struct {
+		TaskID    string `json:"task_id"`
+		Good      bool   `json:"good"`
+		Objective bool   `json:"objective"`
+		Step      *int   `json:"step,omitempty"`
+	}
+	var all []fb
+	for i, ok := range res.StepSolved {
+		if ok != nil {
+			all = append(all, fb{TaskID: res.SwarmTask, Good: *ok, Objective: true, Step: &i})
+		}
+	}
+	if len(all) == 0 {
+		all = append(all, fb{TaskID: res.SwarmTask, Good: res.Solved, Objective: true})
+	}
+	url := strings.TrimRight(run.Gateway, "/") + "/v1/feedback"
+	for _, f := range all {
+		body, _ := json.Marshal(f)
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+		if err != nil {
+			return
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
+		if err != nil {
+			slog.Warn("bench: rückmeldung ans profil fehlgeschlagen", "task", res.TaskID, "err", err)
+			return
+		}
+		resp.Body.Close()
+		if resp.StatusCode != http.StatusNoContent && resp.StatusCode != http.StatusConflict {
+			slog.Warn("bench: rückmeldung ans profil abgelehnt", "task", res.TaskID, "status", resp.Status)
+		}
+	}
 }
 
 func solved(ctx context.Context, t Task, answer string, res *Result) bool {
@@ -358,6 +402,7 @@ func swarmTask(ctx context.Context, p Plan, run Run, t Task, res *Result) {
 	}
 	if a := out.Swarm; a != nil {
 		res.Steps, res.Verdict, res.Issues, res.Limitations = a.Steps, a.Verdict, a.Issues, a.Limitations
+		res.SwarmTask = a.TaskID
 		for _, s := range a.Steps {
 			res.PromptTokens += s.PromptTokens
 			res.CompletionTokens += s.CompletionTokens

@@ -62,6 +62,25 @@ Findet sich kein freigegebener Agent, antwortet das Gateway mit 400. Ruft ein Mo
 
 Inhalte als Liste von Textteilen werden zusammengefügt. Bilder werden noch nicht unterstützt (400).
 
+## Rückmeldungen und Kompetenzprofil
+
+Jeder Knoten führt ein Kompetenzprofil der Agenten, mit denen er arbeitet: eine Glicko-2-Bewertung je Agent und Fähigkeit, dazu eine Prüferstatistik (wie oft sich das `issues` oder `ok` eines Prüfers als richtig erwies). Es sammelt vorerst nur; die Auswahl der Agenten nutzt es noch nicht ([Kooperation](../../spec/de/cooperation.md) § 2).
+
+Eine Rückmeldung zu einer Antwort nutzt deren `task_id` aus dem Feld `swarmainet`:
+
+```sh
+curl -s http://127.0.0.1:7711/v1/feedback -H 'Content-Type: application/json' \
+  -d '{"task_id":"<task_id>","good":true}'
+```
+
+| Feld | Bedeutung |
+|---|---|
+| `good` | das Ergebnis war gut (`true`) oder nicht (`false`) |
+| `objective` | `true` für ein geprüftes Ergebnis (Tests, exakte Lösung): volles Gewicht; sonst Nutzerfeedback mit Gewicht ¼ |
+| `step` | Index in `steps[]`, etwa um einen Entwurf einzeln zu bewerten; ohne Angabe zählt das Endergebnis |
+
+Die Antwort ist 204, bei unbekanntem Auftrag 404, bei schon gemeldetem Schritt 409, bei ungültigem Schritt 400. `swarmainet bench run` sendet seine Bewertungen automatisch als objektive Rückmeldung. `GET http://127.0.0.1:7711/api/profile` zeigt das Profil; gespeichert wird es in `~/.swarmainet/profile.json`. In der Antwort zeigt `steps[].verdict` das Urteil jedes Prüfers.
+
 ## Befehle
 
 | Befehl | Zweck |

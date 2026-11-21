@@ -21,6 +21,7 @@ import (
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/membership"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/orchestrator"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/p2p"
+	"github.com/rainer-sharp/Ai-Swarms.net/internal/profile"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/receipt"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/rem"
@@ -36,8 +37,10 @@ type Node struct {
 	P2P      *p2p.Node
 	Nets     []*p2p.Node
 	Receipts *receipt.Store
-	Orch     *orchestrator.Orchestrator
-	started  time.Time
+	// Profile: Kompetenzprofil aus eigenen Beobachtungen (spec/cooperation.md § 2).
+	Profile *profile.Profile
+	Orch    *orchestrator.Orchestrator
+	started time.Time
 	// NetErrors: Netze, die wegen ihres Zertifikats nicht gestartet sind.
 	NetErrors []string
 }
@@ -86,7 +89,8 @@ func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
 		backends = nil // Helferknoten rechnen nicht
 	}
 	local := NewLocal(backends, m)
-	n := &Node{Cfg: cfg, ID: id, REM: m, Local: local, Receipts: store, started: time.Now()}
+	n := &Node{Cfg: cfg, ID: id, REM: m, Local: local, Receipts: store, started: time.Now(),
+		Profile: profile.Open(filepath.Join(dir, "profile.json"))}
 	// Ressourcenmanager, Backends und Quittungen teilen sich alle Netze;
 	// fremde Aufträge aus allen Netzen konkurrieren um dieselben Slots.
 	for i, s := range nets {
@@ -222,6 +226,9 @@ func (n *Node) Ask(ctx context.Context, req orchestrator.Request) (*orchestrator
 	ans, err := n.Orch.Run(ctx, req)
 	if errors.Is(err, orchestrator.ErrNoAgent) || errors.Is(err, orchestrator.ErrToolsNotAllowed) {
 		slog.Warn("kein agent wählbar", "bekannt", len(n.Agents()), "freigabe", req.Privacy, "werkzeuge", len(req.Tools) > 0, "beschränkt_auf", req.Agents)
+	}
+	if err == nil {
+		n.recordProfile(ans)
 	}
 	if ans != nil {
 		slog.Info("auftrag", "task", ans.TaskID, "muster", ans.Pattern, "skill", ans.Skill, "urteil", ans.Verdict, "schritte", len(ans.Steps),

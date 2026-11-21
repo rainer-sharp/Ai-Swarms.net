@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -17,6 +19,7 @@ import (
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/config"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/identity"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/orchestrator"
+	"github.com/rainer-sharp/Ai-Swarms.net/internal/profile"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/rem"
 )
@@ -188,6 +191,32 @@ func TestLocalSwarmThreeNodes(t *testing.T) {
 	waitFor(t, func() bool { return a.Receipts.Count() == 2 && b.Receipts.Count() == 1 && c.Receipts.Count() == 1 })
 	if s := b.Receipts.Summary(idB.ID.String())[idA.ID.String()]; s.Given != 1 {
 		t.Fatalf("ledger B: %+v", s)
+	}
+
+	// Kompetenzprofil: Der Entwurf von B war objektiv falsch, der Prüfer C lag
+	// mit „issues“ richtig; die Synthese bekommt Nutzerfeedback.
+	if err := a.Feedback(profile.Feedback{TaskID: ans.TaskID, Good: false, Objective: true, Step: new(0)}); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.Feedback(profile.Feedback{TaskID: ans.TaskID, Good: true}); err != nil {
+		t.Fatal(err)
+	}
+	views := map[string]profile.AgentView{}
+	for _, v := range a.Profile.Snapshot() {
+		views[v.Agent] = v
+	}
+	draft, judge, synth := ans.Steps[0], ans.Steps[1], ans.Steps[2]
+	if r := views[profile.AgentKey(draft.PeerID, draft.AgentID)].Skills[ans.Skill]; r.Games != profile.WeightObjective || r.R >= 1500 {
+		t.Fatalf("entwurf im profil: %+v (%v)", r, views)
+	}
+	if v := views[profile.AgentKey(judge.PeerID, judge.AgentID)].Verify[ans.Skill]; v.Hit != 1 {
+		t.Fatalf("prüfer im profil: %+v", v)
+	}
+	if r := views[profile.AgentKey(synth.PeerID, synth.AgentID)].Skills[ans.Skill]; r.Games != profile.WeightUser {
+		t.Fatalf("synthese im profil: %+v", r)
+	}
+	if _, err := os.Stat(filepath.Join(a.Cfg.Node.DataDir, "profile.json")); err != nil {
+		t.Fatal("profil nicht gespeichert")
 	}
 
 	// Peer-Ausfall blockiert nicht: B fällt aus, der Auftrag läuft trotzdem.

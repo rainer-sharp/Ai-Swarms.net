@@ -4,6 +4,13 @@
 
 All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/) with the usual caveat for 0.x: incompatible changes are still possible between minor versions.
 
+## [Unreleased]
+
+### Added
+
+- **Competence profile** (phase 3, stage 1): every node rates the agents it works with per skill (Glicko-2) and keeps a verifier statistic of hits, false alarms and misses. Verdicts of proven verifiers count as signals; feedback via `POST /v1/feedback`, display via `GET /api/profile`, storage in `~/.swarmainet/profile.json`. `swarmainet bench run` sends its assessments as objective feedback. The selection of agents does not use the profile yet. ([usage](docs/usage.md#feedback-and-competence-profile), [cooperation](spec/cooperation.md) § 2)
+- `steps[].verdict` in the answer shows each verifier's verdict.
+
 ## [0.2.0] – 2026-11-21
 
 The protocol is unchanged (version 0.1): nodes with 0.2.0 and 0.1.0 work together. Existing configurations keep working without changes.

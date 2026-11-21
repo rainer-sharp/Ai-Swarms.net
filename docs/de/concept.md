@@ -84,7 +84,7 @@ Der Schwarm fragt nicht „Wer hat Modell X?“, sondern „Wer kann Aufgabe Y u
 
 **Fähigkeits-Taxonomie:** ein gemeinsames Grundvokabular (`reasoning.math`, `code.<sprache>`, `code.review`, `vision.ocr`, `retrieval.embed`, `domain.engineering` …) plus freie Tags für Neues. Die DHT enthält nur Verweise „Peer X bietet Fähigkeit Y“, je Fähigkeit auf vier Schlüssel verteilt, damit kein Knoten zum Engpass wird ([P2P-Schicht](../../spec/de/p2p-layer.md) § 5).
 
-**Gemessenes Profil** (Phase 3): Jeder Knoten führt für die Agenten, mit denen er arbeitet, einen Kompetenzwert pro Fähigkeit nach Glicko-2. Quellen, nach Gewicht:
+**Gemessenes Profil** (Phase 3; seit 21.11.2026 erfasst, noch nicht für die Auswahl genutzt): Jeder Knoten führt für die Agenten, mit denen er arbeitet, einen Kompetenzwert pro Fähigkeit nach Glicko-2. Quellen, nach Gewicht:
 
 1. Objektiv prüfbare Aufgaben: Code mit Tests, Mathe mit exakter Lösung, Extraktion mit Ground Truth.
 2. Canary-Aufgaben mit bekannter Lösung.

@@ -22,6 +22,7 @@ Application (Open WebUI, IDE, agent)
 | Selection | `internal/orchestrator` (`candidates`, `Route`) – rule-based: skill, on a tie load balancing (free slots, running subtasks, round robin), then context size; verifier by model strength (`strength`), then context size, then own before remote |
 | Orchestration | `internal/orchestrator` – patterns `single`, `parallel`, `draft_verify_synthesize`, `parallel_verify`; tool permissions per network |
 | Trust | `internal/receipt` – receipts signed by both sides; `internal/membership` – certificates, chains, revocation lists, invitations |
+| Competence profile | `internal/profile` – Glicko-2 rating per agent and skill, verifier statistics, feedback; not yet used for selection |
 | Resources | `internal/rem` – slots, time windows, GPU minutes, mean GPU utilisation, temperature, RAM reserve, PV hysteresis, own use, emergency stop |
 | P2P transport | `internal/p2p` – one libp2p host per network (QUIC/TCP, PSK), mDNS, static and bootstrap addresses, relay with reservations, hole punching, AutoNAT, peer exchange, peer cache, Kademlia DHT, admission in membership networks, tracker client, rate limits, diagnostics |
 | Network entry | `internal/invite` – invitation links and key files; `internal/tracker` – tracker records, server and client |

@@ -48,6 +48,7 @@ Geheimnisse gehören nicht in die Datei: Der Home-Assistant-Token kommt aus eine
 | `identity.key` | privater Schlüssel des Knotens, bestimmt die Peer-ID |
 | `*.key` | Netzschlüssel privater Netze |
 | `peers-<network_id>.json` | zuletzt erfolgreich verbundene Peers |
+| `profile.json` | Kompetenzprofil der Agenten (siehe [Nutzung](usage.md#rückmeldungen-und-kompetenzprofil)) |
 | Dateien je Mitgliedsnetz | Zertifikat, Sperrlisten, beim Aussteller dessen Schlüssel und das Register offener Einladungen |
 
 Schlüsseldateien nie weitergeben und nicht in ein Repository legen. Wer `identity.key` hat, tritt unter Ihrer Peer-ID auf.

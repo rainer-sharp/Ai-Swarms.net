@@ -4,6 +4,13 @@
 
 Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/); die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/) mit dem üblichen Vorbehalt für 0.x: Zwischen Minor-Versionen sind inkompatible Änderungen noch möglich.
 
+## [Unveröffentlicht]
+
+### Hinzugefügt
+
+- **Kompetenzprofil** (Phase 3, Stufe 1): Jeder Knoten bewertet die Agenten, mit denen er arbeitet, je Fähigkeit (Glicko-2) und führt eine Prüferstatistik aus Treffern, Fehlalarmen und übersehenen Fehlern. Urteile bewährter Prüfer zählen als Signal; Rückmeldungen über `POST /v1/feedback`, Anzeige über `GET /api/profile`, gespeichert in `~/.swarmainet/profile.json`. `swarmainet bench run` sendet seine Bewertungen als objektive Rückmeldung. Die Auswahl der Agenten nutzt das Profil noch nicht. ([Nutzung](../docs/de/usage.md#rückmeldungen-und-kompetenzprofil), [Kooperation](../spec/de/cooperation.md) § 2)
+- `steps[].verdict` in der Antwort zeigt das Urteil jedes Prüfers.
+
 ## [0.2.0] – 2026-11-21
 
 Das Protokoll ist unverändert (Version 0.1): Knoten mit 0.2.0 und 0.1.0 arbeiten zusammen. Bestehende Konfigurationen funktionieren ohne Änderung weiter.
