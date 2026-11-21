@@ -33,7 +33,7 @@ Runde 1 (80 Aufgaben aus HumanEval und GSM8K, [Bericht](../../bench/de/report-r1
 - Der Router ist eine Stichwort-Heuristik, kein Modell; Bandit und Kompetenzprofil folgen in Phase 3.
 - Freigabeklasse `reduced` ohne Pseudonymisierung; sie wird bis dahin wie `trusted` behandelt.
 - Kein Token-Streaming: Bei `stream: true` kommt die geprüfte Antwort als ein Block.
-- Bilder in Anfragen werden nicht unterstützt. Audio nur als Transkription (`/v1/audio/transcriptions`, höchstens 2,75 MiB, nur bis `trusted`); auf Hardware noch nicht getestet.
+- Bilder in Anfragen werden nicht unterstützt. Audio nur als Transkription (`/v1/audio/transcriptions`, höchstens 2,75 MiB je Anfrage, nur bis `trusted`). Auf Hardware getestet: eine Aufnahme von 57 Minuten in sechs Stücken zu 10 Minuten von der VM über einen Knoten mit Nemotron-Transcribe in 122 s. Längere Aufnahmen muss der Aufrufer noch selbst teilen, ohne Behandlung von Überlappungen.
 
 **Ressourcen**
 

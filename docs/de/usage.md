@@ -67,7 +67,7 @@ Inhalte als Liste von Textteilen werden zusammengefügt. Bilder in Chat-Nachrich
 
 ## Transkription
 
-`POST /v1/audio/transcriptions` nimmt eine Aufnahme im Format der OpenAI-Transkriptions-API an (`multipart/form-data` mit `file`, optional `language`, `prompt`, `response_format` `json` oder `text`) und lässt sie von einem Modell mit der Fähigkeit `audio.transcribe` abschreiben, etwa auf einem anderen Knoten des eigenen Netzes. Das Feld `model` wird ignoriert; der Schwarm wählt das Modell. Höchstens 2,75 MiB je Aufnahme; längere Aufnahmen müssen geteilt werden. Audio geht nur an eigene oder vertraute Geräte, nie ins offene Netz (`X-SwarmAiNet-Privacy: public` ergibt 400).
+`POST /v1/audio/transcriptions` nimmt eine Aufnahme im Format der OpenAI-Transkriptions-API an (`multipart/form-data` mit `file`, optional `language`, `prompt`, `response_format` `json` oder `text`) und lässt sie von einem Modell mit der Fähigkeit `audio.transcribe` abschreiben, etwa auf einem anderen Knoten des eigenen Netzes. Der Knoten mit dem Modell ruft `/audio/transcriptions` seines Backends auf (etwa Whisper); gibt es das nicht, schickt er die Aufnahme über den Chat als `audio_url` mit abgeschaltetem Denkmodus (etwa vLLM mit Nemotron-Transcribe). Das Feld `model` wird ignoriert; der Schwarm wählt das Modell. Höchstens 2,75 MiB je Aufnahme; längere Aufnahmen müssen geteilt werden. Audio geht nur an eigene oder vertraute Geräte, nie ins offene Netz (`X-SwarmAiNet-Privacy: public` ergibt 400).
 
 ```sh
 curl -s http://127.0.0.1:7711/v1/audio/transcriptions -F file=@aufnahme.wav -F language=de

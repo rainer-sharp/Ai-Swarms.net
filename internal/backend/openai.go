@@ -8,11 +8,15 @@ package backend
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -121,9 +125,95 @@ func (c *Client) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error
 	}, nil
 }
 
-// Transcribe schickt eine Aufnahme an /audio/transcriptions (OpenAI-Format,
-// etwa vLLM mit einem Transkriptionsmodell) und liefert den Text.
+// errNoTranscriptionAPI: Das Backend kennt /audio/transcriptions nicht.
+var errNoTranscriptionAPI = errors.New("backend ohne /audio/transcriptions")
+
+// Transcribe liefert die Abschrift einer Aufnahme. Zuerst über
+// /audio/transcriptions (OpenAI-Format, etwa Whisper); kennt das Backend diese
+// Schnittstelle nicht, über den Chat mit der Aufnahme als audio_url, wie es
+// vLLM für Modelle wie Nemotron-Transcribe anbietet.
 func (c *Client) Transcribe(ctx context.Context, model string, a protocol.Audio) (string, error) {
+	text, err := c.transcribeAPI(ctx, model, a)
+	if errors.Is(err, errNoTranscriptionAPI) {
+		return c.transcribeChat(ctx, model, a)
+	}
+	return text, err
+}
+
+// transcribePrompt: Anweisung für Modelle, die über den Chat transkribieren.
+const transcribePrompt = "Transcribe this audio with punctuation and capitalization. " +
+	"Include all spoken words and verbal fillers. Write numbers in their standard written form."
+
+// transcribeMaxTokens: genug für die längste Aufnahme, die in einen Teilauftrag
+// passt (2,75 MiB komprimiert, etwa 12 min; rund 10 Tokens je Sekunde).
+const transcribeMaxTokens = 8192
+
+func (c *Client) transcribeChat(ctx context.Context, model string, a protocol.Audio) (string, error) {
+	prompt := transcribePrompt
+	if a.Prompt != "" {
+		prompt += " Context terms: " + a.Prompt + "."
+	}
+	url := "data:" + audioMIME(a) + ";base64," + base64.StdEncoding.EncodeToString(a.Data)
+	body := map[string]any{
+		"model": model,
+		"messages": []map[string]any{{"role": "user", "content": []map[string]any{
+			{"type": "text", "text": prompt},
+			{"type": "audio_url", "audio_url": map[string]string{"url": url}},
+		}}},
+		"temperature": 0, "top_p": 1.0, "seed": 0, "stream": false,
+		"max_tokens": transcribeMaxTokens,
+		// Ohne abgeschalteten Denkmodus analysiert das Modell, statt abzuschreiben.
+		"chat_template_kwargs": map[string]bool{"enable_thinking": false},
+	}
+	var raw struct {
+		Choices []struct {
+			Message      protocol.ChatMessage `json:"message"`
+			FinishReason string               `json:"finish_reason"`
+		} `json:"choices"`
+	}
+	if err := c.do(ctx, http.MethodPost, "/chat/completions", body, &raw); err != nil {
+		return "", err
+	}
+	if len(raw.Choices) == 0 || strings.TrimSpace(raw.Choices[0].Message.Content) == "" {
+		return "", fmt.Errorf("backend lieferte keinen text (stille oder unbekanntes format?)")
+	}
+	if raw.Choices[0].FinishReason == "length" {
+		return "", fmt.Errorf("abschrift abgebrochen: token-grenze %d erreicht (wiederholungsschleife oder aufnahme zu lang)", transcribeMaxTokens)
+	}
+	return cleanTranscript(raw.Choices[0].Message.Content), nil
+}
+
+// modelTagRe: Steuer-Markierungen des Modells wie <sty:stt:vocal_texture_delivery>
+// oder <spk:0>; sie gehören nicht in die Abschrift.
+var modelTagRe = regexp.MustCompile(`<[a-z]{2,12}:[^<>\s]{0,60}>`)
+
+// cleanTranscript entfernt Markierungen und überzählige Leerzeichen.
+func cleanTranscript(s string) string {
+	s = modelTagRe.ReplaceAllString(s, " ")
+	return strings.Join(strings.Fields(s), " ")
+}
+
+// audioMIME: MIME-Typ der Aufnahme, notfalls aus der Dateiendung.
+func audioMIME(a protocol.Audio) string {
+	if a.MIME != "" && a.MIME != "application/octet-stream" {
+		return a.MIME
+	}
+	switch strings.ToLower(filepath.Ext(a.Filename)) {
+	case ".mp3":
+		return "audio/mpeg"
+	case ".ogg", ".opus":
+		return "audio/ogg"
+	case ".flac":
+		return "audio/flac"
+	case ".m4a", ".mp4":
+		return "audio/mp4"
+	case ".webm":
+		return "audio/webm"
+	}
+	return "audio/wav"
+}
+
+func (c *Client) transcribeAPI(ctx context.Context, model string, a protocol.Audio) (string, error) {
 	var body bytes.Buffer
 	mw := multipart.NewWriter(&body)
 	name := a.Filename
@@ -160,6 +250,9 @@ func (c *Client) Transcribe(ctx context.Context, model string, a protocol.Audio)
 		return "", err
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusMethodNotAllowed {
+		return "", errNoTranscriptionAPI
+	}
 	if resp.StatusCode/100 != 2 {
 		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		return "", fmt.Errorf("backend %s/audio/transcriptions: %s: %s", c.BaseURL, resp.Status, strings.TrimSpace(string(msg)))

@@ -67,7 +67,7 @@ Content given as a list of text parts is joined. Images in chat messages are not
 
 ## Transcription
 
-`POST /v1/audio/transcriptions` accepts a recording in the format of the OpenAI transcription API (`multipart/form-data` with `file`, optionally `language`, `prompt`, `response_format` `json` or `text`) and has it transcribed by a model with the skill `audio.transcribe`, e.g. on another node of your own network. The field `model` is ignored; the swarm chooses the model. At most 2.75 MiB per recording; longer recordings have to be split. Audio only goes to your own or trusted devices, never into the open network (`X-SwarmAiNet-Privacy: public` gives 400).
+`POST /v1/audio/transcriptions` accepts a recording in the format of the OpenAI transcription API (`multipart/form-data` with `file`, optionally `language`, `prompt`, `response_format` `json` or `text`) and has it transcribed by a model with the skill `audio.transcribe`, e.g. on another node of your own network. The node providing the model calls `/audio/transcriptions` of its backend (e.g. Whisper); if that does not exist, it sends the recording via the chat as `audio_url` with thinking disabled (e.g. vLLM with Nemotron-Transcribe). The field `model` is ignored; the swarm chooses the model. At most 2.75 MiB per recording; longer recordings have to be split. Audio only goes to your own or trusted devices, never into the open network (`X-SwarmAiNet-Privacy: public` gives 400).
 
 ```sh
 curl -s http://127.0.0.1:7711/v1/audio/transcriptions -F file=@aufnahme.wav -F language=de
