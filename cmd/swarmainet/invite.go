@@ -130,9 +130,10 @@ func cmdInvite(path, network string, withKey, lan, showQR bool, extra []string) 
 }
 
 // replacesFirstNetwork: Das erste Netz wird ersetzt, wenn es das unveränderte
-// offene Netz der Grundkonfiguration oder dasselbe Netz ist.
+// offene Netz der Grundkonfiguration, das noch nie gestartete private Netz aus
+// init oder dasselbe Netz ist.
 func replacesFirstNetwork(cfg config.Config, network string) bool {
-	return cfg.Node.NetworkID == network ||
+	return cfg.Node.NetworkID == network || freshPrivate(cfg) ||
 		cfg.Node.NetworkID == config.Default().Node.NetworkID && cfg.Node.NetworkKeyFile == "" &&
 			len(cfg.Node.Bootstrap) == 0 && len(cfg.Node.StaticPeers) == 0 && len(cfg.Node.Networks) == 0
 }
@@ -151,15 +152,17 @@ func cmdJoin(path, link, keyFile string) error {
 		return joinMember(path, inv, os.Stdout)
 	}
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		if err := cmdInit(path); err != nil {
+		if err := initForJoin(path, os.Stdout); err != nil {
 			return err
 		}
-		fmt.Println()
 	}
 	cfg, err := config.Load(path)
 	if err != nil {
 		return err
 	}
+	// Das noch nie gestartete private Netz aus init weicht der Einladung;
+	// sein Schlüssel gilt dann nicht mehr.
+	replaceFresh := freshPrivate(cfg) && cfg.Node.NetworkID != inv.Network
 	// Das erste Netz wird ersetzt, wenn es das unveränderte offene Netz der
 	// Grundkonfiguration ist oder dasselbe Netz; sonst kommt ein weiteres dazu.
 	first := replacesFirstNetwork(cfg, inv.Network)
@@ -186,9 +189,13 @@ func cmdJoin(path, link, keyFile string) error {
 			return err
 		}
 		set["network_key_file"] = abs
-	case cfg.Node.NetworkKeyFile == "":
+	case cfg.Node.NetworkKeyFile == "" || replaceFresh:
 		fmt.Println("Hinweis: Einladung ohne Netzschlüssel – Beitritt als offenes Netz.\n" +
 			"Für ein privates Netz die Schlüsseldatei mit -key DATEI angeben.")
+		if replaceFresh {
+			set["network_key_file"] = ""
+			set["listen"] = config.Default().Node.Listen // offenes Netz: auch QUIC
+		}
 	}
 	merge := func(boot []string) []string {
 		boot = slices.Clone(boot)

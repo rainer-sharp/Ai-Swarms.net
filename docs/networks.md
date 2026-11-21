@@ -17,7 +17,9 @@ SwarmAiNet knows three kinds of networks. A node can belong to several at once.
 
 ## Private network: own devices
 
-All devices with the same key form a closed network and are considered trusted. Whoever does not have the key does not even get through the connection handshake.
+All devices with the same key form a closed network and are considered trusted. Whoever does not have the key does not even get through the connection handshake. `swarmainet init` sets up such a network by default, with a random ID `p-…` and a fresh key; further devices join it via an [invitation](#invitations).
+
+By hand, e.g. for an existing configuration:
 
 ```sh
 swarmainet psk ~/.swarmainet/swarm.key
@@ -36,7 +38,7 @@ swarmainet join '<link>'                                         # on the new de
 
 `invite` takes the addresses of the running node (without loopback; in the open network only public ones, with `-lan` also local ones), with `-peer` further ones, e.g. those of a helper, plus the configured trackers. `-with-key` embeds the network key: **whoever has the link is a member.** So only pass the link on confidentially. Without the key in the link, it is given to `join -key FILE`. With `-qr`, the link additionally appears as a QR code in the terminal, e.g. to read it with a phone; with a key, the same applies to the code as to the link: do not photograph it, delete it from the phone after the transfer.
 
-`join` creates the configuration if needed, stores the key as `~/.swarmainet/<network_id>.key` (permissions 0600), enters addresses under `node.bootstrap` and trackers under `node.trackers` and keeps the comments in the file. If the node already belongs to a network, the new one is added under `node.networks` with the next free port.
+`join` creates the configuration if needed, stores the key as `~/.swarmainet/<network_id>.key` (permissions 0600), enters addresses under `node.bootstrap` and trackers under `node.trackers` and keeps the comments in the file. If the node already belongs to a network, the new one is added under `node.networks` with the next free port. The private network created by `init` is replaced instead, as long as the node has never run and has no entry addresses.
 
 ### Several sites
 
@@ -75,7 +77,7 @@ On Ubuntu, [`deploy/linux/gruppe-beitreten.sh`](../deploy/linux/README.md#settin
 
 ## Open network
 
-Without a network key and without membership, a node is in the open network (`network_id: swarmainet`). No foreign peer is trusted there:
+Without a network key and without membership, a node is in the open network (`network_id: swarmainet`); `swarmainet init -open` sets this up, as does joining an invitation into the open network. No foreign peer is trusted there:
 
 - Tasks with `X-SwarmAiNet-Privacy: public` may go to foreign nodes, `trusted` and `reduced` only to `trusted_peers`.
 - A node only accepts foreign tasks with `resources.accept_public_tasks: true`.

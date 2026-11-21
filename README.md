@@ -29,7 +29,7 @@ git clone https://github.com/rainer-sharp/Ai-Swarms.net.git
 cd Ai-Swarms.net
 go build -o swarmainet ./cmd/swarmainet
 
-./swarmainet init                    # creates ~/.swarmainet/config.yaml
+./swarmainet init                    # creates ~/.swarmainet/config.yaml and a private network of your own
 $EDITOR ~/.swarmainet/config.yaml    # add your models under backends
 ./swarmainet run
 ```
@@ -43,7 +43,7 @@ curl -s http://127.0.0.1:7711/v1/chat/completions -H 'Content-Type: application/
 
 Or in Open WebUI, enter the URL `http://127.0.0.1:7711/v1` under *Settings → Connections* and select the model `swarmainet`.
 
-> Without further settings, a new node joins the open network. It accepts no foreign tasks there and does not send your requests outside, but it is visible to others with its peer ID and address. For your own devices, you are better off setting up a [private network](docs/networks.md#private-network-own-devices).
+> `init` sets up a **private network of your own** with a fresh key: only your devices that you invite can see the node. For the open network, run `swarmainet init -open` instead; there the node is visible to others with its peer ID and address, but accepts no foreign tasks until you enable that ([network types](docs/networks.md)).
 
 **Connecting more devices:** on a running node, run `swarmainet invite -with-key`, and on the new device `swarmainet join '<link>'`. On a LAN the devices then find each other on their own; for multiple sites see [Network types](docs/networks.md#several-sites).
 

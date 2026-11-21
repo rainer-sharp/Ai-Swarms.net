@@ -29,7 +29,7 @@ The same software supports two kinds of networks. A node can participate in seve
 | Relay | only relays of the same network | relays of any participants (opt-in) |
 | Size | small (up to about 64 nodes), full mesh | large, partial mesh |
 
-**Network ID (`network_id`).** Every network has an ID from `[a-z0-9-]{1,32}`. The open network is called `swarmainet`. A private network MUST use a different ID, recommended: `p-` and 8 random hex characters, which `swarmainet invite` generates. The ID separates mDNS service, DHT and peer cache. It is **not a secret**; the protection of a private network lies solely in the PSK.
+**Network ID (`network_id`).** Every network has an ID from `[a-z0-9-]{1,32}`. The open network is called `swarmainet`. A private network MUST use a different ID, recommended: `p-` and 8 random hex characters, as `swarmainet init` generates by default together with a fresh key (`swarmainet init -open` sets up the open network instead). The ID separates mDNS service, DHT and peer cache. It is **not a secret**; the protection of a private network lies solely in the PSK.
 
 ### 1.1 Consequences of the PSK
 
@@ -282,7 +282,7 @@ A node can be a member of one or more private networks and of the open network a
 - **Assignment when coordinating:** the orchestrator sees agents from all networks with the network marked. A task of class `trusted` or `reduced` only goes to peers of a private network or to `trusted_peers`. A task of class `public` may go into any network. A task is never passed on from one network to another; a provider's subtasks stay in the network the task came from.
 - The gateway (`127.0.0.1:7711`) remains single and bound to localhost only.
 - `accept_public_tasks` is checked by the P2P layer per network; the resource manager admits public tasks as soon as one network accepts them. Receipts are kept in a shared store, the status summarises them across all own peer IDs.
-- `swarmainet join` only replaces the first network if it is the unchanged open network of the default configuration or the same network; otherwise it adds a further network with the next free port.
+- `swarmainet join` only replaces the first network if it is the unchanged open network of the default configuration, the private network created by `init` that has never run (no peer cache, no entry addresses) or the same network; otherwise it adds a further network with the next free port.
 
 ## 10. Diagnostics
 

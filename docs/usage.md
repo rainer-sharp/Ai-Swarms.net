@@ -66,7 +66,7 @@ Content given as a list of text parts is joined. Images are not supported yet (4
 
 | Command | Purpose |
 |---|---|
-| `init` | Create configuration and key |
+| `init [-open]` | Create configuration and keys, by default with a private network of your own; `-open` for the open network |
 | `run` | Start the node |
 | `status` | Status of the running node (JSON) |
 | `pause`, `resume`, `stop` | Pause, resume foreign tasks, emergency stop |

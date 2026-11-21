@@ -17,7 +17,9 @@ SwarmAiNet kennt drei Arten von Netzen. Ein Knoten kann mehreren gleichzeitig an
 
 ## Privates Netz: eigene Geräte
 
-Alle Geräte mit demselben Schlüssel bilden ein abgeschlossenes Netz und gelten als vertraut. Wer den Schlüssel nicht hat, kommt nicht einmal durch den Verbindungsaufbau.
+Alle Geräte mit demselben Schlüssel bilden ein abgeschlossenes Netz und gelten als vertraut. Wer den Schlüssel nicht hat, kommt nicht einmal durch den Verbindungsaufbau. `swarmainet init` richtet ein solches Netz standardmäßig ein, mit zufälliger Kennung `p-…` und frischem Schlüssel; weitere Geräte kommen per [Einladung](#einladungen) dazu.
+
+Von Hand, etwa für eine bestehende Konfiguration:
 
 ```sh
 swarmainet psk ~/.swarmainet/swarm.key
@@ -36,7 +38,7 @@ swarmainet join '<link>'                                      # auf dem neuen Ge
 
 `invite` nimmt die Adressen des laufenden Knotens (ohne Loopback; im offenen Netz nur öffentliche, mit `-lan` auch lokale), mit `-peer` weitere, etwa die eines Helfers, dazu die konfigurierten Tracker. `-with-key` bettet den Netzschlüssel ein: **Wer den Link hat, ist Mitglied.** Den Link deshalb nur vertraulich weitergeben. Ohne Schlüssel im Link gibt man ihn bei `join -key DATEI` an. Mit `-qr` erscheint der Link zusätzlich als QR-Code im Terminal, etwa um ihn mit dem Telefon abzulesen; mit Schlüssel gilt für den Code dasselbe wie für den Link: nicht fotografieren, nach dem Übertragen vom Telefon löschen.
 
-`join` legt die Konfiguration bei Bedarf an, speichert den Schlüssel als `~/.swarmainet/<network_id>.key` (Rechte 0600), trägt Adressen unter `node.bootstrap` und Tracker unter `node.trackers` ein und erhält die Kommentare in der Datei. Gehört der Knoten schon zu einem Netz, kommt das neue unter `node.networks` mit dem nächsten freien Port dazu.
+`join` legt die Konfiguration bei Bedarf an, speichert den Schlüssel als `~/.swarmainet/<network_id>.key` (Rechte 0600), trägt Adressen unter `node.bootstrap` und Tracker unter `node.trackers` ein und erhält die Kommentare in der Datei. Gehört der Knoten schon zu einem Netz, kommt das neue unter `node.networks` mit dem nächsten freien Port dazu. Das von `init` angelegte private Netz wird stattdessen ersetzt, solange der Knoten noch nie lief und keine Einstiegsadressen hat.
 
 ### Mehrere Standorte
 
@@ -75,7 +77,7 @@ Unter Ubuntu nimmt [`deploy/linux/gruppe-beitreten.sh`](../../deploy/linux/de/RE
 
 ## Offenes Netz
 
-Ohne Netzschlüssel und ohne Mitgliedschaft ist ein Knoten im offenen Netz (`network_id: swarmainet`). Dort ist kein fremder Peer vertraut:
+Ohne Netzschlüssel und ohne Mitgliedschaft ist ein Knoten im offenen Netz (`network_id: swarmainet`); so richtet ihn `swarmainet init -open` ein, ebenso der Beitritt per Einladung ins offene Netz. Dort ist kein fremder Peer vertraut:
 
 - Aufträge mit `X-SwarmAiNet-Privacy: public` dürfen an fremde Knoten gehen, `trusted` und `reduced` nur an `trusted_peers`.
 - Fremde Aufträge nimmt ein Knoten nur mit `resources.accept_public_tasks: true` an.

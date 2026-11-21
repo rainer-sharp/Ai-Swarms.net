@@ -20,7 +20,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -36,8 +35,6 @@ import (
 
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/config"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/gateway"
-	"github.com/rainer-sharp/Ai-Swarms.net/internal/identity"
-	"github.com/rainer-sharp/Ai-Swarms.net/internal/invite"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/node"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/tracker"
 )
@@ -46,7 +43,8 @@ func usage() {
 	fmt.Fprintln(os.Stderr, `SwarmAiNet Knoten
 
 Befehle:
-  init      Konfiguration und Schlüssel anlegen
+  init      Konfiguration und Schlüssel anlegen, standardmäßig mit eigenem privatem Netz
+              -open      stattdessen dem offenen Netz beitreten (für andere sichtbar)
   run       Knoten starten
   status    Status des laufenden Knotens anzeigen
   ping      Weg zu einem Peer prüfen: ping [-net ID] <peer-id | /ip4/…/p2p/<peer-id>>
@@ -92,6 +90,7 @@ func main() {
 	verbose := fs.Bool("v", false, "ausführliche Protokollierung")
 	withKey := fs.Bool("with-key", false, "invite: Netzschlüssel einbetten")
 	lan := fs.Bool("lan", false, "invite: lokale Adressen aufnehmen")
+	openNet := fs.Bool("open", false, "init: offenes Netz statt eines eigenen privaten Netzes")
 	showQR := fs.Bool("qr", false, "invite: Link zusätzlich als QR-Code anzeigen")
 	keyFile := fs.String("key", "", "join: Schlüsseldatei des privaten Netzes")
 	netID := fs.String("net", "", "ping, invite: Netz-Kennung (Standard: erstes Netz)")
@@ -130,7 +129,7 @@ func main() {
 	var err error
 	switch cmd {
 	case "init":
-		err = cmdInit(*cfgPath)
+		err = cmdInit(*cfgPath, *openNet, os.Stdout)
 	case "run":
 		err = cmdRun(*cfgPath)
 	case "status":
@@ -159,25 +158,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, "fehler:", err)
 		os.Exit(1)
 	}
-}
-
-func cmdInit(path string) error {
-	if _, err := os.Stat(path); err == nil {
-		return fmt.Errorf("%s existiert bereits", path)
-	}
-	cfg := config.Default()
-	cfg.Node.DataDir = filepath.Dir(path)
-	if err := config.Save(path, cfg); err != nil {
-		return err
-	}
-	id, err := identity.LoadOrCreate(filepath.Join(cfg.Node.DataDir, "identity.key"))
-	if err != nil {
-		return err
-	}
-	fmt.Printf("Konfiguration: %s\nPeer-ID:       %s\n\n", path, id.ID)
-	fmt.Println("Nächste Schritte: unter backends[].models die Modelle eintragen,")
-	fmt.Println("optional node.provide: true setzen und dann `swarmainet run` starten.")
-	return nil
 }
 
 func cmdRun(path string) error {
@@ -249,11 +229,7 @@ func cmdPSK(path string) error {
 	if _, err := os.Stat(path); err == nil {
 		return fmt.Errorf("%s existiert bereits", path)
 	}
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		return err
-	}
-	if err := os.WriteFile(path, invite.EncodePSK(key), 0o600); err != nil {
+	if err := writeNewPSK(path); err != nil {
 		return err
 	}
 	fmt.Printf("Schlüssel geschrieben: %s\nAuf alle Geräte des privaten Schwarms kopieren und unter node.network_key_file eintragen.\n", path)

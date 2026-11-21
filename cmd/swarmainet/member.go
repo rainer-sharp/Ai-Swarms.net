@@ -325,10 +325,9 @@ func memberInvite(args []string, home string, now time.Time, out io.Writer) erro
 // einlösen, die Kette gegen den Wurzelschlüssel aus dem Link prüfen.
 func joinMember(path string, inv invite.Invite, out io.Writer) error {
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		if err := cmdInit(path); err != nil {
+		if err := initForJoin(path, out); err != nil {
 			return err
 		}
-		fmt.Fprintln(out)
 	}
 	cfg, err := config.Load(path)
 	if err != nil {
@@ -386,6 +385,10 @@ func addMemberNetwork(path, network, root string, peers []string, out io.Writer)
 	where := "node"
 	if replacesFirstNetwork(cfg, network) {
 		set = map[string]any{"network_id": network, "membership": mem, "bootstrap": merge(cfg.Node.Bootstrap), "dns_seeds": []string{}}
+		if freshPrivate(cfg) && cfg.Node.NetworkID != network {
+			// Das private Netz aus init weicht; Mitgliedsnetze laufen auch über QUIC.
+			set["network_key_file"], set["listen"] = "", config.Default().Node.Listen
+		}
 	} else {
 		nets := slices.Clone(cfg.Node.Networks)
 		i := slices.IndexFunc(nets, func(n config.Network) bool { return n.NetworkID == network })

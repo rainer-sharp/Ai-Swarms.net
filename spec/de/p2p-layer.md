@@ -29,7 +29,7 @@ Dieselbe Software unterstützt zwei Arten von Netzen. Ein Knoten kann an mehrere
 | Relay | nur Relays desselben Netzes | Relays beliebiger Teilnehmer (Opt-in) |
 | Größe | klein (bis etwa 64 Knoten), Vollvermaschung | groß, Teilvermaschung |
 
-**Netz-Kennung (`network_id`).** Jedes Netz hat eine Kennung aus `[a-z0-9-]{1,32}`. Das offene Netz heißt `swarmainet`. Ein privates Netz MUSS eine andere Kennung verwenden, empfohlen: `p-` und 8 zufällige Hex-Zeichen, die `swarmainet invite` erzeugt. Die Kennung trennt mDNS-Dienst, DHT und Peer-Cache. Sie ist **kein Geheimnis**; der Schutz eines privaten Netzes liegt allein im PSK.
+**Netz-Kennung (`network_id`).** Jedes Netz hat eine Kennung aus `[a-z0-9-]{1,32}`. Das offene Netz heißt `swarmainet`. Ein privates Netz MUSS eine andere Kennung verwenden, empfohlen: `p-` und 8 zufällige Hex-Zeichen, wie sie `swarmainet init` standardmäßig zusammen mit einem frischen Schlüssel erzeugt (`swarmainet init -open` richtet stattdessen das offene Netz ein). Die Kennung trennt mDNS-Dienst, DHT und Peer-Cache. Sie ist **kein Geheimnis**; der Schutz eines privaten Netzes liegt allein im PSK.
 
 ### 1.1 Folgen des PSK
 
@@ -282,7 +282,7 @@ Ein Knoten kann gleichzeitig Mitglied eines oder mehrerer privater Netze und des
 - **Zuordnung beim Koordinieren:** Der Orchestrator sieht Agenten aus allen Netzen mit Kennzeichnung des Netzes. Ein Auftrag der Klasse `trusted` oder `reduced` geht nur an Peers eines privaten Netzes oder an `trusted_peers`. Ein Auftrag der Klasse `public` darf in jedes Netz. Ein Auftrag wird nie von einem Netz in ein anderes weitergereicht; Teilaufträge eines Anbieters bleiben im Netz, aus dem der Auftrag kam.
 - Das Gateway (`127.0.0.1:7711`) bleibt einmalig und nur an localhost gebunden.
 - `accept_public_tasks` prüft die P2P-Schicht je Netz; der Ressourcenmanager lässt öffentliche Aufträge zu, sobald ein Netz sie annimmt. Quittungen liegen in einem gemeinsamen Speicher, der Status fasst sie über alle eigenen Peer-IDs zusammen.
-- `swarmainet join` ersetzt das erste Netz nur, wenn es das unveränderte offene Netz der Grundkonfiguration oder dasselbe Netz ist; sonst trägt es ein weiteres Netz mit dem nächsten freien Port ein.
+- `swarmainet join` ersetzt das erste Netz nur, wenn es das unveränderte offene Netz der Grundkonfiguration, das noch nie gestartete private Netz aus `init` (kein Peer-Cache, keine Einstiegsadressen) oder dasselbe Netz ist; sonst trägt es ein weiteres Netz mit dem nächsten freien Port ein.
 
 ## 10. Diagnose
 

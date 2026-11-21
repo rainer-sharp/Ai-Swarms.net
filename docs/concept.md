@@ -2,7 +2,7 @@
 
 **English** · [Deutsch](de/concept.md)
 
-**Version 2 of 18 Nov 2026.** The project and domain are called **Ai-Swarms.net**, the software **SwarmAiNet** (program `swarmainet`). The first version of 14 Oct 2026 still carried the working title "KI-Schwarm" and is kept in the [archive](archive/concept-2026-10-14-de.pdf) (in German). It merged a Claude concept and a GPT-5 concept and decided the points on which they contradicted each other. This version brings the concept up to date with the specification and the implementation; what has changed compared with the first version is listed at the end ([changes](#changes-from-version-1)). The [specification](../spec/README.md) is authoritative in the details.
+**Version 2 of 18 Nov 2026, last changed on 21 Nov 2026.** The project and domain are called **Ai-Swarms.net**, the software **SwarmAiNet** (program `swarmainet`). The first version of 14 Oct 2026 still carried the working title "KI-Schwarm" and is kept in the [archive](archive/concept-2026-10-14-de.pdf) (in German). It merged a Claude concept and a GPT-5 concept and decided the points on which they contradicted each other. This version brings the concept up to date with the specification and the implementation; what has changed compared with the first version is listed at the end ([changes](#changes-from-version-1)). The [specification](../spec/README.md) is authoritative in the details.
 
 SwarmAiNet is a self-governing P2P network in which different local AI models form a team per task, check each other and thus aim to deliver better results than the best single model. It first connects your own devices, then groups and companies and finally any participants with restricted rights. The added value over the best single model is not assumed but measured.
 
@@ -10,6 +10,7 @@ SwarmAiNet is a self-governing P2P network in which different local AI models fo
 
 | Question | Decision | Reason |
 |---|---|---|
+| Participation | **Private by default:** `init` creates a network of your own; the open network only via `init -open` or an invitation | Own devices first; nobody becomes visible to strangers without wanting to |
 | Network types | **Three network types:** private network (PSK), group network (certificate per node), open network; a node can belong to several | Own devices, groups and strangers need different levels of trust; priority in this order |
 | Automatic port forwarding (UPnP/NAT-PMP/PCP) | **Opt-in**, off by default | Changes router settings; IPv6, hole punching and relay cover the normal case without forwarding |
 | Offering a relay to others | in the open network **automatic** as soon as the node is publicly reachable, with conservative limits and can be disabled; in private and group networks via own helpers | Without relays at reachable nodes, the open network falls apart into islands as soon as the start node goes away; content stays end-to-end encrypted |
@@ -24,7 +25,7 @@ SwarmAiNet is a self-governing P2P network in which different local AI models fo
 | Coordinating a task | **The requesting peer coordinates**; handover via lease on failure from phase 3 | No centre, but also no loss of running tasks |
 | Incentives | **No mandatory currency**; signed receipts since phase 1, mutual credit from phase 4 | Measure first, then settle; the data for the credit is then already available |
 
-**Open:** today, a newly set-up node without an invitation joins the open network. It accepts nothing there and passes nothing on, but is visible with its peer ID and address. The first version envisaged participation as opt-in. Whether the default stays this way is to be decided ([open questions](#open-questions-and-related-projects)).
+**Default at first start:** `swarmainet init` sets up a private network of your own with a fresh key (decided on 21 Nov 2026). The open network is a deliberate choice (`init -open` or an invitation into the open network), as in version 1; this way nobody becomes visible to strangers without wanting to.
 
 ## Vision and guiding principles
 
@@ -398,7 +399,6 @@ The P2P layer was made robust in phase 2 before swarm intelligence is added in p
 
 ## Open questions and related projects
 
-- **Default at first start:** should a new node without an invitation automatically join the open network (today) or stay local until the open network is deliberately switched on (version 1)?
 - **Availability of issuers:** members only renew their certificate if an issuer is online at the same time. Does a group network need a permanently running issuer, e.g. on a server?
 - How much may automatic pseudonymisation change the domain context?
 - May local knowledge indexes (RAG) be shared in addition to results? Default: no.
@@ -416,7 +416,7 @@ The P2P layer was made robust in phase 2 before swarm intelligence is added in p
 | Name | KI-Schwarm, protocol `/ki-schwarm/…` | SwarmAiNet, project and domain Ai-Swarms.net, protocol `/swarmainet/…` |
 | Network types | open network and private swarms | three network types with priority: private, group, open; group networks with certificates are new |
 | Relay | opt-in | automatic in the open network when publicly reachable |
-| Participation in the open network | opt-in | default today without an invitation; kept as an open question |
+| Participation in the open network | opt-in | opt-in again: `init` creates a private network of your own by default, `init -open` for the open network |
 | Tools | "only after consent, with narrow rights and an audit log" | tool list per network, executed by the application; audit log not implemented |
 | Gossip | DHT and gossip | no gossip in phase 2; capabilities directly at the peer, references in the DHT |
 | Entry | bootstrap list, DNS seeds | plus tracker and QR code; dialling again after a start node failure |

@@ -28,14 +28,14 @@ Unter Ubuntu ohne installiertes Go erledigt [`deploy/linux/gruppe-beitreten.sh`]
 ## Ersten Knoten einrichten
 
 ```sh
-./swarmainet init               # legt ~/.swarmainet/config.yaml und den Schlüssel an, zeigt die Peer-ID
+./swarmainet init               # legt ~/.swarmainet/config.yaml, Schlüssel und ein eigenes privates Netz an
 $EDITOR ~/.swarmainet/config.yaml
 ./swarmainet run
 ```
 
 Danach steht die OpenAI-kompatible API unter `http://127.0.0.1:7711/v1` bereit, und unter `http://127.0.0.1:7711` erscheint eine Status-Seite. Wie man sie nutzt, steht in [Nutzung](usage.md).
 
-> **Hinweis:** Ohne Netzschlüssel oder Einladung ist ein neuer Knoten im **offenen Netz** und meldet sich beim eingebauten Startknoten. Andere Teilnehmer sehen dann seine Peer-ID und seine öffentliche Adresse. Fremde Aufträge nimmt er erst an, wenn Sie das ausdrücklich einschalten. Wer nur die eigenen Geräte verbinden will, richtet zuerst ein [privates Netz](networks.md#privates-netz-eigene-geräte) ein oder setzt `node.dns_seeds: [none]`.
+> **Hinweis:** `init` richtet ein **eigenes privates Netz** ein (Kennung `p-…`, Schlüssel in `~/.swarmainet/p-….key`). Weitere eigene Geräte kommen per [Einladung](networks.md#einladungen) dazu. Wer stattdessen einem anderen Netz beitreten will, ruft `swarmainet join '<link>'` auf, bevor der Knoten zum ersten Mal läuft; das neue private Netz weicht dann. Für das **offene Netz** `swarmainet init -open`: Andere Teilnehmer sehen dann Peer-ID und öffentliche Adresse des Knotens; fremde Aufträge nimmt er erst an, wenn Sie das ausdrücklich einschalten.
 
 ## Die wichtigsten Einstellungen
 

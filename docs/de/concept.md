@@ -2,7 +2,7 @@
 
 [English](../concept.md) · **Deutsch**
 
-**Fassung 2 vom 18.11.2026.** Projekt und Domain heißen **Ai-Swarms.net**, die Software **SwarmAiNet** (Programm `swarmainet`). Die erste Fassung vom 14.10.2026 trug noch den Arbeitstitel „KI-Schwarm“ und liegt im [Archiv](../archive/concept-2026-10-14-de.pdf). Sie führte ein Claude- und ein GPT-5-Konzept zusammen und entschied die Punkte, in denen sie sich widersprachen. Diese Fassung bringt das Konzept auf den Stand von Spezifikation und Umsetzung; was sich gegenüber der ersten Fassung geändert hat, steht am Ende ([Änderungen](#änderungen-gegenüber-fassung-1)). Verbindlich im Detail ist die [Spezifikation](../../spec/de/README.md).
+**Fassung 2 vom 18.11.2026, zuletzt geändert am 21.11.2026.** Projekt und Domain heißen **Ai-Swarms.net**, die Software **SwarmAiNet** (Programm `swarmainet`). Die erste Fassung vom 14.10.2026 trug noch den Arbeitstitel „KI-Schwarm“ und liegt im [Archiv](../archive/concept-2026-10-14-de.pdf). Sie führte ein Claude- und ein GPT-5-Konzept zusammen und entschied die Punkte, in denen sie sich widersprachen. Diese Fassung bringt das Konzept auf den Stand von Spezifikation und Umsetzung; was sich gegenüber der ersten Fassung geändert hat, steht am Ende ([Änderungen](#änderungen-gegenüber-fassung-1)). Verbindlich im Detail ist die [Spezifikation](../../spec/de/README.md).
 
 SwarmAiNet ist ein selbstverwaltetes P2P-Netz, in dem unterschiedliche lokale KI-Modelle pro Aufgabe ein Team bilden, sich gegenseitig prüfen und so bessere Ergebnisse liefern sollen als das beste Einzelmodell. Es verbindet zuerst die eigenen Geräte, dann Gruppen und Firmen und schließlich beliebige Teilnehmer mit eingeschränkten Rechten. Der Mehrwert gegenüber dem besten Einzelmodell wird nicht vorausgesetzt, sondern gemessen.
 
@@ -10,6 +10,7 @@ SwarmAiNet ist ein selbstverwaltetes P2P-Netz, in dem unterschiedliche lokale KI
 
 | Frage | Entscheidung | Begründung |
 |---|---|---|
+| Teilnahme | **Standardmäßig privat:** `init` legt ein eigenes Netz an; das offene Netz nur über `init -open` oder eine Einladung | Erst die eigenen Geräte; niemand wird ungewollt für Fremde sichtbar |
 | Netzarten | **Drei Netzarten:** privates Netz (PSK), Gruppennetz (Zertifikat je Knoten), offenes Netz; ein Knoten kann mehreren angehören | Eigene Geräte, Gruppen und Fremde brauchen verschiedenes Vertrauen; Priorität in dieser Reihenfolge |
 | Automatische Portfreigabe (UPnP/NAT-PMP/PCP) | **Opt-in**, standardmäßig aus | Verändert Router-Einstellungen; IPv6, Hole Punching und Relay decken den Normalfall ohne Freigabe ab |
 | Relay für andere anbieten | im offenen Netz **automatisch**, sobald der Knoten öffentlich erreichbar ist, mit sparsamen Grenzen und abschaltbar; in privaten und Gruppennetzen über eigene Helfer | Ohne Relays bei erreichbaren Knoten zerfällt das offene Netz in Inseln, sobald der Startknoten wegfällt; Inhalte bleiben Ende-zu-Ende verschlüsselt |
@@ -24,7 +25,7 @@ SwarmAiNet ist ein selbstverwaltetes P2P-Netz, in dem unterschiedliche lokale KI
 | Koordination eines Auftrags | **Anfragender Peer koordiniert**; Übergabe per Lease bei Ausfall ab Phase 3 | Keine Zentrale, aber auch kein Verlust laufender Aufträge |
 | Anreize | **Keine Pflichtwährung**; signierte Quittungen seit Phase 1, gegenseitiger Kredit ab Phase 4 | Erst messen, dann abrechnen; die Daten für den Kredit liegen dann schon vor |
 
-**Offen:** Ein neu eingerichteter Knoten ohne Einladung tritt heute dem offenen Netz bei. Er nimmt dort nichts an und gibt nichts weiter, ist aber mit Peer-ID und Adresse sichtbar. Die erste Fassung sah die Teilnahme als Opt-in vor. Ob der Standard so bleibt, ist zu entscheiden ([Offene Fragen](#offene-fragen-und-verwandte-projekte)).
+**Standard beim ersten Start:** `swarmainet init` richtet ein eigenes privates Netz mit frischem Schlüssel ein (entschieden am 21.11.2026). Das offene Netz wählt man bewusst (`init -open` oder eine Einladung ins offene Netz), wie in Fassung 1; so wird niemand ungewollt für Fremde sichtbar.
 
 ## Vision und Leitprinzipien
 
@@ -398,7 +399,6 @@ Die P2P-Schicht wurde in Phase 2 robust gemacht, bevor in Phase 3 die Schwarmint
 
 ## Offene Fragen und verwandte Projekte
 
-- **Standard beim ersten Start:** Soll ein neuer Knoten ohne Einladung automatisch dem offenen Netz beitreten (heute) oder lokal bleiben, bis das offene Netz bewusst eingeschaltet wird (Fassung 1)?
 - **Verfügbarkeit der Aussteller:** Mitglieder verlängern ihr Zertifikat nur, wenn ein Aussteller gleichzeitig online ist. Braucht ein Gruppennetz einen dauerhaft laufenden Aussteller, etwa auf einem Server?
 - Wie stark darf automatische Pseudonymisierung den fachlichen Kontext verändern?
 - Dürfen neben Ergebnissen auch lokale Wissensindizes (RAG) geteilt werden? Standard: nein.
@@ -416,7 +416,7 @@ Die P2P-Schicht wurde in Phase 2 robust gemacht, bevor in Phase 3 die Schwarmint
 | Name | KI-Schwarm, Protokoll `/ki-schwarm/…` | SwarmAiNet, Projekt und Domain Ai-Swarms.net, Protokoll `/swarmainet/…` |
 | Netzarten | offenes Netz und private Schwärme | drei Netzarten mit Priorität: privat, Gruppe, offen; Gruppennetze mit Zertifikaten neu |
 | Relay | Opt-in | im offenen Netz automatisch bei öffentlicher Erreichbarkeit |
-| Teilnahme am offenen Netz | Opt-in | heute Standard ohne Einladung; als offene Frage geführt |
+| Teilnahme am offenen Netz | Opt-in | wieder Opt-in: `init` legt standardmäßig ein eigenes privates Netz an, `init -open` für das offene Netz |
 | Werkzeuge | „nur nach Zustimmung, mit engen Rechten und Audit-Log“ | Werkzeugliste je Netz, Ausführung durch die Anwendung; Audit-Log nicht umgesetzt |
 | Gossip | DHT und Gossip | kein Gossip in Phase 2; Fähigkeiten direkt beim Peer, Verweise in der DHT |
 | Einstieg | Bootstrap-Liste, DNS-Seeds | dazu Tracker und QR-Code; erneutes Anwählen nach Ausfall des Startknotens |

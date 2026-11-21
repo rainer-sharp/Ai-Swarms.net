@@ -27,7 +27,7 @@ git clone https://github.com/rainer-sharp/Ai-Swarms.net.git
 cd Ai-Swarms.net
 go build -o swarmainet ./cmd/swarmainet
 
-./swarmainet init                    # legt ~/.swarmainet/config.yaml an
+./swarmainet init                    # legt ~/.swarmainet/config.yaml und ein eigenes privates Netz an
 $EDITOR ~/.swarmainet/config.yaml    # Modelle unter backends eintragen
 ./swarmainet run
 ```
@@ -41,7 +41,7 @@ curl -s http://127.0.0.1:7711/v1/chat/completions -H 'Content-Type: application/
 
 Oder in Open WebUI unter *Einstellungen → Verbindungen* die URL `http://127.0.0.1:7711/v1` eintragen und das Modell `swarmainet` wählen.
 
-> Ohne weitere Einstellungen ist ein neuer Knoten im offenen Netz. Er nimmt dort keine fremden Aufträge an und gibt Ihre Anfragen nicht nach außen, ist für andere aber mit Peer-ID und Adresse sichtbar. Für die eigenen Geräte richten Sie besser ein [privates Netz](../docs/de/networks.md#privates-netz-eigene-geräte) ein.
+> `init` richtet ein **eigenes privates Netz** mit frischem Schlüssel ein: Nur Ihre Geräte, die Sie einladen, sehen den Knoten. Für das offene Netz stattdessen `swarmainet init -open`; dort ist der Knoten für andere mit Peer-ID und Adresse sichtbar, nimmt aber keine fremden Aufträge an, bis Sie das einschalten ([Netzarten](../docs/de/networks.md)).
 
 **Weitere Geräte verbinden:** Auf einem laufenden Knoten `swarmainet invite -with-key` aufrufen und auf dem neuen Gerät `swarmainet join '<link>'`. Im LAN finden sich die Geräte danach selbst; für mehrere Standorte siehe [Netzarten](../docs/de/networks.md#mehrere-standorte).
 

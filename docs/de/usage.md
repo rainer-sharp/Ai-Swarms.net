@@ -66,7 +66,7 @@ Inhalte als Liste von Textteilen werden zusammengefügt. Bilder werden noch nich
 
 | Befehl | Zweck |
 |---|---|
-| `init` | Konfiguration und Schlüssel anlegen |
+| `init [-open]` | Konfiguration und Schlüssel anlegen, standardmäßig mit eigenem privatem Netz; `-open` für das offene Netz |
 | `run` | Knoten starten |
 | `status` | Status des laufenden Knotens (JSON) |
 | `pause`, `resume`, `stop` | fremde Aufträge pausieren, fortsetzen, Sofort-Stopp |

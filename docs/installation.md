@@ -28,14 +28,14 @@ On Ubuntu without Go installed, [`deploy/linux/gruppe-beitreten.sh`](../deploy/l
 ## Setting up the first node
 
 ```sh
-./swarmainet init               # creates ~/.swarmainet/config.yaml and the key, shows the peer ID
+./swarmainet init               # creates ~/.swarmainet/config.yaml, keys and a private network of your own
 $EDITOR ~/.swarmainet/config.yaml
 ./swarmainet run
 ```
 
 The OpenAI-compatible API is then available at `http://127.0.0.1:7711/v1`, and a status page appears at `http://127.0.0.1:7711`. How to use it is described in [Usage](usage.md).
 
-> **Note:** Without a network key or invitation, a new node is in the **open network** and contacts the built-in start node. Other participants then see its peer ID and its public address. It only accepts foreign tasks once you explicitly enable that. If you only want to connect your own devices, first set up a [private network](networks.md#private-network-own-devices) or set `node.dns_seeds: [none]`.
+> **Note:** `init` sets up a **private network of your own** (ID `p-…`, key in `~/.swarmainet/p-….key`). Further own devices join via an [invitation](networks.md#invitations). If you want to join another network instead, run `swarmainet join '<link>'` before the node runs for the first time; the new private network then gives way. For the **open network**, use `swarmainet init -open`: other participants then see the node's peer ID and public address; it only accepts foreign tasks once you explicitly enable that.
 
 ## The most important settings
 
