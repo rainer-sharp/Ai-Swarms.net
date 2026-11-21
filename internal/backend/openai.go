@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"strings"
 	"time"
@@ -118,6 +119,61 @@ func (c *Client) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error
 		PromptTokens:     raw.Usage.PromptTokens,
 		CompletionTokens: raw.Usage.CompletionTokens,
 	}, nil
+}
+
+// Transcribe schickt eine Aufnahme an /audio/transcriptions (OpenAI-Format,
+// etwa vLLM mit einem Transkriptionsmodell) und liefert den Text.
+func (c *Client) Transcribe(ctx context.Context, model string, a protocol.Audio) (string, error) {
+	var body bytes.Buffer
+	mw := multipart.NewWriter(&body)
+	name := a.Filename
+	if name == "" {
+		name = "audio"
+	}
+	fw, err := mw.CreateFormFile("file", name)
+	if err != nil {
+		return "", err
+	}
+	if _, err := fw.Write(a.Data); err != nil {
+		return "", err
+	}
+	for k, v := range map[string]string{"model": model, "language": a.Language, "prompt": a.Prompt, "response_format": "json"} {
+		if v != "" {
+			if err := mw.WriteField(k, v); err != nil {
+				return "", err
+			}
+		}
+	}
+	if err := mw.Close(); err != nil {
+		return "", err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/audio/transcriptions", &body)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	if c.APIKey != "" {
+		req.Header.Set("Authorization", "Bearer "+c.APIKey)
+	}
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode/100 != 2 {
+		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return "", fmt.Errorf("backend %s/audio/transcriptions: %s: %s", c.BaseURL, resp.Status, strings.TrimSpace(string(msg)))
+	}
+	var out struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(out.Text) == "" {
+		return "", fmt.Errorf("backend lieferte keinen text (stille oder unbekanntes format?)")
+	}
+	return out.Text, nil
 }
 
 // Models listet die vom Backend angebotenen Modelle.

@@ -26,6 +26,7 @@
 | Überhöhte Selbsteinschätzung (`strength`) | wirkt nur als Reihung bei gleicher Eignung; Prüfer bleibt aus anderer Familie; gemessene Bewertung (Elo) ersetzt die Angabe | Phase 1: nur vertrauter Kreis; Elo ab Phase 3 |
 | Prompt-Injection zwischen Modellen | Ergebnisse sind Daten; Begrenzer; strukturierte Ausgaben; Anweisungsmuster verwerfen | umgesetzt (Heuristik) |
 | Untergeschobene Werkzeug-Aufrufe (ein Anbieter lässt den lokalen Agenten Befehle ausführen), Abfluss von Werkzeug-Ergebnissen | Werkzeugliste je Netz, ohne Liste keine bei Fremden und in Mitgliedsnetzen; nicht genannte Aufrufe werden verworfen, Verlauf mit anderen Werkzeugen geht nicht an eingeschränkte Agenten; nur Muster `single`, nur Modelle mit `tools: true`. Die Liste prüft nur Namen; Bestätigung riskanter Aufrufe bleibt Aufgabe des Agenten | umgesetzt |
+| Stimmen und Inhalte von Aufnahmen bei fremden Knoten | Audio höchstens bis `trusted`, durchgesetzt von Koordinator und Anbieter; nur Agenten mit `audio.transcribe` bekommen Aufnahmen | umgesetzt |
 | Replay | Nonce + Ablaufzeit + Signatur | umgesetzt |
 | Identitätsfälschung | Absender = Gegenstelle der Verbindung, Signatur über Peer-ID-Schlüssel | umgesetzt |
 | Überlastung des Anbieters | REM: Slots, Zeitfenster, GPU-Minuten, mittlere Auslastung, Temperatur, RAM-Reserve; max. 4 Streams pro Peer; 4 MiB pro Nachricht | umgesetzt |

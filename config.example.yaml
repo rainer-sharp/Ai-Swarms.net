@@ -101,8 +101,16 @@ resources:
     reading_max_age_s: 120
 
 tasks:
-  pattern: draft_verify_synthesize  # single | parallel | draft_verify_synthesize | parallel_verify
+  pattern: draft_verify_synthesize  # single | parallel | draft_verify_synthesize | parallel_verify | cascade
   privacy_class: trusted            # local | trusted | reduced | public
   max_tokens: 2048
   deadline_s: 300
   max_subtasks: 8
+
+# Wahl des Musters, wenn eine Anfrage keines nennt (spec/cooperation.md § 3).
+cooperation:
+  selection: rules                  # rules: tasks.pattern | bandit: nach Kompetenzprofil (Opt-in)
+  exploration: 0.05                 # Anteil zufälliger Wahl
+  # targets:                        # Sollwerte je Aufgabenkategorie
+  #   code: { quality: 0.9 }
+  #   math: { quality: 0.95 }

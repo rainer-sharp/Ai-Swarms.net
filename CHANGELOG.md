@@ -8,8 +8,15 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 ### Added
 
+- **Transcription:** `POST /v1/audio/transcriptions` in the format of the OpenAI API has a recording transcribed by a model with the skill `audio.transcribe`, also on another node (new optional field `audio` in the subtask, at most 2.75 MiB). Audio only goes up to privacy class `trusted`; coordinator and provider both enforce this. ([usage](docs/usage.md#transcription), [protocol](spec/protocol-v0.1.md) § 4.2)
 - **Competence profile** (phase 3, stage 1): every node rates the agents it works with per skill (Glicko-2) and keeps a verifier statistic of hits, false alarms and misses. Verdicts of proven verifiers count as signals; feedback via `POST /v1/feedback`, display via `GET /api/profile`, storage in `~/.swarmainet/profile.json`. `swarmainet bench run` sends its assessments as objective feedback. The selection of agents does not use the profile yet. ([usage](docs/usage.md#feedback-and-competence-profile), [cooperation](spec/cooperation.md) § 2)
 - `steps[].verdict` in the answer shows each verifier's verdict.
+- **Pattern `cascade`** (`swarmainet/cascade`, also allowed for `tasks.pattern`): a cheap model first, review by a different family; only if flaws are found does the best other model by measured rating solve the task anew (`escalated: true`).
+- **Bandit over patterns** (phase 3, stage 2, opt-in via `cooperation.selection: bandit`): for requests without a pattern, the node chooses per task category by Thompson sampling the cheapest pattern expected to reach the quality target, learning from feedback on final results. Default remains `rules`. The answer states who chose the pattern (`selected_by`). ([configuration](docs/configuration.md#choosing-the-pattern-cooperation), [cooperation](spec/cooperation.md) § 3, § 5)
+
+### Changed
+
+- **Agents without a matching skill** only serve as a fallback if no agent fits at all; agents with only audio skills never receive text tasks, and text generalists (`general`) never receive audio.
 
 ## [0.2.0] – 2026-11-21
 

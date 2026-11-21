@@ -2,7 +2,7 @@
 
 [English](../cooperation.md) · **Deutsch**
 
-Status: **Entwurf**; Stufe 1 (Kompetenzprofil, § 2 und § 11) am 21.11.2026 umgesetzt, das Profil beeinflusst die Auswahl noch nicht. Grundlage: Gesamtkonzept, Abschnitte „Fähigkeiten und Kompetenzmessung“, „Rollen und Kooperationsmuster“, „Auftragsprotokoll“ und „Auswahl und Regelung“. Ergänzt [Protokoll v0.1](protocol-v0.1.md) und baut auf der [P2P-Schicht](p2p-layer.md) auf. Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
+Status: **Entwurf**; Stufen 1 und 2 (Kompetenzprofil, Bandit, Kaskade; § 2, § 3, § 5, § 11) am 21.11.2026 umgesetzt. Der Bandit ist Opt-in (`cooperation.selection: bandit`); standardmäßig gilt die bisherige Regel.
 
 Bisher entscheidet der Orchestrator nach festen Regeln: Er nimmt das Muster aus der Konfiguration oder der Anfrage und den Prüfer nach Familie und `strength` (eine Selbstauskunft). Phase 3 ersetzt das durch **gemessene Erfahrung**:
 
@@ -99,6 +99,8 @@ Erst beim Ausführen werden die Rollen mit konkreten Agenten besetzt: der Erstel
 
 Die bisherige regelbasierte Auswahl wird zum **Vorwissen** (Prior) des Bandits und zum Rückfall, solange zu wenig Daten vorliegen.
 
+**Umsetzung (Stufe 2):** Rezepte sind die Muster `single`, `cascade`, `draft_verify_synthesize`, `parallel`, `parallel_verify`; ihre Besetzung bleibt regelbasiert (Kaskade: § 5). Ein Muster gilt als besetzbar, wenn die zugelassenen Agenten es füllen können: Alles außer `single` braucht zwei Modellfamilien. Je Aufgabenkategorie (aus der Fähigkeit abgeleitet: `code.*` → code, `reasoning.math` → math, sonst general …) und Muster führt der Knoten Beta(1+α, 1+β) über die Erfolgsquote, mit α und β als gewichteten Erfolgen und Misserfolgen der **Endergebnisse** (objektives Feedback Gewicht 1, Nutzerfeedback ¼; Zwischenschritte gehen nur ins Kompetenzprofil). Das Muster aus `tasks.pattern` bekommt einen Erfolg als Vorwissen. Kosten sind die mittleren Tokens je Auftrag, sobald mindestens 3 Aufträge beobachtet sind, vorher grobe Werte aus Benchmark Runde 1. Sollwerte standardmäßig: code 0,9, math 0,95, sonst 0,85; Erkundung 5 %. Die Antwort nennt, wer das Muster gewählt hat (`selected_by`: `request`, `rules`, `bandit`).
+
 ### 3.3 Abgrenzung
 
 Der Bandit wählt diskret, *womit* gearbeitet wird. Wie viel Aufwand innerhalb eines Rezepts (Prüfrunden, Zahl paralleler Modelle) bestimmt der Regler (§ 4). Ein PID-Regler für die Auswahl ist ausdrücklich nicht vorgesehen.
@@ -141,6 +143,8 @@ Neues Muster `cascade`: Zuerst löst ein günstiges Modell (kleinste erwartete K
 3. die Selbstauskunft `confidence` liegt unter `θ` (schwächstes Kriterium, nur in Kombination).
 
 `θ` stellt der Kaskaden-Regler (§ 4.1). Die Kaskade ist laut Konzept der künftige Standard für den Großteil der Anfragen, weil sie Aufwand nur dort einsetzt, wo er nötig ist.
+
+**Umsetzung (Stufe 2):** verfügbar als Muster `cascade` (Modellname `swarmainet/cascade` oder vom Bandit gewählt). Stufe 1 ist der Kandidat mit der passendsten Fähigkeit, ohne gemessene Bewertung unter 1650 (etwa 75 % Erfolg), mit der kleinsten `strength` als Näherung für geringere Kosten. Meldet der Prüfer einer anderen Familie Mängel (bei Mathe nur mit abweichendem Ergebnis), löst das nach gemessener Bewertung, sonst nach `strength` beste andere Modell neu; die Antwort trägt dann `escalated: true`. Kriterium 3 und der Regler für `θ` folgen in Stufe 3.
 
 ## 6. Muster: Zerlegen und Verteilen (Task-Graph)
 
@@ -207,10 +211,10 @@ Neue Nachrichten und Felder (Versionierung wie bisher: neue optionale Payload-Fe
 Gateway:
 
 - `POST /v1/feedback` mit `{ "task_id": …, "good": true|false, "objective": false, "step": <index> }`: Rückmeldung zu einem eigenen Auftrag. Ohne `objective` Nutzerfeedback (§ 2.2, Rang 4, Gewicht ¼), mit `objective: true` ein geprüftes Ergebnis (Rang 1, volles Gewicht), wie es `swarmainet bench run` sendet. `step` bezeichnet einen Eintrag in `steps[]` der Antwort; ohne Angabe zählt das Endergebnis. Der Auftrag muss zu den letzten 1024 dieses Knotens gehören; je Schritt gilt eine Rückmeldung. Antworten: 204, 404 (Auftrag unbekannt), 409 (schon gemeldet), 400 (ungültiger Schritt, etwa ein Prüfer). In Stufe 1 umgesetzt.
-- Modellname `swarmainet` wählt künftig über den Bandit; `swarmainet/<muster>` erzwingt weiterhin ein Muster.
-- `GET /api/profile`: Kompetenzprofil und Reglerzustand je Kategorie (Diagnose, „Regelungsstabilität“ im Messplan). Stufe 1 zeigt das Profil: Bewertung je Agent und Fähigkeit (`r`, `rd`, `sigma`, `games`) und Prüferstatistik (`hit`, `false_alarm`, `correct_ok`, `miss`).
+- Mit `cooperation.selection: bandit` wählt der Modellname `swarmainet` über den Bandit (in Stufe 2 umgesetzt); `swarmainet/<muster>` erzwingt weiterhin ein Muster.
+- `GET /api/profile`: Kompetenzprofil und Reglerzustand je Kategorie (Diagnose, „Regelungsstabilität“ im Messplan). Stufe 1 zeigt das Profil: Bewertung je Agent und Fähigkeit (`r`, `rd`, `sigma`, `games`) und Prüferstatistik (`hit`, `false_alarm`, `correct_ok`, `miss`); Stufe 2 ergänzt die Statistik des Bandits je Kategorie und Muster (`recipes`: `alpha`, `beta`, `tasks`, `tokens`).
 
-Konfiguration (Entwurf):
+Konfiguration (Entwurf; umgesetzt sind bisher `selection`, `exploration` und `targets` als Qualitätswert je Kategorie):
 
 ```yaml
 cooperation:
@@ -247,7 +251,7 @@ Kennzahlen zusätzlich zum Messplan: Konvergenz des Bandits (wie viele Aufträge
 ## 11. Umsetzung in Stufen
 
 1. ✅ **Kompetenzprofil und Signale:** Glicko-2 je Agent und Fähigkeit, Prüferbewertung, Signale aus Benchmark, Prüferurteil und `POST /v1/feedback`; Anzeige über `GET /api/profile`. Prüfbar mit künstlichen Agenten bekannter Qualität. Umgesetzt in `internal/profile`; Vorwissen aus `strength`, Prüferurteile je Schritt (`steps[].verdict`). Noch nicht: Paarvergleiche aus parallelen Mustern.
-2. **Bandit über Rezepte** mit der heutigen Auswahl als Vorwissen, und Muster **Kaskade**.
+2. ✅ **Bandit über Rezepte** mit der heutigen Auswahl als Vorwissen, und Muster **Kaskade**. Umgesetzt mit festen Regeln für „unsicher“ (§ 5); Opt-in über `cooperation.selection: bandit`.
 3. **PI-Regler** für den Prüfaufwand je Kategorie.
 4. **Task-Graph**: Planer, Zerlegen und Verteilen, Synthese.
 5. **Asynchrone Aufträge und Lease-Koordinator**, Ausfalltests.

@@ -127,6 +127,17 @@ func (l *Local) RunLocal(ctx context.Context, id string, t orchestrator.Task) (p
 		return protocol.Result{}, fmt.Errorf("agent %q unbekannt", id)
 	}
 	start := time.Now()
+	if t.Audio != nil {
+		text, err := a.client.Transcribe(ctx, a.model, *t.Audio)
+		if err != nil {
+			return protocol.Result{}, err
+		}
+		return protocol.Result{
+			TaskID: t.TaskID, SubtaskID: t.SubtaskID, AgentID: id, ModelFamily: a.info.ModelFamily, Role: t.Role,
+			Result: protocol.ResultBody{Status: protocol.StatusOK, Content: text},
+			Usage:  protocol.Usage{DurationMs: time.Since(start).Milliseconds()},
+		}, nil
+	}
 	msgs := withSchema(t.Messages, t.JSONSchema)
 	resp, err := a.client.Chat(ctx, backend.ChatRequest{Model: a.model, Messages: msgs, MaxTokens: t.Limits.MaxTokens,
 		Tools: t.Tools, ToolChoice: t.ToolChoice})

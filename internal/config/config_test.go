@@ -304,3 +304,29 @@ func TestDNSSeedsApplyToAllNetworks(t *testing.T) {
 		}
 	}
 }
+
+// TestCooperationValidation: Standard ist die bisherige Regel; ungültige
+// Werte für Auswahl, Erkundung und Sollwerte werden abgewiesen.
+func TestCooperationValidation(t *testing.T) {
+	if d := Default(); d.Cooperation.Selection != "rules" || d.Validate() != nil {
+		t.Fatalf("standard: %+v", d.Cooperation)
+	}
+	for name, mod := range map[string]func(*Config){
+		"auswahl":   func(c *Config) { c.Cooperation.Selection = "zufall" },
+		"erkundung": func(c *Config) { c.Cooperation.Exploration = 0.6 },
+		"sollwert":  func(c *Config) { c.Cooperation.Targets = map[string]Target{"code": {Quality: 1.2}} },
+		"muster":    func(c *Config) { c.Tasks.Pattern = "debatte" },
+	} {
+		c := Default()
+		mod(&c)
+		if c.Validate() == nil {
+			t.Errorf("%s angenommen", name)
+		}
+	}
+	c := Default()
+	c.Cooperation = Cooperation{Selection: "bandit", Exploration: 0.1, Targets: map[string]Target{"code": {Quality: 0.8, LatencyP90S: 60}}}
+	c.Tasks.Pattern = "cascade"
+	if err := c.Validate(); err != nil {
+		t.Fatal(err)
+	}
+}

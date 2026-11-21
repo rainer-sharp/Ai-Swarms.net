@@ -132,6 +132,22 @@ type ProposePayload struct {
 	// Tools und ToolChoice im OpenAI-Format, unverändert weitergereicht.
 	Tools      json.RawMessage `json:"tools,omitempty"`
 	ToolChoice json.RawMessage `json:"tool_choice,omitempty"`
+	// Audio: Aufnahme für eine Transkription (Fähigkeit audio.transcribe);
+	// nie in der Freigabeklasse public (spec/protocol-v0.1.md § 4.2).
+	Audio *Audio `json:"audio,omitempty"`
+}
+
+// MaxAudioBytes begrenzt eine Aufnahme so, dass die Nachricht mit Base64 unter
+// der Grenze von 4 MiB bleibt.
+const MaxAudioBytes = 2816 << 10 // 2,75 MiB
+
+// Audio ist eine Aufnahme mit den Angaben der OpenAI-Transkriptions-API.
+type Audio struct {
+	Data     []byte `json:"data"` // im JSON Base64
+	MIME     string `json:"mime,omitempty"`
+	Filename string `json:"filename,omitempty"`
+	Language string `json:"language,omitempty"` // ISO-639-1, optional
+	Prompt   string `json:"prompt,omitempty"`   // Hinweise zu Begriffen, optional
 }
 
 type BidPayload struct {

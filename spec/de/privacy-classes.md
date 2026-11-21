@@ -29,7 +29,8 @@ Transportverschlüsselung schützt den Weg, nicht den Inhalt vor dem ausführend
    | offenes Netz, Fremde | keine | nur die Liste |
 
    Der eigene Knoten setzt das durch: Er entfernt andere Werkzeuge vor dem Versand, verwirft Antworten mit nicht genannten Aufrufen und gibt einem eingeschränkten Agenten keinen Verlauf, der Aufrufe anderer Werkzeuge enthält. Die Liste prüft nur Namen; was ein Werkzeug tut, weiß der Knoten nicht. Auch lesende Werkzeuge geben Daten preis, denn das Ergebnis geht an den fremden Knoten; `run_command` und Dateizugriffe gehören deshalb nicht auf die Liste eines offenen Netzes.
-7. Lokale Wissensindizes (RAG) werden nicht geteilt (offene Frage, Standard: nein).
+7. Tonaufnahmen (Transkription, Fähigkeit `audio.transcribe`) gehen höchstens bis `trusted`, nie `public`: Stimmen sind personenbezogene Daten, und der Inhalt einer Aufnahme lässt sich nicht minimieren. Koordinator und Anbieter setzen das beide durch ([Protokoll](protocol-v0.1.md) § 4.2).
+8. Lokale Wissensindizes (RAG) werden nicht geteilt (offene Frage, Standard: nein).
 
 ## Offen
 

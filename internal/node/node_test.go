@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -61,6 +62,15 @@ func fakeBackend(t *testing.T, model string, calls *atomic.Int32) *httptest.Serv
 				"choices": []map[string]any{{"message": map[string]string{"role": "assistant", "content": out}}},
 				"usage":   map[string]int{"prompt_tokens": 10, "completion_tokens": 5},
 			})
+		case "/v1/audio/transcriptions":
+			calls.Add(1)
+			f, _, err := r.FormFile("file")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			data, _ := io.ReadAll(f)
+			_ = json.NewEncoder(w).Encode(map[string]string{"text": "ABSCHRIFT von " + model + ": " + string(data)})
 		default:
 			http.NotFound(w, r)
 		}

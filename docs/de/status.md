@@ -11,7 +11,7 @@ SwarmAiNet ist ein **Forschungsprototyp**. Die Netzschicht ist weiter entwickelt
 | 0 · Spezifikation | Protokoll, Freigabeklassen, Bedrohungsmodell, Messplan | Entwurf v0.1 in [`spec/`](../../spec/de/README.md) |
 | 1 · Lokaler Schwarm | mDNS, statische Peers, OpenAI-Backends, Ressourcenmanager, Muster, Lastverteilung, Modellstärke, Quittungen | **abgeschlossen**, auf echter Hardware getestet: 3 Geräte, 3 Modellfamilien, Ollama, llama.cpp und vLLM |
 | 2 · P2P-Schicht | DHT, Einstiegsquellen, AutoNAT, Hole Punching, Relay; private, Mitglieds- und offene Netze, auch gleichzeitig | **privates Netz, Mitgliedsnetz und offenes Netz auf Hardware über zwei Standorte bestätigt** |
-| 3 · Selbstorganisierte Kooperation | Kompetenzprofil, Bandit, PI-Regler, Task-Graph, Lease-Koordinator | Spezifikation im Entwurf: [`spec/de/cooperation.md`](../../spec/de/cooperation.md); **Stufe 1 (Kompetenzprofil) umgesetzt**, noch nicht für die Auswahl genutzt |
+| 3 · Selbstorganisierte Kooperation | Kompetenzprofil, Bandit, PI-Regler, Task-Graph, Lease-Koordinator | Spezifikation im Entwurf: [`spec/de/cooperation.md`](../../spec/de/cooperation.md); **Stufen 1 und 2 umgesetzt** (Kompetenzprofil, Bandit über Muster als Opt-in, Kaskade) |
 | 4 · Offenes Testnetz | Ein-Klick-Client, Kredit, Sandbox, Benchmark-Pool | offen |
 
 ## Erprobung auf Hardware
@@ -33,7 +33,7 @@ Runde 1 (80 Aufgaben aus HumanEval und GSM8K, [Bericht](../../bench/de/report-r1
 - Der Router ist eine Stichwort-Heuristik, kein Modell; Bandit und Kompetenzprofil folgen in Phase 3.
 - Freigabeklasse `reduced` ohne Pseudonymisierung; sie wird bis dahin wie `trusted` behandelt.
 - Kein Token-Streaming: Bei `stream: true` kommt die geprüfte Antwort als ein Block.
-- Bilder in Anfragen werden nicht unterstützt.
+- Bilder in Anfragen werden nicht unterstützt. Audio nur als Transkription (`/v1/audio/transcriptions`, höchstens 2,75 MiB, nur bis `trusted`); auf Hardware noch nicht getestet.
 
 **Ressourcen**
 

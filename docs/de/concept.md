@@ -82,7 +82,7 @@ Der Schwarm fragt nicht „Wer hat Modell X?“, sondern „Wer kann Aufgabe Y u
 }
 ```
 
-**Fähigkeits-Taxonomie:** ein gemeinsames Grundvokabular (`reasoning.math`, `code.<sprache>`, `code.review`, `vision.ocr`, `retrieval.embed`, `domain.engineering` …) plus freie Tags für Neues. Die DHT enthält nur Verweise „Peer X bietet Fähigkeit Y“, je Fähigkeit auf vier Schlüssel verteilt, damit kein Knoten zum Engpass wird ([P2P-Schicht](../../spec/de/p2p-layer.md) § 5).
+**Fähigkeits-Taxonomie:** ein gemeinsames Grundvokabular (`reasoning.math`, `code.<sprache>`, `code.review`, `vision.ocr`, `audio.transcribe`, `retrieval.embed`, `domain.engineering` …) plus freie Tags für Neues. Die DHT enthält nur Verweise „Peer X bietet Fähigkeit Y“, je Fähigkeit auf vier Schlüssel verteilt, damit kein Knoten zum Engpass wird ([P2P-Schicht](../../spec/de/p2p-layer.md) § 5).
 
 **Gemessenes Profil** (Phase 3; seit 21.11.2026 erfasst, noch nicht für die Auswahl genutzt): Jeder Knoten führt für die Agenten, mit denen er arbeitet, einen Kompetenzwert pro Fähigkeit nach Glicko-2. Quellen, nach Gewicht:
 
@@ -104,7 +104,7 @@ Rollen sind dynamisch: Derselbe Knoten kann bei einer Aufgabe Spezialist sein un
 | Spezialist | Teilaufgabe in seiner Domäne lösen | Fachmodell |
 | Prüfer | Ergebnis prüfen, Tests ausführen, Fehler benennen | Modell anderer Familie, Werkzeug-Knoten |
 | Synthesizer | Geprüfte Teilergebnisse zusammenführen, offene Risiken nennen | starker Generalist, bevorzugt lokal |
-| Werkzeug-Knoten | Embeddings, Reranking, OCR, Code in Sandbox ausführen | Spezialmodelle, auch schwache Hardware |
+| Werkzeug-Knoten | Embeddings, Reranking, OCR, Transkription (umgesetzt), Code in Sandbox ausführen | Spezialmodelle, auch schwache Hardware |
 | Netzwerkhelfer | Einstieg, DHT-Server, Relay; später Benchmark-Pool speichern | erreichbare Knoten ohne GPU, z. B. ein VPS |
 
 | Muster | Ablauf | Einsatz | Stand |
@@ -112,7 +112,7 @@ Rollen sind dynamisch: Derselbe Knoten kann bei einer Aufgabe Spezialist sein un
 | Experten-Routing (`single`) | Anfrage an den besten Spezialisten, bei Ausfall der nächste | kurze, klar zuordenbare Fragen; Aufträge mit Werkzeugen | umgesetzt |
 | Entwurf + Prüfer + Synthese (`draft_verify_synthesize`) | Erzeugen, unabhängig prüfen, nur bei Mängeln überarbeiten | Code, Analysen; heutiger Standard | umgesetzt |
 | Parallele Vielfalt (`parallel`, `parallel_verify`) | Mehrere Modelle lösen unabhängig, Synthese, optional geprüft | Faktenfragen, schwierige Probleme | umgesetzt |
-| Kaskade | Erst günstiges Modell, bei Unsicherheit eskalieren | künftiger Standard für den Großteil der Anfragen | Phase 3 |
+| Kaskade (`cascade`) | Erst günstiges Modell, bei Unsicherheit eskalieren | künftiger Standard für den Großteil der Anfragen | umgesetzt (Phase 3, Stufe 2) |
 | Zerlegen & Verteilen | Task-Graph, Teilaufgaben parallel | mehrteilige Aufgaben, gemischte Modalitäten | Phase 3 |
 | Mixture-of-Agents | Antworten schichtweise verbessern | maximale Qualität, Zeit unkritisch | Idee |
 | Debatte | Gegenpositionen, Urteil durch Dritte | Abwägungen, Entscheidungen | Idee |
@@ -162,7 +162,7 @@ Jede Nachricht trägt Protokollversion, Task-ID, Absender, Ablaufzeit, Nonce und
 
 ## Auswahl und Regelung
 
-Heute wählt der Orchestrator nach Regeln: Fähigkeit, bei Gleichstand Lastverteilung, Prüfer nach Familie und Modellstärke. Ab Phase 3 entscheidet ein Bandit, welche Modellkombination arbeitet, und PI-Regler entscheiden, wie viel Aufwand eingesetzt wird. Die Auswahl ist eine diskrete Entscheidung und daher keine Aufgabe für einen PID-Regler. Einzelheiten: [Kooperation](../../spec/de/cooperation.md).
+Heute wählt der Orchestrator nach Regeln: Fähigkeit, bei Gleichstand Lastverteilung, Prüfer nach Familie und Modellstärke. Seit Stufe 2 von Phase 3 kann stattdessen ein Bandit das Muster wählen (Opt-in, `cooperation.selection: bandit`); in weiteren Stufen entscheidet er, welche Modellkombination arbeitet, und PI-Regler entscheiden, wie viel Aufwand eingesetzt wird. Die Auswahl ist eine diskrete Entscheidung und daher keine Aufgabe für einen PID-Regler. Einzelheiten: [Kooperation](../../spec/de/cooperation.md).
 
 **Auswahl (Bandit über Rezepte):** Bewertet werden nicht alle Modellkombinationen, sondern Rezepte aus Muster und Rollenbesetzung, z. B. „Coder-Familie A + Prüfer anderer Familie“. Zuerst gelten harte Filter: Modalität, Freigabeklasse, Verfügbarkeit, Lizenz, erlaubte Werkzeuge. Unter den übrigen wählt Thompson Sampling pro Aufgabenkategorie das günstigste Rezept, das den Qualitäts-Sollwert voraussichtlich erreicht. Ein kleiner Anteil geht an neue Agenten (Exploration); Vielfalt der Modellfamilien wird bei Prüfungen bewusst bevorzugt.
 

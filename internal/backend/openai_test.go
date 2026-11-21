@@ -11,6 +11,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
 )
 
 func TestChatEmptyContentIsError(t *testing.T) {
@@ -44,5 +46,33 @@ func TestChatToolCalls(t *testing.T) {
 	}
 	if !strings.Contains(got, `"tools":[{`) || !strings.Contains(got, `"tool_choice":"auto"`) {
 		t.Fatalf("anfrage: %s", got)
+	}
+}
+
+// TestTranscribe: Die Aufnahme geht als multipart/form-data mit Modell und
+// Sprache an /audio/transcriptions; zurück kommt der Text.
+func TestTranscribe(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/audio/transcriptions" {
+			http.Error(w, "pfad", 404)
+			return
+		}
+		f, hdr, err := r.FormFile("file")
+		if err != nil {
+			http.Error(w, err.Error(), 400)
+			return
+		}
+		data, _ := io.ReadAll(f)
+		if string(data) != "RIFF-daten" || hdr.Filename != "a.wav" || r.FormValue("model") != "asr" || r.FormValue("language") != "de" {
+			http.Error(w, "felder", 400)
+			return
+		}
+		_, _ = w.Write([]byte(`{"text":"Hallo Schwarm"}`))
+	}))
+	defer srv.Close()
+	c := New(srv.URL+"/v1", "")
+	got, err := c.Transcribe(context.Background(), "asr", protocol.Audio{Data: []byte("RIFF-daten"), Filename: "a.wav", Language: "de"})
+	if err != nil || got != "Hallo Schwarm" {
+		t.Fatalf("%q %v", got, err)
 	}
 }

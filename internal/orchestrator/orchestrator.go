@@ -8,6 +8,7 @@
 package orchestrator
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -60,6 +61,8 @@ type Task struct {
 	// Werkzeuge der aufrufenden Anwendung (OpenAI-Format), unverändert.
 	Tools      json.RawMessage
 	ToolChoice json.RawMessage
+	// Audio: Aufnahme für eine Transkription.
+	Audio *protocol.Audio
 }
 
 type Executor interface {
@@ -78,7 +81,20 @@ const (
 	PatternDraftVerify Pattern = "draft_verify_synthesize"
 	// PatternParallelVerify: parallel, danach Prüfung und ggf. Überarbeitung.
 	PatternParallelVerify Pattern = "parallel_verify"
+	// PatternCascade: erst ein günstiges Modell, Prüfung durch eine andere
+	// Familie, nur bei Mängeln löst das beste Modell neu (spec/cooperation.md § 5).
+	PatternCascade Pattern = "cascade"
 )
+
+// Patterns: alle Muster, die Run kennt.
+var Patterns = []Pattern{PatternSingle, PatternParallel, PatternDraftVerify, PatternParallelVerify, PatternCascade}
+
+// Choice beschreibt, zwischen welchen Mustern ein Auftrag wählen kann.
+type Choice struct {
+	Skill    string
+	Feasible []Pattern // mit den verfügbaren Agenten besetzbar
+	Default  Pattern   // Muster nach Regel (tasks.pattern)
+}
 
 type Request struct {
 	Messages []protocol.ChatMessage
@@ -98,7 +114,13 @@ type Request struct {
 	// auf dem eigenen Rechner aus).
 	Tools      json.RawMessage
 	ToolChoice json.RawMessage
+	// Audio: Transkription statt Chat. Läuft immer als single mit der
+	// Fähigkeit audio.transcribe und nie in der Freigabeklasse public.
+	Audio *protocol.Audio
 }
+
+// SkillTranscribe: Fähigkeit von Transkriptionsmodellen.
+const SkillTranscribe = "audio.transcribe"
 
 type Step struct {
 	Role       protocol.Role `json:"role"`
@@ -120,21 +142,33 @@ type Step struct {
 
 // Answer trägt Herkunft, Prüfurteil und Einschränkungen.
 type Answer struct {
-	TaskID      string              `json:"task_id"`
-	Content     string              `json:"-"`
-	ToolCalls   []protocol.ToolCall `json:"-"`
-	Pattern     Pattern             `json:"pattern"`
-	Skill       string              `json:"skill"`
-	Verdict     string              `json:"verdict,omitempty"`
-	Issues      []string            `json:"issues,omitempty"`
-	Limitations []string            `json:"limitations,omitempty"`
-	Steps       []Step              `json:"steps"`
+	TaskID    string              `json:"task_id"`
+	Content   string              `json:"-"`
+	ToolCalls []protocol.ToolCall `json:"-"`
+	Pattern   Pattern             `json:"pattern"`
+	Skill     string              `json:"skill"`
+	// SelectedBy: wer das Muster gewählt hat: request, rules oder bandit.
+	SelectedBy string `json:"selected_by,omitempty"`
+	// Escalated: In der Kaskade hat das beste Modell neu gelöst.
+	Escalated   bool     `json:"escalated,omitempty"`
+	Verdict     string   `json:"verdict,omitempty"`
+	Issues      []string `json:"issues,omitempty"`
+	Limitations []string `json:"limitations,omitempty"`
+	Steps       []Step   `json:"steps"`
 }
 
 type Orchestrator struct {
 	Dir      Directory
 	Exec     Executor
 	Parallel int // Zahl unabhängiger Lösungen im Muster parallel
+	// Default: Muster, wenn die Anfrage keines nennt (leer: draft_verify_synthesize).
+	Default Pattern
+	// Choose wählt das Muster, wenn die Anfrage keines nennt (Bandit, spec/
+	// cooperation.md § 3); nil: Default.
+	Choose func(Choice) Pattern
+	// Rate liefert die gemessene Bewertung eines Agenten in einer Fähigkeit
+	// (Kompetenzprofil); ok=false, wenn noch keine vorliegt.
+	Rate func(a Agent, skill string) (r float64, ok bool)
 
 	load loadTracker
 }
@@ -256,6 +290,16 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 	if !req.Privacy.Valid() {
 		return nil, fmt.Errorf("privacy_class %q unbekannt", req.Privacy)
 	}
+	if req.Audio != nil {
+		// Stimmen sind personenbezogene Daten: Audio nur bis trusted.
+		if req.Privacy == protocol.PrivacyPublic {
+			return nil, privacyError{"audio geht nicht an fremde knoten (freigabeklasse public); höchstens trusted"}
+		}
+		if len(req.Audio.Data) == 0 || len(req.Audio.Data) > protocol.MaxAudioBytes {
+			return nil, fmt.Errorf("aufnahme leer oder größer als %d bytes", protocol.MaxAudioBytes)
+		}
+		req.Skill, req.Pattern, req.Tools = SkillTranscribe, PatternSingle, nil
+	}
 	if req.Skill == "" {
 		req.Skill = Route(req.Messages)
 	}
@@ -269,7 +313,17 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 		req.Pattern = PatternSingle // Prüfer und Synthese passen nicht in den Werkzeug-Kreislauf
 	}
 	r := &run{o: o, req: req, taskID: newID()}
-	r.ans = &Answer{TaskID: r.taskID, Pattern: req.Pattern, Skill: req.Skill}
+	r.ans = &Answer{TaskID: r.taskID, Pattern: req.Pattern, Skill: req.Skill, SelectedBy: "request"}
+	if req.Pattern == "" {
+		r.req.Pattern, r.ans.SelectedBy = cmp.Or(o.Default, PatternDraftVerify), "rules"
+		if o.Choose != nil {
+			if p := o.Choose(Choice{Skill: req.Skill, Feasible: r.feasible(), Default: r.req.Pattern}); p != "" {
+				r.req.Pattern, r.ans.SelectedBy = p, "bandit"
+			}
+		}
+		r.ans.Pattern = r.req.Pattern
+	}
+	req = r.req
 
 	var err error
 	switch req.Pattern {
@@ -279,9 +333,10 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 		err = r.parallel(ctx)
 	case PatternParallelVerify:
 		err = r.parallelVerify(ctx)
-	case PatternDraftVerify, "":
-		r.ans.Pattern = PatternDraftVerify
+	case PatternDraftVerify:
 		err = r.draftVerify(ctx)
+	case PatternCascade:
+		err = r.cascade(ctx)
 	default:
 		err = fmt.Errorf("pattern %q unbekannt", req.Pattern)
 	}
@@ -321,6 +376,7 @@ func (r *run) rank(skill string, preferLocal, balance bool, exclude func(Agent) 
 		}
 		out = append(out, a)
 	}
+	out = fitting(out, skill)
 	loads := make(map[string]agentLoad, len(out))
 	for _, a := range out {
 		loads[a.key()] = r.o.load.get(a)
@@ -404,6 +460,24 @@ func allowed(a Agent, p protocol.PrivacyClass) bool {
 	return false
 }
 
+// audioOnly: Der Agent bietet nur Audio-Fähigkeiten an (z. B. Transkription).
+func audioOnly(a Agent) bool {
+	return len(a.Skills) > 0 && !slices.ContainsFunc(a.Skills, func(s string) bool { return !strings.HasPrefix(s, "audio.") })
+}
+
+// fitting: Reine Audio-Agenten bekommen nur Audio-Aufgaben. Passt mindestens
+// ein Agent zur Fähigkeit, fallen Agenten ganz ohne passende Fähigkeit weg;
+// passt keiner, bleiben sie als Rückfall.
+func fitting(agents []Agent, skill string) []Agent {
+	if !strings.HasPrefix(skill, "audio.") {
+		agents = slices.DeleteFunc(agents, audioOnly)
+	}
+	if slices.ContainsFunc(agents, func(a Agent) bool { return skillScore(a, skill) > 0 }) {
+		agents = slices.DeleteFunc(agents, func(a Agent) bool { return skillScore(a, skill) == 0 })
+	}
+	return agents
+}
+
 func skillScore(a Agent, skill string) float64 {
 	best := 0.0
 	domain, _, _ := strings.Cut(skill, ".")
@@ -413,7 +487,7 @@ func skillScore(a Agent, skill string) float64 {
 			return 3
 		case domain != "" && (s == domain || strings.HasPrefix(s, domain+".")):
 			best = max(best, 2)
-		case s == "general":
+		case s == "general" && !strings.HasPrefix(skill, "audio."): // Text-Generalisten verarbeiten kein Audio
 			best = max(best, 1)
 		}
 	}
@@ -469,7 +543,7 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 
 		tools, choice := toolsFor(a, r.req)
 		t := Task{TaskID: r.taskID, SubtaskID: newID(), Role: role, Skill: r.req.Skill, Messages: msgs, Limits: r.req.Limits, JSONSchema: schema,
-			Tools: tools, ToolChoice: choice}
+			Tools: tools, ToolChoice: choice, Audio: r.req.Audio}
 		start := time.Now()
 		done := r.o.load.begin(a)
 		res, err := r.o.Exec.Execute(ctx, a, t)
@@ -483,7 +557,7 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 		if err == nil {
 			err = checkToolCalls(a, r.req, res.Result.ToolCalls)
 		}
-		if err == nil && !a.Local && looksLikeInjection(res.Result.Content) {
+		if err == nil && !a.Local && r.req.Audio == nil && looksLikeInjection(res.Result.Content) {
 			err = errors.New("ergebnis enthält anweisungsmuster, verworfen")
 		}
 		if errors.Is(err, ErrBusy) {
@@ -572,6 +646,21 @@ func (r *run) draftVerify(ctx context.Context) error {
 // Familie als author prüfen und bei Mängeln einmal überarbeiten. Fehlschläge
 // führen nicht zum Abbruch, sondern zu Einschränkungen in der Antwort.
 func (r *run) verifyAndRevise(ctx context.Context, author Agent) {
+	v, ok := r.verify(ctx, author)
+	if !ok || v.Verdict == "ok" {
+		return
+	}
+	synth, _, err := r.exec(ctx, protocol.RoleSynthesizer, r.candidates("general", true, nil), synthPrompt(r.req.Messages, []string{r.ans.Content}, v.Issues), "")
+	if err != nil {
+		r.limit("synthese fehlgeschlagen: antwort mit bekannten mängeln")
+		return
+	}
+	r.ans.Content = synth.Result.Content
+}
+
+// verify lässt r.ans.Content von einem Prüfer aus einer anderen Familie als
+// author prüfen. ok=false: ungeprüft (als Einschränkung vermerkt).
+func (r *run) verify(ctx context.Context, author Agent) (verdict, bool) {
 	verifiers := r.verifierCandidates(func(a Agent) bool { return a.Family == author.Family })
 	if len(verifiers) == 0 {
 		verifiers = r.verifierCandidates(func(a Agent) bool { return a.ID == author.ID && a.PeerID == author.PeerID })
@@ -581,7 +670,7 @@ func (r *run) verifyAndRevise(ctx context.Context, author Agent) {
 	}
 	if len(verifiers) == 0 {
 		r.limit("ungeprüft: kein prüfer verfügbar")
-		return
+		return verdict{}, false
 	}
 	// Ein unbrauchbares Urteil (kein JSON, Schema statt Antwort …) ist kein
 	// Mangelbefund: dann prüft der nächste Kandidat, höchstens maxVerifyTries.
@@ -612,7 +701,7 @@ func (r *run) verifyAndRevise(ctx context.Context, author Agent) {
 		} else {
 			r.limit("ungeprüft: prüfung fehlgeschlagen")
 		}
-		return
+		return verdict{}, false
 	}
 	// Mathe: Mängel, die am Ergebnis nichts ändern, lösen keine Überarbeitung aus.
 	if v.Verdict == "issues" && isMath(r.req.Skill) && sameResult(v.Result, r.ans.Content) {
@@ -621,16 +710,7 @@ func (r *run) verifyAndRevise(ctx context.Context, author Agent) {
 	}
 	r.ans.Verdict, r.ans.Issues = v.Verdict, v.Issues
 	r.markVerdict(judge, v.Verdict)
-	if v.Verdict == "ok" {
-		return
-	}
-
-	synth, _, err := r.exec(ctx, protocol.RoleSynthesizer, r.candidates("general", true, nil), synthPrompt(r.req.Messages, []string{r.ans.Content}, v.Issues), "")
-	if err != nil {
-		r.limit("synthese fehlgeschlagen: antwort mit bekannten mängeln")
-		return
-	}
-	r.ans.Content = synth.Result.Content
+	return v, true
 }
 
 func (r *run) parallel(ctx context.Context) error {

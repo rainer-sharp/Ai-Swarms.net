@@ -132,7 +132,11 @@ func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
 		n.Nets = append(n.Nets, pn)
 	}
 	n.P2P = n.Nets[0]
-	n.Orch = &orchestrator.Orchestrator{Dir: n, Exec: n, Parallel: 3}
+	n.Orch = &orchestrator.Orchestrator{Dir: n, Exec: n, Parallel: 3,
+		Default: orchestrator.Pattern(cfg.Tasks.Pattern), Rate: n.rate}
+	if cfg.Cooperation.Selection == "bandit" {
+		n.Orch.Choose = n.choose
+	}
 	return n, nil
 }
 
@@ -196,10 +200,7 @@ func (n *Node) Execute(ctx context.Context, a orchestrator.Agent, t orchestrator
 
 // Ask bearbeitet einen eigenen Auftrag mit den Standardgrenzen aus der Konfiguration.
 func (n *Node) Ask(ctx context.Context, req orchestrator.Request) (*orchestrator.Answer, error) {
-	a := n.Cfg.Tasks
-	if req.Pattern == "" {
-		req.Pattern = orchestrator.Pattern(a.Pattern)
-	}
+	a := n.Cfg.Tasks // ohne Muster wählt der Orchestrator (Regel oder Bandit)
 	if req.Privacy == "" {
 		req.Privacy = protocol.PrivacyClass(a.PrivacyClass)
 	}

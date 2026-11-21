@@ -8,8 +8,15 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 
 ### Hinzugefügt
 
+- **Transkription:** `POST /v1/audio/transcriptions` im Format der OpenAI-API lässt eine Aufnahme von einem Modell mit der Fähigkeit `audio.transcribe` abschreiben, auch auf einem anderen Knoten (neues optionales Feld `audio` im Teilauftrag, höchstens 2,75 MiB). Audio geht höchstens bis zur Freigabeklasse `trusted`; Koordinator und Anbieter setzen das beide durch. ([Nutzung](../docs/de/usage.md#transkription), [Protokoll](../spec/de/protocol-v0.1.md) § 4.2)
 - **Kompetenzprofil** (Phase 3, Stufe 1): Jeder Knoten bewertet die Agenten, mit denen er arbeitet, je Fähigkeit (Glicko-2) und führt eine Prüferstatistik aus Treffern, Fehlalarmen und übersehenen Fehlern. Urteile bewährter Prüfer zählen als Signal; Rückmeldungen über `POST /v1/feedback`, Anzeige über `GET /api/profile`, gespeichert in `~/.swarmainet/profile.json`. `swarmainet bench run` sendet seine Bewertungen als objektive Rückmeldung. Die Auswahl der Agenten nutzt das Profil noch nicht. ([Nutzung](../docs/de/usage.md#rückmeldungen-und-kompetenzprofil), [Kooperation](../spec/de/cooperation.md) § 2)
 - `steps[].verdict` in der Antwort zeigt das Urteil jedes Prüfers.
+- **Muster `cascade`** (`swarmainet/cascade`, auch für `tasks.pattern` zulässig): erst ein günstiges Modell, Prüfung durch eine andere Familie; nur bei Mängeln löst das nach gemessener Bewertung beste andere Modell neu (`escalated: true`).
+- **Bandit über Muster** (Phase 3, Stufe 2, Opt-in über `cooperation.selection: bandit`): Bei Anfragen ohne Muster wählt der Knoten je Aufgabenkategorie per Thompson Sampling das günstigste Muster, das den Qualitäts-Sollwert voraussichtlich erreicht, und lernt aus Rückmeldungen zu Endergebnissen. Standard bleibt `rules`. Die Antwort nennt, wer das Muster gewählt hat (`selected_by`). ([Konfiguration](../docs/de/configuration.md#wahl-des-musters-cooperation), [Kooperation](../spec/de/cooperation.md) § 3, § 5)
+
+### Geändert
+
+- **Agenten ohne passende Fähigkeit** dienen nur noch als Rückfall, wenn gar kein Agent passt; Agenten mit nur Audio-Fähigkeiten bekommen nie Textaufgaben, und Text-Generalisten (`general`) nie Audio.
 
 ## [0.2.0] – 2026-11-21
 

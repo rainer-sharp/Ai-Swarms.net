@@ -6,11 +6,13 @@
 package gateway
 
 import (
+	"cmp"
 	"context"
 	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -47,12 +49,13 @@ func Handler(b Backend) http.Handler {
 	})
 	mux.HandleFunc("GET /v1/models", func(w http.ResponseWriter, _ *http.Request) {
 		var data []map[string]any
-		for _, id := range []string{modelPrefix, modelPrefix + "/single", modelPrefix + "/parallel", modelPrefix + "/draft_verify_synthesize", modelPrefix + "/parallel_verify"} {
+		for _, id := range []string{modelPrefix, modelPrefix + "/single", modelPrefix + "/parallel", modelPrefix + "/draft_verify_synthesize", modelPrefix + "/parallel_verify", modelPrefix + "/cascade"} {
 			data = append(data, map[string]any{"id": id, "object": "model", "owned_by": "swarmainet"})
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"object": "list", "data": data})
 	})
 	mux.HandleFunc("POST /v1/chat/completions", func(w http.ResponseWriter, r *http.Request) { chat(b, w, r) })
+	mux.HandleFunc("POST /v1/audio/transcriptions", func(w http.ResponseWriter, r *http.Request) { transcribe(b, w, r) })
 	mux.HandleFunc("GET /api/status", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, http.StatusOK, b.StatusJSON()) })
 	mux.HandleFunc("POST /api/pause", func(w http.ResponseWriter, _ *http.Request) {
 		b.Pause()
@@ -311,4 +314,62 @@ func assistantMessage(ans *orchestrator.Answer) map[string]any {
 		}
 	}
 	return m
+}
+
+// transcribe nimmt eine Aufnahme im Format der OpenAI-Transkriptions-API an
+// (multipart/form-data: file, optional language, prompt, response_format) und
+// lässt sie von einem Agenten mit audio.transcribe abschreiben. Das Feld model
+// wird ignoriert; der Schwarm wählt das Modell.
+func transcribe(b Backend, w http.ResponseWriter, r *http.Request) {
+	const formLimit = protocol.MaxAudioBytes + 64<<10
+	r.Body = http.MaxBytesReader(w, r.Body, formLimit)
+	tooBig := fmt.Errorf("aufnahme größer als %d bytes; bitte kürzen oder teilen", protocol.MaxAudioBytes)
+	if err := r.ParseMultipartForm(formLimit); err != nil {
+		var mbe *http.MaxBytesError
+		if errors.As(err, &mbe) {
+			writeErr(w, http.StatusRequestEntityTooLarge, tooBig)
+			return
+		}
+		writeErr(w, http.StatusBadRequest, err)
+		return
+	}
+	f, hdr, err := r.FormFile("file")
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, errors.New("feld file mit der aufnahme fehlt"))
+		return
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, protocol.MaxAudioBytes+1))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err)
+		return
+	}
+	if len(data) > protocol.MaxAudioBytes {
+		writeErr(w, http.StatusRequestEntityTooLarge, tooBig)
+		return
+	}
+	format := cmp.Or(r.FormValue("response_format"), "json")
+	if format != "json" && format != "text" && format != "verbose_json" {
+		writeErr(w, http.StatusBadRequest, fmt.Errorf("response_format %q nicht unterstützt (json, text)", format))
+		return
+	}
+	ans, err := b.Ask(r.Context(), orchestrator.Request{
+		Audio: &protocol.Audio{Data: data, MIME: hdr.Header.Get("Content-Type"), Filename: hdr.Filename,
+			Language: r.FormValue("language"), Prompt: r.FormValue("prompt")},
+		Privacy: protocol.PrivacyClass(r.Header.Get("X-SwarmAiNet-Privacy")),
+	})
+	switch {
+	case errors.Is(err, orchestrator.ErrPrivacy):
+		writeErr(w, http.StatusBadRequest, err)
+		return
+	case err != nil:
+		writeErr(w, http.StatusBadGateway, err)
+		return
+	}
+	if format == "text" {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		_, _ = io.WriteString(w, ans.Content)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"text": ans.Content, "swarmainet": ans})
 }

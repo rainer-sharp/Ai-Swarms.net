@@ -10,8 +10,17 @@ The configuration lives in `~/.swarmainet/config.yaml` (create it with `swarmain
 | `backends` | Inference servers and their models: `family`, `skills`, `context`, `strength`, `tools`, `offer` |
 | `resources` | Resource manager: parallel tasks, GPU limits, temperature, RAM reserve, time windows, GPU minutes, energy (PV surplus, electricity price via Home Assistant) |
 | `tasks` | Default pattern, default privacy class, token limit, deadline, subtasks |
+| `cooperation` | How the pattern is chosen when a request names none (table below) |
 
 Secrets do not belong in the file: the Home Assistant token comes from an environment variable (`token_env`), network keys are kept in separate files with permissions 0600.
+
+## Choosing the pattern (`cooperation.…`)
+
+| Key | Default | Meaning |
+|---|---|---|
+| `selection` | `rules` | `rules`: `tasks.pattern` applies; `bandit`: the node chooses the pattern per task category from its competence profile ([cooperation](../spec/cooperation.md) § 3). A request with `swarmainet/<pattern>` always gets that pattern |
+| `exploration` | `0.05` | Share of random choice among the feasible patterns (0 to 0.5) |
+| `targets` | code 0.9, math 0.95, otherwise 0.85 | Targets per category, e.g. `code: { quality: 0.9 }`; `latency_p90_s` is reserved for stage 3 |
 
 ## Network keys (`node.…`)
 

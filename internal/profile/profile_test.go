@@ -35,7 +35,7 @@ func draftTask(p *Profile, creator, verifier, verdict string) string {
 	if verifier != "" {
 		steps = append(steps, Step{Role: RoleVerifier, Agent: verifier, Family: "fam-" + verifier, OK: true, Verdict: verdict})
 	}
-	p.Record(id, "code.python", steps)
+	p.Record(TaskInfo{ID: id, Skill: "code.python", Steps: steps})
 	return id
 }
 
@@ -119,7 +119,7 @@ func TestFeedbackTargets(t *testing.T) {
 		{Role: RoleVerifier, Agent: "c", Family: "qwen", OK: true, Verdict: "issues"},
 		{Role: RoleSynthesizer, Agent: "d", Family: "gpt-oss", OK: true},
 	}
-	p.Record("x", "general", steps)
+	p.Record(TaskInfo{ID: "x", Skill: "general", Steps: steps})
 	for _, tc := range []struct {
 		fb   Feedback
 		want error

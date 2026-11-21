@@ -29,7 +29,8 @@ Transport encryption protects the path, not the content from the executing peer.
    | open network, strangers | none | only the list |
 
    Your own node enforces this: it removes other tools before sending, discards responses with calls that were not listed and gives a restricted agent no history containing calls of other tools. The list only checks names; the node does not know what a tool does. Read-only tools also disclose data, because the result goes to the foreign node; `run_command` and file access therefore do not belong on the list of an open network.
-7. Local knowledge indexes (RAG) are not shared (open question, default: no).
+7. Audio recordings (transcription, skill `audio.transcribe`) go at most to `trusted`, never to `public`: voices are personal data, and the content of a recording cannot be minimised. Coordinator and provider both enforce this ([protocol](protocol-v0.1.md) § 4.2).
+8. Local knowledge indexes (RAG) are not shared (open question, default: no).
 
 ## Open
 

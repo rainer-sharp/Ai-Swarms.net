@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 
@@ -149,6 +150,21 @@ func (n *Node) handleTask(s network.Stream) {
 		reject("agent beherrscht keine werkzeuge")
 		return
 	}
+	// Audio: Stimmen sind personenbezogene Daten, deshalb nie public; nur an
+	// Agenten, die Audio verarbeiten (spec/protocol-v0.1.md § 4.2).
+	if p.Audio != nil {
+		switch {
+		case p.Limits.PrivacyClass == protocol.PrivacyPublic:
+			reject("audio nur im vertrauten kreis")
+			return
+		case !slices.Contains(agent.Skills, orchestrator.SkillTranscribe):
+			reject("agent verarbeitet kein audio")
+			return
+		case len(p.Audio.Data) == 0 || len(p.Audio.Data) > protocol.MaxAudioBytes:
+			reject("aufnahme leer oder zu groß")
+			return
+		}
+	}
 	slot, err := n.opts.Provider.Admit(!trusted)
 	if err != nil {
 		// Der genaue Grund (Energie, Last, Zeitfenster) bleibt lokal.
@@ -194,7 +210,7 @@ func (n *Node) handleTask(s network.Stream) {
 	}()
 
 	task := orchestrator.Task{TaskID: env.TaskID, SubtaskID: p.SubtaskID, Role: p.Role, Skill: p.Skill,
-		Messages: p.Messages, Limits: p.Limits, JSONSchema: p.JSONSchema, Tools: p.Tools, ToolChoice: p.ToolChoice}
+		Messages: p.Messages, Limits: p.Limits, JSONSchema: p.JSONSchema, Tools: p.Tools, ToolChoice: p.ToolChoice, Audio: p.Audio}
 	res, err := n.opts.Provider.RunLocal(ctx, p.AgentID, task)
 	if err != nil {
 		slog.Info("teilauftrag nicht ausgeführt", "peer", from, "agent", p.AgentID, "err", err)
@@ -289,7 +305,7 @@ func (n *Node) Execute(ctx context.Context, a orchestrator.Agent, t orchestrator
 	if err := send(protocol.TaskPropose, protocol.ProposePayload{
 		SubtaskID: t.SubtaskID, Role: t.Role, Skill: t.Skill, AgentID: a.ID,
 		Messages: t.Messages, Limits: limits, JSONSchema: t.JSONSchema,
-		Tools: t.Tools, ToolChoice: t.ToolChoice,
+		Tools: t.Tools, ToolChoice: t.ToolChoice, Audio: t.Audio,
 	}); err != nil {
 		return protocol.Result{}, err
 	}

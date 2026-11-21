@@ -11,7 +11,7 @@ SwarmAiNet is a **research prototype**. The network layer is more advanced than 
 | 0 · Specification | Protocol, privacy classes, threat model, measurement plan | Draft v0.1 in [`spec/`](../spec/README.md) |
 | 1 · Local swarm | mDNS, static peers, OpenAI backends, resource manager, patterns, load balancing, model strength, receipts | **completed**, tested on real hardware: 3 devices, 3 model families, Ollama, llama.cpp and vLLM |
 | 2 · P2P layer | DHT, entry sources, AutoNAT, hole punching, relay; private, membership and open networks, also simultaneously | **private network, membership network and open network confirmed on hardware across two sites** |
-| 3 · Self-organised cooperation | Competence profile, bandit, PI controller, task graph, lease coordinator | Specification draft: [`spec/cooperation.md`](../spec/cooperation.md); **stage 1 (competence profile) implemented**, not yet used for selection |
+| 3 · Self-organised cooperation | Competence profile, bandit, PI controller, task graph, lease coordinator | Specification draft: [`spec/cooperation.md`](../spec/cooperation.md); **stages 1 and 2 implemented** (competence profile, bandit over patterns as opt-in, cascade) |
 | 4 · Open test network | One-click client, credit, sandbox, benchmark pool | open |
 
 ## Testing on hardware
@@ -33,7 +33,7 @@ Round 1 (80 tasks from HumanEval and GSM8K, [report](../bench/report-r1.md)): th
 - The router is a keyword heuristic, not a model; bandit and competence profile follow in phase 3.
 - Privacy class `reduced` without pseudonymisation; until then it is treated like `trusted`.
 - No token streaming: with `stream: true`, the reviewed answer arrives as one block.
-- Images in requests are not supported.
+- Images in requests are not supported. Audio only as a transcription (`/v1/audio/transcriptions`, at most 2.75 MiB, only up to `trusted`); not yet tested on hardware.
 
 **Resources**
 

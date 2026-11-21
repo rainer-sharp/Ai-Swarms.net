@@ -87,10 +87,11 @@ type agentProfile struct {
 }
 
 type task struct {
-	id    string
-	skill string
-	steps []Step
-	given map[int]bool // Schritte mit objektivem oder Nutzer-Feedback (-1: Endergebnis)
+	id      string
+	skill   string
+	pattern string
+	steps   []Step
+	given   map[int]bool // Schritte mit objektivem oder Nutzer-Feedback (-1: Endergebnis)
 }
 
 // Profile ist sicher für gleichzeitige Nutzung.
@@ -98,14 +99,16 @@ type Profile struct {
 	path string
 	now  func() time.Time
 
-	mu     sync.Mutex
-	agents map[string]*agentProfile
-	tasks  []*task // Ringpuffer, älteste zuerst
+	mu      sync.Mutex
+	agents  map[string]*agentProfile
+	recipes map[string]map[string]*RecipeStats // Kategorie → Muster
+	tasks   []*task                            // Ringpuffer, älteste zuerst
 }
 
 type fileFormat struct {
-	Version int                      `json:"version"`
-	Agents  map[string]*agentProfile `json:"agents"`
+	Version int                                `json:"version"`
+	Agents  map[string]*agentProfile           `json:"agents"`
+	Recipes map[string]map[string]*RecipeStats `json:"recipes,omitempty"`
 }
 
 // Open lädt das Profil aus path oder beginnt leer. Eine unlesbare Datei wird
@@ -128,6 +131,7 @@ func Open(path string) *Profile {
 	if f.Agents != nil {
 		p.agents = f.Agents
 	}
+	p.recipes = f.Recipes
 	return p
 }
 
@@ -188,14 +192,30 @@ func final(steps []Step) int {
 	return -1
 }
 
-// Record merkt sich einen abgeschlossenen Auftrag und wertet die Urteile
-// bewährter Prüfer als Signal für die geprüften Ersteller (Gewicht ½).
-func (p *Profile) Record(taskID, skill string, steps []Step) {
+// TaskInfo beschreibt einen abgeschlossenen Auftrag.
+type TaskInfo struct {
+	ID      string
+	Skill   string
+	Pattern string // Muster, nach dem er lief
+	Tokens  int    // Verbrauch aller Schritte
+	Steps   []Step
+}
+
+// Record merkt sich einen abgeschlossenen Auftrag, wertet die Urteile
+// bewährter Prüfer als Signal für die geprüften Ersteller (Gewicht ½) und
+// führt den Verbrauch des Musters nach.
+func (p *Profile) Record(ti TaskInfo) {
+	taskID, skill, steps := ti.ID, ti.Skill, ti.Steps
 	if taskID == "" || skill == "" || len(steps) == 0 {
 		return
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
+	if ti.Pattern != "" {
+		st := p.recipe(Category(skill), ti.Pattern)
+		st.Tasks++
+		st.Tokens += (float64(ti.Tokens) - st.Tokens) / float64(st.Tasks)
+	}
 	for i, s := range steps {
 		if s.Role != RoleVerifier || s.Verdict == "" {
 			continue
@@ -213,7 +233,7 @@ func (p *Profile) Record(taskID, skill string, steps []Step) {
 		}
 		p.play(steps[j], skill, score, WeightVerifier)
 	}
-	p.tasks = append(p.tasks, &task{id: taskID, skill: skill, steps: slices.Clone(steps), given: map[int]bool{}})
+	p.tasks = append(p.tasks, &task{id: taskID, skill: skill, pattern: ti.Pattern, steps: slices.Clone(steps), given: map[int]bool{}})
 	if len(p.tasks) > taskMemory {
 		p.tasks = p.tasks[len(p.tasks)-taskMemory:]
 	}
@@ -269,6 +289,12 @@ func (p *Profile) Feedback(fb Feedback) error {
 		weight = WeightObjective
 	}
 	p.play(t.steps[idx], t.skill, score, weight)
+	// Der Bandit lernt aus dem Endergebnis, nicht aus Zwischenschritten.
+	if idx == final(t.steps) && t.pattern != "" {
+		st := p.recipe(Category(t.skill), t.pattern)
+		st.Alpha += weight * score
+		st.Beta += weight * (1 - score)
+	}
 	if fb.Objective {
 		for k, s := range t.steps {
 			if s.Role != RoleVerifier || s.Verdict == "" || reviewed(t.steps, k) != idx {
@@ -297,6 +323,20 @@ type AgentView struct {
 	Family string                   `json:"family,omitempty"`
 	Skills map[string]Rating        `json:"skills"`
 	Verify map[string]VerifierStats `json:"verifier,omitempty"`
+}
+
+// Recipes liefert die Beobachtungen des Bandits je Kategorie und Muster.
+func (p *Profile) Recipes() map[string]map[string]RecipeStats {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := map[string]map[string]RecipeStats{}
+	for c, m := range p.recipes {
+		out[c] = map[string]RecipeStats{}
+		for pat, s := range m {
+			out[c][pat] = *s
+		}
+	}
+	return out
 }
 
 // Snapshot liefert das Profil mit der Unsicherheit von jetzt, sortiert nach Agent.
@@ -328,7 +368,7 @@ func (p *Profile) saveLocked() {
 	if p.path == "" {
 		return
 	}
-	data, err := json.MarshalIndent(fileFormat{Version: 1, Agents: p.agents}, "", " ")
+	data, err := json.MarshalIndent(fileFormat{Version: 1, Agents: p.agents, Recipes: p.recipes}, "", " ")
 	if err == nil {
 		err = writeAtomic(p.path, data)
 	}

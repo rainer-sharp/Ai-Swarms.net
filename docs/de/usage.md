@@ -15,6 +15,9 @@ Der Modellname wählt das Muster, nach dem die Modelle zusammenarbeiten:
 | `swarmainet/parallel` | bis zu drei Modelle verschiedener Familien unabhängig, Synthese lokal |
 | `swarmainet/draft_verify_synthesize` | Entwurf, Prüfung durch eine andere Familie, Synthese nur bei Mängeln |
 | `swarmainet/parallel_verify` | wie `parallel`, danach Prüfung der Synthese durch eine andere Familie, Überarbeitung nur bei Mängeln |
+| `swarmainet/cascade` | erst ein günstiges Modell, Prüfung durch eine andere Familie; nur bei Mängeln löst das beste andere Modell neu |
+
+Mit `cooperation.selection: bandit` wählt der Knoten beim Modellnamen `swarmainet` ohne Zusatz das Muster je Aufgabenkategorie nach seinem [Kompetenzprofil](#rückmeldungen-und-kompetenzprofil), statt `tasks.pattern` zu nehmen.
 
 ```sh
 curl -s http://127.0.0.1:7711/v1/chat/completions \
@@ -23,7 +26,7 @@ curl -s http://127.0.0.1:7711/v1/chat/completions \
   -d '{"model":"swarmainet","messages":[{"role":"user","content":"Schreibe eine Python-Funktion für Primzahlen"}]}'
 ```
 
-Die Antwort enthält zusätzlich das Feld `swarmainet` mit Ablauf, Prüfurteil, gefundenen Mängeln und Einschränkungen. In `steps[]` stehen je Schritt Agent, Peer, Dauer und Tokens.
+Die Antwort enthält zusätzlich das Feld `swarmainet` mit Ablauf, Prüfurteil, gefundenen Mängeln und Einschränkungen. In `steps[]` stehen je Schritt Agent, Peer, Dauer und Tokens. `selected_by` nennt, wer das Muster gewählt hat (`request`, `rules` oder `bandit`), `escalated: true`, dass die Kaskade eskaliert hat.
 
 ## Optionale Header
 
@@ -60,7 +63,26 @@ Die Werkzeuge führt die **Anwendung selbst** aus, also Open WebUI oder der Agen
 
 Findet sich kein freigegebener Agent, antwortet das Gateway mit 400. Ruft ein Modell ein Werkzeug auf, das ihm nicht gezeigt wurde, wird die Antwort verworfen. Einzelheiten: [Freigabeklassen, Regel 6](../../spec/de/privacy-classes.md).
 
-Inhalte als Liste von Textteilen werden zusammengefügt. Bilder werden noch nicht unterstützt (400).
+Inhalte als Liste von Textteilen werden zusammengefügt. Bilder in Chat-Nachrichten werden noch nicht unterstützt (400).
+
+## Transkription
+
+`POST /v1/audio/transcriptions` nimmt eine Aufnahme im Format der OpenAI-Transkriptions-API an (`multipart/form-data` mit `file`, optional `language`, `prompt`, `response_format` `json` oder `text`) und lässt sie von einem Modell mit der Fähigkeit `audio.transcribe` abschreiben, etwa auf einem anderen Knoten des eigenen Netzes. Das Feld `model` wird ignoriert; der Schwarm wählt das Modell. Höchstens 2,75 MiB je Aufnahme; längere Aufnahmen müssen geteilt werden. Audio geht nur an eigene oder vertraute Geräte, nie ins offene Netz (`X-SwarmAiNet-Privacy: public` ergibt 400).
+
+```sh
+curl -s http://127.0.0.1:7711/v1/audio/transcriptions -F file=@aufnahme.wav -F language=de
+```
+
+In Open WebUI: *Admin-Einstellungen → Audio → Sprache-zu-Text*, Engine *OpenAI*, URL `http://127.0.0.1:7711/v1`, Schlüssel und Modell beliebig.
+
+Ein Transkriptionsmodell wird wie jedes andere eingetragen, nur mit eigener Fähigkeit, damit es nie Textfragen bekommt:
+
+```yaml
+- name: nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B-NVFP4
+  family: nemotron
+  skills: [audio.transcribe]
+  offer: true
+```
 
 ## Rückmeldungen und Kompetenzprofil
 

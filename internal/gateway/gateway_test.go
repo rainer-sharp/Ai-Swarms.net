@@ -4,9 +4,11 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -202,5 +204,67 @@ func TestFeedbackEndpoint(t *testing.T) {
 	}
 	if rec := do(h, "POST", "/v1/feedback", `{"task_id":"t1","good":true}`, "192.0.2.7:5000", "127.0.0.1:7711"); rec.Code == 204 {
 		t.Fatal("rückmeldung von außen angenommen")
+	}
+}
+
+func audioForm(t *testing.T, data []byte, fields map[string]string) (string, string) {
+	t.Helper()
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	if data != nil {
+		fw, _ := mw.CreateFormFile("file", "a.wav")
+		_, _ = fw.Write(data)
+	}
+	for k, v := range fields {
+		_ = mw.WriteField(k, v)
+	}
+	_ = mw.Close()
+	return buf.String(), mw.FormDataContentType()
+}
+
+// TestTranscriptionEndpoint: /v1/audio/transcriptions reicht die Aufnahme
+// als Audio-Auftrag durch und antwortet im OpenAI-Format.
+func TestTranscriptionEndpoint(t *testing.T) {
+	fb := &fakeBackend{}
+	h := Handler(fb)
+	post := func(body, ctype, privacy string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", "/v1/audio/transcriptions", strings.NewReader(body))
+		req.RemoteAddr, req.Host = "127.0.0.1:5000", "127.0.0.1:7711"
+		req.Header.Set("Content-Type", ctype)
+		if privacy != "" {
+			req.Header.Set("X-SwarmAiNet-Privacy", privacy)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		return rec
+	}
+	body, ct := audioForm(t, []byte("RIFF"), map[string]string{"model": "whisper-1", "language": "de"})
+	rec := post(body, ct, "local")
+	var out struct {
+		Text string `json:"text"`
+	}
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &out) != nil || out.Text != "hallo" {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	a := fb.last.Audio
+	if a == nil || string(a.Data) != "RIFF" || a.Filename != "a.wav" || a.Language != "de" || fb.last.Privacy != "local" {
+		t.Fatalf("auftrag %+v", fb.last)
+	}
+	body, ct = audioForm(t, []byte("RIFF"), map[string]string{"response_format": "text"})
+	if rec := post(body, ct, ""); rec.Code != 200 || rec.Body.String() != "hallo" {
+		t.Fatalf("text: %d %q", rec.Code, rec.Body)
+	}
+	body, ct = audioForm(t, nil, nil)
+	if rec := post(body, ct, ""); rec.Code != 400 {
+		t.Fatalf("ohne datei: %d", rec.Code)
+	}
+	body, ct = audioForm(t, make([]byte, protocol.MaxAudioBytes+1), nil)
+	if rec := post(body, ct, ""); rec.Code != 413 {
+		t.Fatalf("zu groß: %d", rec.Code)
+	}
+	fb.err = orchestrator.ErrPrivacy
+	body, ct = audioForm(t, []byte("RIFF"), nil)
+	if rec := post(body, ct, "public"); rec.Code != 400 {
+		t.Fatalf("public: %d", rec.Code)
 	}
 }

@@ -23,10 +23,30 @@ import (
 )
 
 type Config struct {
-	Node      Node      `yaml:"node"`
-	Backends  []Backend `yaml:"backends"`
-	Resources Resources `yaml:"resources"`
-	Tasks     Tasks     `yaml:"tasks"`
+	Node        Node        `yaml:"node"`
+	Backends    []Backend   `yaml:"backends"`
+	Resources   Resources   `yaml:"resources"`
+	Tasks       Tasks       `yaml:"tasks"`
+	Cooperation Cooperation `yaml:"cooperation"`
+}
+
+// Cooperation steuert die Auswahl des Musters (spec/cooperation.md § 3).
+type Cooperation struct {
+	// Selection: rules (tasks.pattern, bisheriges Verhalten) oder bandit
+	// (Thompson Sampling über Muster nach Kompetenzprofil). Eine Anfrage, die
+	// ein Muster nennt (swarmainet/<muster>), bekommt es immer.
+	Selection string `yaml:"selection"`
+	// Exploration: Anteil zufälliger Wahl unter den besetzbaren Mustern.
+	Exploration float64 `yaml:"exploration"`
+	// Targets: Sollwerte je Aufgabenkategorie (code, math, general …).
+	Targets map[string]Target `yaml:"targets,omitempty"`
+}
+
+// Target: Sollwerte einer Aufgabenkategorie (spec/cooperation.md § 4.1).
+type Target struct {
+	Quality float64 `yaml:"quality"` // angestrebte Erfolgsquote, z. B. 0.9
+	// LatencyP90S: p90-Antwortzeit; erst mit dem Latenz-Regler (Stufe 3) wirksam.
+	LatencyP90S int `yaml:"latency_p90_s,omitempty"`
 }
 
 type Node struct {
@@ -353,7 +373,7 @@ type HomeAssistant struct {
 }
 
 type Tasks struct {
-	// Standardmuster: single | parallel | draft_verify_synthesize | parallel_verify
+	// Standardmuster: single | parallel | draft_verify_synthesize | parallel_verify | cascade
 	Pattern      string `yaml:"pattern"`
 	PrivacyClass string `yaml:"privacy_class"`
 	MaxTokens    int    `yaml:"max_tokens"`
@@ -421,6 +441,7 @@ func Default() Config {
 			DeadlineS:    300,
 			MaxSubtasks:  8,
 		},
+		Cooperation: Cooperation{Selection: "rules", Exploration: 0.05},
 	}
 }
 
@@ -530,9 +551,25 @@ func (c Config) Validate() error {
 		return fmt.Errorf("energy: stop_below_w muss ≤ start_above_w sein (hysterese)")
 	}
 	switch c.Tasks.Pattern {
-	case "single", "parallel", "draft_verify_synthesize", "parallel_verify":
+	case "single", "parallel", "draft_verify_synthesize", "parallel_verify", "cascade":
 	default:
 		return fmt.Errorf("tasks.pattern %q unbekannt", c.Tasks.Pattern)
+	}
+	switch c.Cooperation.Selection {
+	case "rules", "bandit":
+	default:
+		return fmt.Errorf("cooperation.selection %q: erlaubt sind rules, bandit", c.Cooperation.Selection)
+	}
+	if e := c.Cooperation.Exploration; e < 0 || e > 0.5 {
+		return fmt.Errorf("cooperation.exploration %v: erlaubt ist 0 bis 0.5", e)
+	}
+	for cat, tg := range c.Cooperation.Targets {
+		if tg.Quality <= 0 || tg.Quality > 1 {
+			return fmt.Errorf("cooperation.targets.%s.quality %v: erlaubt ist ein Wert über 0 bis 1", cat, tg.Quality)
+		}
+		if tg.LatencyP90S < 0 {
+			return fmt.Errorf("cooperation.targets.%s.latency_p90_s: keine negativen Werte", cat)
+		}
 	}
 	return nil
 }

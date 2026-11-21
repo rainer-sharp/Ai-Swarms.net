@@ -82,7 +82,7 @@ The swarm does not ask "Who has model X?" but "Who can do task Y under condition
 }
 ```
 
-**Capability taxonomy:** a shared basic vocabulary (`reasoning.math`, `code.<language>`, `code.review`, `vision.ocr`, `retrieval.embed`, `domain.engineering` …) plus free tags for new things. The DHT only contains references "peer X offers capability Y", spread over four keys per capability, so that no node becomes a bottleneck ([P2P layer](../spec/p2p-layer.md) § 5).
+**Capability taxonomy:** a shared basic vocabulary (`reasoning.math`, `code.<language>`, `code.review`, `vision.ocr`, `audio.transcribe`, `retrieval.embed`, `domain.engineering` …) plus free tags for new things. The DHT only contains references "peer X offers capability Y", spread over four keys per capability, so that no node becomes a bottleneck ([P2P layer](../spec/p2p-layer.md) § 5).
 
 **Measured profile** (phase 3; recorded since 21 Nov 2026, not yet used for selection): every node keeps a competence value per capability according to Glicko-2 for the agents it works with. Sources, by weight:
 
@@ -104,7 +104,7 @@ Roles are dynamic: the same node can be a specialist for one task and a verifier
 | Specialist | Solve a subtask in its domain | domain model |
 | Verifier | Check a result, run tests, name errors | model of another family, tool node |
 | Synthesiser | Merge verified partial results, name open risks | strong generalist, preferably local |
-| Tool node | Embeddings, reranking, OCR, running code in a sandbox | special models, also weak hardware |
+| Tool node | Embeddings, reranking, OCR, transcription (implemented), running code in a sandbox | special models, also weak hardware |
 | Network helper | Entry, DHT server, relay; later storing the benchmark pool | reachable nodes without a GPU, e.g. a VPS |
 
 | Pattern | Flow | Use | Status |
@@ -112,7 +112,7 @@ Roles are dynamic: the same node can be a specialist for one task and a verifier
 | Expert routing (`single`) | Request to the best specialist, the next one on failure | short, clearly assignable questions; tasks with tools | implemented |
 | Draft + verifier + synthesis (`draft_verify_synthesize`) | Create, review independently, revise only if flaws are found | code, analyses; today's default | implemented |
 | Parallel diversity (`parallel`, `parallel_verify`) | Several models solve independently, synthesis, optionally reviewed | fact questions, difficult problems | implemented |
-| Cascade | Cheap model first, escalate when uncertain | future default for most requests | phase 3 |
+| Cascade (`cascade`) | Cheap model first, escalate when uncertain | future default for most requests | implemented (phase 3, stage 2) |
 | Decompose & distribute | Task graph, subtasks in parallel | multi-part tasks, mixed modalities | phase 3 |
 | Mixture-of-agents | Improve answers layer by layer | maximum quality, time not critical | idea |
 | Debate | Opposing positions, verdict by a third party | trade-offs, decisions | idea |
@@ -162,7 +162,7 @@ Every message carries protocol version, task ID, sender, expiry time, nonce and 
 
 ## Selection and control
 
-Today the orchestrator selects by rules: skill, on a tie load balancing, verifier by family and model strength. From phase 3, a bandit decides which model combination works, and PI controllers decide how much effort is used. Selection is a discrete decision and therefore not a task for a PID controller. Details: [cooperation](../spec/cooperation.md).
+Today the orchestrator selects by rules: skill, on a tie load balancing, verifier by family and model strength. Since stage 2 of phase 3, a bandit can choose the pattern instead (opt-in, `cooperation.selection: bandit`); in further stages it decides which model combination works, and PI controllers decide how much effort is used. Selection is a discrete decision and therefore not a task for a PID controller. Details: [cooperation](../spec/cooperation.md).
 
 **Selection (bandit over recipes):** not all model combinations are rated, but recipes made of pattern and role casting, e.g. "coder family A + verifier of another family". Hard filters apply first: modality, privacy class, availability, licence, allowed tools. Among the rest, Thompson sampling per task category chooses the cheapest recipe that is expected to reach the quality target. A small share goes to new agents (exploration); diversity of model families is deliberately preferred for reviews.
 

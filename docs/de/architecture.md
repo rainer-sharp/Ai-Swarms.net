@@ -19,7 +19,7 @@ Anwendung (Open WebUI, IDE, Agent)
 | Modul | Paket |
 |---|---|
 | Gateway | `internal/gateway` – OpenAI-API, Status-API, Web-Oberfläche, nur localhost |
-| Auswahl | `internal/orchestrator` (`candidates`, `Route`) – regelbasiert: Fähigkeit, bei Gleichstand Lastverteilung (freie Slots, laufende Teilaufträge, im Wechsel), dann Kontextgröße; Prüfer nach Modellstärke (`strength`), dann Kontextgröße, dann eigene vor entfernten |
+| Auswahl | `internal/orchestrator` (`candidates`, `Route`) – regelbasiert: Fähigkeit, bei Gleichstand Lastverteilung (freie Slots, laufende Teilaufträge, im Wechsel), dann Kontextgröße; Prüfer nach Modellstärke (`strength`), dann Kontextgröße, dann eigene vor entfernten; wahlweise das Muster per Bandit über das Kompetenzprofil (`cooperation.selection: bandit`), Kaskade nach gemessener Bewertung geordnet |
 | Orchestrierung | `internal/orchestrator` – Muster `single`, `parallel`, `draft_verify_synthesize`, `parallel_verify`; Werkzeugfreigaben je Netz |
 | Vertrauen | `internal/receipt` – beidseitig signierte Quittungen; `internal/membership` – Zertifikate, Ketten, Sperrlisten, Einladungen |
 | Kompetenzprofil | `internal/profile` – Glicko-2-Bewertung je Agent und Fähigkeit, Prüferstatistik, Rückmeldungen; noch nicht für die Auswahl genutzt |

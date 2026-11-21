@@ -15,6 +15,9 @@ The model name selects the pattern by which the models work together:
 | `swarmainet/parallel` | Up to three models of different families independently, synthesis locally |
 | `swarmainet/draft_verify_synthesize` | Draft, review by a different family, synthesis only if flaws are found |
 | `swarmainet/parallel_verify` | Like `parallel`, then the synthesis is reviewed by a different family, revision only if flaws are found |
+| `swarmainet/cascade` | A cheap model first, review by a different family; only if flaws are found does the best other model solve the task anew |
+
+With `cooperation.selection: bandit`, the plain model name `swarmainet` lets the node choose the pattern per task category from its [competence profile](#feedback-and-competence-profile) instead of using `tasks.pattern`.
 
 ```sh
 curl -s http://127.0.0.1:7711/v1/chat/completions \
@@ -23,7 +26,7 @@ curl -s http://127.0.0.1:7711/v1/chat/completions \
   -d '{"model":"swarmainet","messages":[{"role":"user","content":"Write a Python function for prime numbers"}]}'
 ```
 
-The response additionally contains the field `swarmainet` with the procedure, the review verdict, the flaws found and limitations. `steps[]` lists agent, peer, duration and tokens for each step.
+The response additionally contains the field `swarmainet` with the procedure, the review verdict, the flaws found and limitations. `steps[]` lists agent, peer, duration and tokens for each step. `selected_by` says who chose the pattern (`request`, `rules` or `bandit`), `escalated: true` that the cascade escalated.
 
 ## Optional headers
 
@@ -60,7 +63,26 @@ The tools are executed by the **application itself**, i.e. Open WebUI or the age
 
 If no agent with the required permission is found, the gateway responds with 400. If a model calls a tool that was not shown to it, the response is discarded. Details: [privacy classes, rule 6](../spec/privacy-classes.md).
 
-Content given as a list of text parts is joined. Images are not supported yet (400).
+Content given as a list of text parts is joined. Images in chat messages are not supported yet (400).
+
+## Transcription
+
+`POST /v1/audio/transcriptions` accepts a recording in the format of the OpenAI transcription API (`multipart/form-data` with `file`, optionally `language`, `prompt`, `response_format` `json` or `text`) and has it transcribed by a model with the skill `audio.transcribe`, e.g. on another node of your own network. The field `model` is ignored; the swarm chooses the model. At most 2.75 MiB per recording; longer recordings have to be split. Audio only goes to your own or trusted devices, never into the open network (`X-SwarmAiNet-Privacy: public` gives 400).
+
+```sh
+curl -s http://127.0.0.1:7711/v1/audio/transcriptions -F file=@aufnahme.wav -F language=de
+```
+
+In Open WebUI: *Admin Settings → Audio → Speech-to-Text*, engine *OpenAI*, URL `http://127.0.0.1:7711/v1`, any key and model.
+
+A transcription model is entered like any other, only with its own skill, so that it never receives text questions:
+
+```yaml
+- name: nvidia/NVIDIA-Nemotron-3.5-Transcribe-30B-A4B-NVFP4
+  family: nemotron
+  skills: [audio.transcribe]
+  offer: true
+```
 
 ## Feedback and competence profile
 

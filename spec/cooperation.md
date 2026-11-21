@@ -2,7 +2,7 @@
 
 **English** · [Deutsch](de/cooperation.md)
 
-Status: **draft**; stage 1 (competence profile, § 2 and § 11) implemented on 21 Nov 2026, the profile does not influence selection yet. Basis: the overall concept, sections "Capabilities and competence measurement", "Roles and cooperation patterns", "Task protocol" and "Selection and control". Supplements [protocol v0.1](protocol-v0.1.md) and builds on the [P2P layer](p2p-layer.md). The keywords MUST, SHOULD and MAY are normative.
+Status: **draft**; stages 1 and 2 (competence profile, bandit, cascade; § 2, § 3, § 5, § 11) implemented on 21 Nov 2026. The bandit is opt-in (`cooperation.selection: bandit`); by default the previous rule applies.
 
 So far the orchestrator decides by fixed rules: it takes the pattern from the configuration or the request and the verifier by family and `strength` (a self-declaration). Phase 3 replaces this with **measured experience**:
 
@@ -99,6 +99,8 @@ Only at execution are the roles cast with concrete agents: the creator by profil
 
 The previous rule-based selection becomes the **prior knowledge** of the bandit and the fallback as long as there is too little data.
 
+**Implementation (stage 2):** recipes are the patterns `single`, `cascade`, `draft_verify_synthesize`, `parallel`, `parallel_verify`; their casting stays rule-based (cascade: § 5). A pattern counts as feasible if the admitted agents can fill it: everything except `single` needs two model families. Per task category (derived from the skill: `code.*` → code, `reasoning.math` → math, otherwise general …) and pattern, the node keeps Beta(1+α, 1+β) over the success rate, α and β being the weighted successes and failures of **final results** (objective feedback weight 1, user feedback ¼; intermediate steps only feed the competence profile). The pattern from `tasks.pattern` gets one success as prior knowledge. Costs are the mean tokens per task once at least 3 tasks have been observed, before that rough values from benchmark round 1. Default target values: code 0.9, math 0.95, otherwise 0.85; exploration 5 %. The answer states who chose the pattern (`selected_by`: `request`, `rules`, `bandit`).
+
 ### 3.3 Delimitation
 
 The bandit chooses discretely *what* is used. How much effort within a recipe (review rounds, number of parallel models) is determined by the controller (§ 4). A PID controller for selection is explicitly not intended.
@@ -141,6 +143,8 @@ New pattern `cascade`: first a cheap model solves the task (lowest expected cost
 3. the self-declared `confidence` is below `θ` (weakest criterion, only in combination).
 
 `θ` is set by the cascade controller (§ 4.1). According to the concept, the cascade is the future default for most requests, because it only uses effort where it is needed.
+
+**Implementation (stage 2):** available as the pattern `cascade` (model name `swarmainet/cascade`, or chosen by the bandit). Stage 1 is the candidate with the best matching skill, without a measured rating below 1650 (about 75 % success), with the lowest `strength` as an approximation of lower cost. If the verifier of another family reports flaws (in maths only with a deviating result), the best other model by measured rating, otherwise by `strength`, solves the task anew; the answer then carries `escalated: true`. Criterion 3 and the controller for `θ` follow in stage 3.
 
 ## 6. Pattern: decompose and distribute (task graph)
 
@@ -207,10 +211,10 @@ New messages and fields (versioning as before: new optional payload fields are c
 Gateway:
 
 - `POST /v1/feedback` with `{ "task_id": …, "good": true|false, "objective": false, "step": <index> }`: feedback on a task of your own. Without `objective` it is user feedback (§ 2.2, rank 4, weight ¼), with `objective: true` a checked result (rank 1, full weight), as sent by `swarmainet bench run`. `step` refers to an entry in `steps[]` of the answer; without it, the final result counts. The task must be among the last 1024 of this node; each step accepts one feedback. Responses: 204, 404 (unknown task), 409 (already given), 400 (invalid step, e.g. a verifier). Implemented in stage 1.
-- In future, the model name `swarmainet` selects via the bandit; `swarmainet/<pattern>` still forces a pattern.
-- `GET /api/profile`: competence profile and controller state per category (diagnostics, "control stability" in the measurement plan). Stage 1 shows the profile: rating per agent and skill (`r`, `rd`, `sigma`, `games`) and verifier statistics (`hit`, `false_alarm`, `correct_ok`, `miss`).
+- With `cooperation.selection: bandit`, the model name `swarmainet` selects via the bandit (implemented in stage 2); `swarmainet/<pattern>` still forces a pattern.
+- `GET /api/profile`: competence profile and controller state per category (diagnostics, "control stability" in the measurement plan). Stage 1 shows the profile: rating per agent and skill (`r`, `rd`, `sigma`, `games`) and verifier statistics (`hit`, `false_alarm`, `correct_ok`, `miss`); stage 2 adds the bandit statistics per category and pattern (`recipes`: `alpha`, `beta`, `tasks`, `tokens`).
 
-Configuration (draft):
+Configuration (draft; implemented so far: `selection`, `exploration`, `targets` as a quality value per category):
 
 ```yaml
 cooperation:
@@ -247,7 +251,7 @@ Metrics in addition to the measurement plan: convergence of the bandit (how many
 ## 11. Implementation in stages
 
 1. ✅ **Competence profile and signals:** Glicko-2 per agent and skill, verifier rating, signals from benchmark, verifier verdict and `POST /v1/feedback`; display via `GET /api/profile`. Testable with artificial agents of known quality. Implemented in `internal/profile`; prior knowledge from `strength`, verifier verdicts per step (`steps[].verdict`). Not yet: pairwise comparisons from parallel patterns.
-2. **Bandit over recipes** with today's selection as prior knowledge, and the pattern **cascade**.
+2. ✅ **Bandit over recipes** with today's selection as prior knowledge, and the pattern **cascade**. Implemented with fixed rules for "uncertain" (§ 5); opt-in via `cooperation.selection: bandit`.
 3. **PI controller** for the review effort per category.
 4. **Task graph:** planner, decompose and distribute, synthesis.
 5. **Asynchronous tasks and lease coordinator**, failure tests.

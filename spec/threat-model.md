@@ -26,6 +26,7 @@
 | Inflated self-assessment (`strength`) | only acts as ordering at equal suitability; verifier stays from another family; measured rating (Elo) replaces the declaration | phase 1: trusted circle only; Elo from phase 3 |
 | Prompt injection between models | results are data; delimiters; structured outputs; discard instruction patterns | implemented (heuristic) |
 | Smuggled tool calls (a provider gets the local agent to execute commands), leakage of tool results | tool list per network, none for strangers and in membership networks without a list; calls not listed are discarded, history with other tools does not go to restricted agents; only pattern `single`, only models with `tools: true`. The list only checks names; confirming risky calls remains the agent's job | implemented |
+| Voices and content of recordings at foreign nodes | audio only up to `trusted`, enforced by coordinator and provider; only agents with `audio.transcribe` receive recordings | implemented |
 | Replay | nonce + expiry + signature | implemented |
 | Identity forgery | sender = remote end of the connection, signature with the peer ID key | implemented |
 | Provider overload | REM: slots, time windows, GPU minutes, mean utilisation, temperature, RAM reserve; max. 4 streams per peer; 4 MiB per message | implemented |

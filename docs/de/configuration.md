@@ -10,8 +10,17 @@ Die Konfiguration liegt in `~/.swarmainet/config.yaml` (anlegen mit `swarmainet 
 | `backends` | Inferenz-Server und ihre Modelle: `family`, `skills`, `context`, `strength`, `tools`, `offer` |
 | `resources` | Ressourcenmanager: parallele Aufträge, GPU-Grenzen, Temperatur, RAM-Reserve, Zeitfenster, GPU-Minuten, Energie (PV-Überschuss, Strompreis über Home Assistant) |
 | `tasks` | Standardmuster, Standard-Freigabeklasse, Token-Grenze, Frist, Teilaufträge |
+| `cooperation` | Wie das Muster gewählt wird, wenn eine Anfrage keines nennt (Tabelle unten) |
 
 Geheimnisse gehören nicht in die Datei: Der Home-Assistant-Token kommt aus einer Umgebungsvariablen (`token_env`), Netzschlüssel stehen in eigenen Dateien mit Rechten 0600.
+
+## Wahl des Musters (`cooperation.…`)
+
+| Schlüssel | Standard | Bedeutung |
+|---|---|---|
+| `selection` | `rules` | `rules`: es gilt `tasks.pattern`; `bandit`: der Knoten wählt das Muster je Aufgabenkategorie nach seinem Kompetenzprofil ([Kooperation](../../spec/de/cooperation.md) § 3). Eine Anfrage mit `swarmainet/<muster>` bekommt immer dieses Muster |
+| `exploration` | `0.05` | Anteil zufälliger Wahl unter den besetzbaren Mustern (0 bis 0,5) |
+| `targets` | code 0,9, math 0,95, sonst 0,85 | Sollwerte je Kategorie, z. B. `code: { quality: 0.9 }`; `latency_p90_s` ist für Stufe 3 vorgesehen |
 
 ## Netz-Schlüssel (`node.…`)
 

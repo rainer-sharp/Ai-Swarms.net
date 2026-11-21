@@ -20,14 +20,37 @@ func (n *Node) recordProfile(ans *orchestrator.Answer) {
 		strength[profile.AgentKey(a.PeerID, a.ID)] = a.Strength
 	}
 	steps := make([]profile.Step, 0, len(ans.Steps))
+	tokens := 0
 	for _, s := range ans.Steps {
+		tokens += s.PromptTokens + s.CompletionTokens
 		key := profile.AgentKey(s.PeerID, s.AgentID)
 		steps = append(steps, profile.Step{
 			Role: string(s.Role), Agent: key, Family: s.Family,
 			OK: s.Status != protocol.StatusFailed, Verdict: s.Verdict, Strength: strength[key],
 		})
 	}
-	n.Profile.Record(ans.TaskID, ans.Skill, steps)
+	n.Profile.Record(profile.TaskInfo{ID: ans.TaskID, Skill: ans.Skill, Pattern: string(ans.Pattern), Tokens: tokens, Steps: steps})
+}
+
+// rate liefert dem Orchestrator die gemessene Bewertung eines Agenten (Kaskade).
+func (n *Node) rate(a orchestrator.Agent, skill string) (float64, bool) {
+	if n.Profile == nil {
+		return 0, false
+	}
+	return n.Profile.Rating(profile.AgentKey(a.PeerID, a.ID), skill)
+}
+
+// choose wählt das Muster per Bandit (cooperation.selection: bandit).
+func (n *Node) choose(c orchestrator.Choice) orchestrator.Pattern {
+	feasible := make([]string, len(c.Feasible))
+	for i, p := range c.Feasible {
+		feasible[i] = string(p)
+	}
+	sel := profile.Selection{Exploration: n.Cfg.Cooperation.Exploration, Targets: map[string]float64{}}
+	for cat, tg := range n.Cfg.Cooperation.Targets {
+		sel.Targets[cat] = tg.Quality
+	}
+	return orchestrator.Pattern(n.Profile.Choose(c.Skill, feasible, string(c.Default), sel, nil))
 }
 
 // Feedback nimmt eine Rückmeldung zu einem eigenen Auftrag an (POST /v1/feedback).
@@ -37,5 +60,5 @@ func (n *Node) Feedback(fb profile.Feedback) error {
 
 // ProfileJSON zeigt das Kompetenzprofil (GET /api/profile).
 func (n *Node) ProfileJSON() any {
-	return map[string]any{"agents": n.Profile.Snapshot()}
+	return map[string]any{"selection": n.Cfg.Cooperation.Selection, "agents": n.Profile.Snapshot(), "recipes": n.Profile.Recipes()}
 }
