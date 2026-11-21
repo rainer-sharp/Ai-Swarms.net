@@ -1,0 +1,36 @@
+# Changelog
+
+**English** · [Deutsch](de/CHANGELOG.md)
+
+All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/) with the usual caveat for 0.x: incompatible changes are still possible between minor versions.
+
+## [0.2.0] – 2026-11-21
+
+The protocol is unchanged (version 0.1): nodes with 0.2.0 and 0.1.0 work together. Existing configurations keep working without changes.
+
+### Changed
+
+- **`swarmainet init` now sets up a private network of your own** with a random ID `p-…` and a fresh key, instead of joining the open network. Nobody becomes visible to strangers without wanting to. The previous behaviour is available with `swarmainet init -open`. ([network types](docs/networks.md#private-network-own-devices))
+- **`swarmainet join` replaces the private network created by `init`** as long as the node has never run and has no entry addresses, instead of adding a second network next to it. Networks that are already in use stay untouched.
+- **Entry nodes and DNS seeds are dialled again** when the DHT routing table is empty or a node behind NAT has no relay slot, not only when no peer at all is connected. Two nodes behind NAT that only knew each other after the start node failed used to remain an island that new nodes could not find; now they reconnect to the start node within seconds of its return. Failed entry attempts are only logged at INFO level while no peer is connected. ([P2P layer](spec/p2p-layer.md) § 2)
+- **`dns_seeds` also applies to the networks under `node.networks`** unless they specify their own; membership networks never ask a seed.
+- **Clearer message when the privacy class excludes all agents:** for `trusted`, `reduced` or `local` without suitable agents, the error states the reason and the way out (`X-SwarmAiNet-Privacy: public`), and the gateway responds with **400** instead of 502.
+- **Documentation in English and German:** the English version is now the main one; German versions are in `de/` subfolders with the same file names. Documentation files were renamed to English names, e.g. `docs/netze.md` → `docs/networks.md` (German: `docs/de/networks.md`), `spec/p2p-schicht.md` → `spec/p2p-layer.md`. Links to the old paths no longer work.
+- **Overall concept** brought up to date as Markdown in both languages ([concept](docs/concept.md)), with new graphics; the original of 14 Oct 2026 is archived as a PDF.
+
+### Added
+
+- **QR code for invitations:** `swarmainet invite -qr` and `swarmainet member invite -qr` additionally show the link as a QR code in the terminal (new dependency `rsc.io/qr`, BSD licence).
+- **Hardware test of the open network** across two sites ([P2P layer](spec/p2p-layer.md) § 15): entry solely via the DNS seed, a public task between a home network and a mobile network, hole punching over IPv6/QUIC, failure of the start node, tool rights for strangers.
+
+### Upgrade notes
+
+- If your own private network still uses the ID `swarmainet` (the name of the open network), rename it to an ID of its own, e.g. `p-…`, on all nodes at the same time ([P2P layer](spec/p2p-layer.md) § 1).
+- Nodes behind NAT benefit from the reconnection fix only once they run 0.2.0; start nodes and helpers are not affected by it.
+
+## [0.1.0] – 2026-11-17
+
+First public version: local swarm (phase 1) and P2P layer with private networks and membership networks, tested on hardware across two sites.
+
+[0.2.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/rainer-sharp/Ai-Swarms.net/releases/tag/v0.1.0

@@ -56,6 +56,7 @@ Oder in Open WebUI unter *Einstellungen → Verbindungen* die URL `http://127.0.
 | [Stand](../docs/de/status.md) | Was erprobt ist, was fehlt |
 | [Gesamtkonzept](../docs/de/concept.md) | Vision, Entscheidungen, Rollen, Vertrauen, Roadmap |
 | [Spezifikation](../spec/de/README.md) | Protokoll, Netzschicht, Sicherheitsmodell |
+| [Änderungen](CHANGELOG.md) | Änderungen je Version |
 
 ## Sicherheit
 

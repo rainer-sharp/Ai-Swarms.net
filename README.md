@@ -58,6 +58,7 @@ Or in Open WebUI, enter the URL `http://127.0.0.1:7711/v1` under *Settings → C
 | [Status](docs/status.md) | What has been tested, what is missing |
 | [Concept](docs/concept.md) | Vision, decisions, roles, trust, roadmap |
 | [Specification](spec/README.md) | Protocol, network layer, security model |
+| [Changelog](CHANGELOG.md) | Changes per version |
 
 ## Security
 
