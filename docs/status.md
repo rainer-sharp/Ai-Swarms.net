@@ -33,7 +33,7 @@ Round 1 (80 tasks from HumanEval and GSM8K, [report](../bench/report-r1.md)): th
 - The router is a keyword heuristic, not a model; bandit and competence profile follow in phase 3.
 - Privacy class `reduced` without pseudonymisation; until then it is treated like `trusted`.
 - No token streaming: with `stream: true`, the reviewed answer arrives as one block.
-- Images in requests are not supported. Audio only as a transcription (`/v1/audio/transcriptions`, at most 2.75 MiB per request, only up to `trusted`). Tested on hardware: a 57-minute recording in six 10-minute pieces from the VM via a node with Nemotron-Transcribe in 122 s. Longer recordings still have to be split by the caller, without overlap handling.
+- Images in requests are not supported. Audio only as a transcription (`/v1/audio/transcriptions`, only up to `trusted`); the gateway splits long recordings into overlapping pieces with `ffmpeg`. Tested on hardware: a 57-minute recording in a single request, seven pieces from the VM via a node with Nemotron-Transcribe in 143 s, without doubled or lost words at the seams. The pieces run in parallel, but the gain depends on how many providers are free; with only one model, they run one after another.
 
 **Resources**
 

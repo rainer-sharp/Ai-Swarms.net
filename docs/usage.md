@@ -67,11 +67,13 @@ Content given as a list of text parts is joined. Images in chat messages are not
 
 ## Transcription
 
-`POST /v1/audio/transcriptions` accepts a recording in the format of the OpenAI transcription API (`multipart/form-data` with `file`, optionally `language`, `prompt`, `response_format` `json` or `text`) and has it transcribed by a model with the skill `audio.transcribe`, e.g. on another node of your own network. The node providing the model calls `/audio/transcriptions` of its backend (e.g. Whisper); if that does not exist, it sends the recording via the chat as `audio_url` with thinking disabled (e.g. vLLM with Nemotron-Transcribe). The field `model` is ignored; the swarm chooses the model. At most 2.75 MiB per recording; longer recordings have to be split. Audio only goes to your own or trusted devices, never into the open network (`X-SwarmAiNet-Privacy: public` gives 400).
+`POST /v1/audio/transcriptions` accepts a recording in the format of the OpenAI transcription API (`multipart/form-data` with `file`, optionally `language`, `prompt`, `response_format` `json` or `text`) and has it transcribed by a model with the skill `audio.transcribe`, e.g. on another node of your own network. The node providing the model calls `/audio/transcriptions` of its backend (e.g. Whisper); if that does not exist, it sends the recording via the chat as `audio_url` with thinking disabled (e.g. vLLM with Nemotron-Transcribe). The field `model` is ignored; the swarm chooses the model. Audio only goes to your own or trusted devices, never into the open network (`X-SwarmAiNet-Privacy: public` gives 400).
 
 ```sh
 curl -s http://127.0.0.1:7711/v1/audio/transcriptions -F file=@aufnahme.wav -F language=de
 ```
+
+One subtask carries at most 2.75 MiB. The gateway splits longer recordings (up to 512 MiB) itself: into pieces of 10 minutes with 1 minute of overlap, as mono MP3 at 16 kHz. It sends up to four pieces through the swarm at the same time and joins the transcripts; within each overlap it looks for the longest common sequence of words and cuts in its middle, so no words are lost or doubled. If a provider stays busy, the piece waits and is sent again; if a piece fails, the whole request fails with the cause. Splitting needs `ffmpeg` and `ffprobe` on the node with the gateway (Debian/Ubuntu: `apt install ffmpeg`); without them, recordings over 2.75 MiB give 413. With `response_format=verbose_json`, the field `swarmainet` contains `duration_s`, `chunks` and the procedure of every piece in `parts[]`.
 
 In Open WebUI: *Admin Settings → Audio → Speech-to-Text*, engine *OpenAI*, URL `http://127.0.0.1:7711/v1`, any key and model.
 

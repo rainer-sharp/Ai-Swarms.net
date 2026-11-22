@@ -7,13 +7,19 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
+	"github.com/rainer-sharp/Ai-Swarms.net/internal/audio"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/orchestrator"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/profile"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
@@ -258,13 +264,110 @@ func TestTranscriptionEndpoint(t *testing.T) {
 	if rec := post(body, ct, ""); rec.Code != 400 {
 		t.Fatalf("ohne datei: %d", rec.Code)
 	}
+	// Zu groß für einen Teilauftrag und keine Aufnahme: ohne ffmpeg 413,
+	// mit ffmpeg 400 (nicht lesbar).
+	want := http.StatusRequestEntityTooLarge
+	if audio.Available() {
+		want = http.StatusBadRequest
+	}
 	body, ct = audioForm(t, make([]byte, protocol.MaxAudioBytes+1), nil)
-	if rec := post(body, ct, ""); rec.Code != 413 {
-		t.Fatalf("zu groß: %d", rec.Code)
+	if rec := post(body, ct, ""); rec.Code != want {
+		t.Fatalf("zu groß: %d %s", rec.Code, rec.Body)
 	}
 	fb.err = orchestrator.ErrPrivacy
 	body, ct = audioForm(t, []byte("RIFF"), nil)
 	if rec := post(body, ct, "public"); rec.Code != 400 {
 		t.Fatalf("public: %d", rec.Code)
+	}
+}
+
+// chunkBackend schreibt jedes Stück als Wortfolge ab, die sich mit dem
+// Nachbarstück in der Überlappung deckt.
+// Mit busy meldet ein Stück zuerst „ausgelastet“, mit fail scheitert es; die
+// anderen warten dann auf den Abbruch.
+type chunkBackend struct {
+	fakeBackend
+	mu         sync.Mutex
+	calls      int
+	busy, fail map[int]int
+}
+
+func (c *chunkBackend) Ask(ctx context.Context, r orchestrator.Request) (*orchestrator.Answer, error) {
+	var i int
+	if _, err := fmt.Sscanf(r.Audio.Filename, "stueck-%02d.mp3", &i); err != nil || r.Audio.MIME != "audio/mpeg" || len(r.Audio.Data) > protocol.MaxAudioBytes {
+		return nil, fmt.Errorf("stück %q %s %d", r.Audio.Filename, r.Audio.MIME, len(r.Audio.Data))
+	}
+	c.mu.Lock()
+	c.calls++
+	busy := c.busy[i] > 0
+	if busy {
+		c.busy[i]--
+	}
+	_, fail := c.fail[i]
+	failing := len(c.fail) > 0
+	c.mu.Unlock()
+	switch {
+	case busy:
+		return nil, fmt.Errorf("alle kandidaten ausgelastet: %w", orchestrator.ErrBusy)
+	case fail:
+		return nil, errors.New("backend kaputt")
+	case failing:
+		<-ctx.Done()
+		return nil, fmt.Errorf("abgebrochen: %w", ctx.Err())
+	}
+	// Wort w steht für Minute w; Stück i umfasst Minute 9i bis 9i+10.
+	var words []string
+	for m := 9 * i; m < min(9*i+10, 25); m++ {
+		words = append(words, fmt.Sprintf("w%d", m))
+	}
+	return &orchestrator.Answer{Content: strings.Join(words, " ")}, nil
+}
+
+// TestTranscriptionLong: Eine Aufnahme über dem Limit eines Teilauftrags
+// wird geteilt, parallel abgeschrieben und ohne Doppelungen zusammengefügt;
+// ein ausgelastetes Stück kommt zurück in die Schlange, ein fehlgeschlagenes
+// wird als Ursache gemeldet.
+func TestTranscriptionLong(t *testing.T) {
+	if !audio.Available() {
+		t.Skip("ffmpeg fehlt")
+	}
+	path := filepath.Join(t.TempDir(), "lang.wav")
+	// 25 min WAV mit 8 kHz, 16 bit: etwa 24 MB
+	if out, err := exec.Command("ffmpeg", "-v", "error", "-f", "lavfi", "-i", "sine=frequency=300:duration=1500:sample_rate=8000",
+		path).CombinedOutput(); err != nil {
+		t.Fatalf("%v %s", err, out)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	post := func(cb *chunkBackend) *httptest.ResponseRecorder {
+		body, ct := audioForm(t, data, map[string]string{"response_format": "verbose_json"})
+		req := httptest.NewRequest("POST", "/v1/audio/transcriptions", strings.NewReader(body))
+		req.RemoteAddr, req.Host = "127.0.0.1:5000", "127.0.0.1:7711"
+		req.Header.Set("Content-Type", ct)
+		rec := httptest.NewRecorder()
+		Handler(cb).ServeHTTP(rec, req)
+		return rec
+	}
+	cb := &chunkBackend{busy: map[int]int{1: 2}}
+	rec := post(cb)
+	var out struct {
+		Text       string
+		Swarmainet struct{ Chunks int }
+	}
+	if rec.Code != 200 || json.Unmarshal(rec.Body.Bytes(), &out) != nil {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	var want []string
+	for m := range 25 {
+		want = append(want, fmt.Sprintf("w%d", m))
+	}
+	if out.Text != strings.Join(want, " ") || out.Swarmainet.Chunks != 3 || cb.calls != 5 {
+		t.Fatalf("%q, %d stücke, %d aufrufe", out.Text, out.Swarmainet.Chunks, cb.calls)
+	}
+	rec = post(&chunkBackend{fail: map[int]int{2: 1}})
+	if rec.Code != http.StatusBadGateway || !strings.Contains(rec.Body.String(), "stück 2 (ab 18m0s): backend kaputt") {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
 	}
 }

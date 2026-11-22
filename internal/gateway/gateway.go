@@ -18,9 +18,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rainer-sharp/Ai-Swarms.net/internal/audio"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/orchestrator"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/profile"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
+	"os"
+	"sync"
 )
 
 type Backend interface {
@@ -316,60 +319,193 @@ func assistantMessage(ans *orchestrator.Answer) map[string]any {
 	return m
 }
 
+// maxUpload: Größte Aufnahme, die das Gateway annimmt. Über
+// protocol.MaxAudioBytes wird sie in überlappende Stücke geteilt (ffmpeg).
+const maxUpload = 512 << 20
+
+// parallelChunks: So viele Stücke einer langen Aufnahme laufen gleichzeitig.
+const parallelChunks = 4
+
 // transcribe nimmt eine Aufnahme im Format der OpenAI-Transkriptions-API an
 // (multipart/form-data: file, optional language, prompt, response_format) und
-// lässt sie von einem Agenten mit audio.transcribe abschreiben. Das Feld model
-// wird ignoriert; der Schwarm wählt das Modell.
+// lässt sie von Agenten mit audio.transcribe abschreiben. Das Feld model wird
+// ignoriert; der Schwarm wählt das Modell. Lange Aufnahmen teilt das Gateway
+// in überlappende Stücke, schickt sie parallel und fügt die Abschriften
+// zusammen.
 func transcribe(b Backend, w http.ResponseWriter, r *http.Request) {
-	const formLimit = protocol.MaxAudioBytes + 64<<10
-	r.Body = http.MaxBytesReader(w, r.Body, formLimit)
-	tooBig := fmt.Errorf("aufnahme größer als %d bytes; bitte kürzen oder teilen", protocol.MaxAudioBytes)
-	if err := r.ParseMultipartForm(formLimit); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, maxUpload+1<<20)
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		var mbe *http.MaxBytesError
 		if errors.As(err, &mbe) {
-			writeErr(w, http.StatusRequestEntityTooLarge, tooBig)
+			writeErr(w, http.StatusRequestEntityTooLarge, fmt.Errorf("aufnahme größer als %d MiB", maxUpload>>20))
 			return
 		}
 		writeErr(w, http.StatusBadRequest, err)
 		return
 	}
+	defer r.MultipartForm.RemoveAll()
 	f, hdr, err := r.FormFile("file")
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, errors.New("feld file mit der aufnahme fehlt"))
 		return
 	}
 	defer f.Close()
-	data, err := io.ReadAll(io.LimitReader(f, protocol.MaxAudioBytes+1))
-	if err != nil {
-		writeErr(w, http.StatusBadRequest, err)
-		return
-	}
-	if len(data) > protocol.MaxAudioBytes {
-		writeErr(w, http.StatusRequestEntityTooLarge, tooBig)
-		return
-	}
 	format := cmp.Or(r.FormValue("response_format"), "json")
 	if format != "json" && format != "text" && format != "verbose_json" {
 		writeErr(w, http.StatusBadRequest, fmt.Errorf("response_format %q nicht unterstützt (json, text)", format))
 		return
 	}
-	ans, err := b.Ask(r.Context(), orchestrator.Request{
-		Audio: &protocol.Audio{Data: data, MIME: hdr.Header.Get("Content-Type"), Filename: hdr.Filename,
-			Language: r.FormValue("language"), Prompt: r.FormValue("prompt")},
-		Privacy: protocol.PrivacyClass(r.Header.Get("X-SwarmAiNet-Privacy")),
-	})
-	switch {
-	case errors.Is(err, orchestrator.ErrPrivacy):
-		writeErr(w, http.StatusBadRequest, err)
-		return
-	case err != nil:
-		writeErr(w, http.StatusBadGateway, err)
-		return
+	base := protocol.Audio{MIME: hdr.Header.Get("Content-Type"), Filename: hdr.Filename,
+		Language: r.FormValue("language"), Prompt: r.FormValue("prompt")}
+	privacy := protocol.PrivacyClass(r.Header.Get("X-SwarmAiNet-Privacy"))
+
+	var text string
+	var info any
+	if hdr.Size <= protocol.MaxAudioBytes {
+		data, err := io.ReadAll(f)
+		if err != nil {
+			writeErr(w, http.StatusBadRequest, err)
+			return
+		}
+		a := base
+		a.Data = data
+		ans, err := b.Ask(r.Context(), orchestrator.Request{Audio: &a, Privacy: privacy})
+		if err != nil {
+			writeAskErr(w, err)
+			return
+		}
+		text, info = ans.Content, ans
+	} else {
+		text, info, err = transcribeLong(r.Context(), b, f, base, privacy)
+		switch {
+		case errors.Is(err, audio.ErrNoFFmpeg):
+			writeErr(w, http.StatusRequestEntityTooLarge, fmt.Errorf("aufnahme größer als %d bytes: %w", protocol.MaxAudioBytes, err))
+			return
+		case errors.Is(err, audio.ErrUnreadable):
+			writeErr(w, http.StatusBadRequest, err)
+			return
+		case err != nil:
+			writeAskErr(w, err)
+			return
+		}
 	}
 	if format == "text" {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = io.WriteString(w, ans.Content)
+		_, _ = io.WriteString(w, text)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"text": ans.Content, "swarmainet": ans})
+	writeJSON(w, http.StatusOK, map[string]any{"text": text, "swarmainet": info})
+}
+
+func writeAskErr(w http.ResponseWriter, err error) {
+	if errors.Is(err, orchestrator.ErrPrivacy) {
+		writeErr(w, http.StatusBadRequest, err)
+		return
+	}
+	writeErr(w, http.StatusBadGateway, err)
+}
+
+// longTranscript beschreibt eine geteilte Aufnahme in der Antwort.
+type longTranscript struct {
+	DurationS float64                `json:"duration_s"`
+	Chunks    int                    `json:"chunks"`
+	Parts     []*orchestrator.Answer `json:"parts"`
+}
+
+// transcribeLong teilt die Aufnahme, lässt die Stücke parallel abschreiben
+// und fügt die Abschriften in der Überlappung zusammen.
+func transcribeLong(ctx context.Context, b Backend, f io.Reader, base protocol.Audio, privacy protocol.PrivacyClass) (string, any, error) {
+	if !audio.Available() {
+		return "", nil, audio.ErrNoFFmpeg
+	}
+	path, cleanup, err := spool(f)
+	if err != nil {
+		return "", nil, err
+	}
+	defer cleanup()
+	chunks, total, err := audio.Split(ctx, path, audio.ChunkLength, audio.Overlap)
+	if err != nil {
+		return "", nil, err
+	}
+	answers, err := askChunks(ctx, b, chunks, base, privacy)
+	if err != nil {
+		return "", nil, err
+	}
+	texts, share := make([]string, len(chunks)), make([]float64, 0, len(chunks))
+	for i, c := range chunks {
+		texts[i] = answers[i].Content
+		if i > 0 {
+			share = append(share, audio.Overlap.Seconds()/c.Len.Seconds())
+		}
+	}
+	return audio.Merge(texts, share), longTranscript{DurationS: total.Seconds(), Chunks: len(chunks), Parts: answers}, nil
+}
+
+// busyRequeues: So oft kommt ein Stück zurück in die Warteschlange, wenn alle
+// Anbieter auch nach der Wartezeit des Orchestrators ausgelastet sind.
+const busyRequeues = 5
+
+// askChunks lässt die Stücke mit höchstens parallelChunks Aufträgen zugleich
+// abschreiben. Ein fehlgeschlagenes Stück bricht die übrigen ab; gemeldet
+// wird die Ursache, nicht der Folgeabbruch.
+func askChunks(ctx context.Context, b Backend, chunks []audio.Chunk, base protocol.Audio, privacy protocol.PrivacyClass) ([]*orchestrator.Answer, error) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	n := len(chunks)
+	answers, errs, requeued := make([]*orchestrator.Answer, n), make([]error, n), make([]int, n)
+	jobs := make(chan int, n)
+	for i := range n {
+		jobs <- i
+	}
+	var done sync.WaitGroup
+	done.Add(n)
+	for range min(parallelChunks, n) {
+		go func() {
+			for i := range jobs {
+				a := base
+				a.Data, a.MIME = chunks[i].Data, "audio/mpeg"
+				a.Filename = fmt.Sprintf("stueck-%02d.mp3", i)
+				ans, err := b.Ask(ctx, orchestrator.Request{Audio: &a, Privacy: privacy})
+				if errors.Is(err, orchestrator.ErrBusy) && ctx.Err() == nil && requeued[i] < busyRequeues {
+					requeued[i]++
+					jobs <- i // Platz ist da: jedes Stück steht höchstens einmal in der Schlange
+					continue
+				}
+				answers[i], errs[i] = ans, err
+				if err != nil {
+					cancel() // ein fehlendes Stück macht die Abschrift unbrauchbar
+				}
+				done.Done()
+			}
+		}()
+	}
+	done.Wait()
+	close(jobs)
+	first := -1
+	for i, err := range errs {
+		if err != nil && (first < 0 || errors.Is(errs[first], context.Canceled) && !errors.Is(err, context.Canceled)) {
+			first = i
+		}
+	}
+	if first >= 0 {
+		return nil, fmt.Errorf("stück %d (ab %s): %w", first, chunks[first].Start.Round(time.Second), errs[first])
+	}
+	return answers, nil
+}
+
+// spool legt die hochgeladene Aufnahme als Datei ab, damit ffmpeg sie lesen kann.
+func spool(f io.Reader) (string, func(), error) {
+	if of, ok := f.(*os.File); ok {
+		return of.Name(), func() {}, nil
+	}
+	tmp, err := os.CreateTemp("", "swarmainet-audio-*")
+	if err != nil {
+		return "", nil, err
+	}
+	cleanup := func() { tmp.Close(); os.Remove(tmp.Name()) }
+	if _, err := io.Copy(tmp, f); err != nil {
+		cleanup()
+		return "", nil, err
+	}
+	return tmp.Name(), cleanup, nil
 }

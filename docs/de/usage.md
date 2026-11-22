@@ -67,11 +67,13 @@ Inhalte als Liste von Textteilen werden zusammengefügt. Bilder in Chat-Nachrich
 
 ## Transkription
 
-`POST /v1/audio/transcriptions` nimmt eine Aufnahme im Format der OpenAI-Transkriptions-API an (`multipart/form-data` mit `file`, optional `language`, `prompt`, `response_format` `json` oder `text`) und lässt sie von einem Modell mit der Fähigkeit `audio.transcribe` abschreiben, etwa auf einem anderen Knoten des eigenen Netzes. Der Knoten mit dem Modell ruft `/audio/transcriptions` seines Backends auf (etwa Whisper); gibt es das nicht, schickt er die Aufnahme über den Chat als `audio_url` mit abgeschaltetem Denkmodus (etwa vLLM mit Nemotron-Transcribe). Das Feld `model` wird ignoriert; der Schwarm wählt das Modell. Höchstens 2,75 MiB je Aufnahme; längere Aufnahmen müssen geteilt werden. Audio geht nur an eigene oder vertraute Geräte, nie ins offene Netz (`X-SwarmAiNet-Privacy: public` ergibt 400).
+`POST /v1/audio/transcriptions` nimmt eine Aufnahme im Format der OpenAI-Transkriptions-API an (`multipart/form-data` mit `file`, optional `language`, `prompt`, `response_format` `json` oder `text`) und lässt sie von einem Modell mit der Fähigkeit `audio.transcribe` abschreiben, etwa auf einem anderen Knoten des eigenen Netzes. Der Knoten mit dem Modell ruft `/audio/transcriptions` seines Backends auf (etwa Whisper); gibt es das nicht, schickt er die Aufnahme über den Chat als `audio_url` mit abgeschaltetem Denkmodus (etwa vLLM mit Nemotron-Transcribe). Das Feld `model` wird ignoriert; der Schwarm wählt das Modell. Audio geht nur an eigene oder vertraute Geräte, nie ins offene Netz (`X-SwarmAiNet-Privacy: public` ergibt 400).
 
 ```sh
 curl -s http://127.0.0.1:7711/v1/audio/transcriptions -F file=@aufnahme.wav -F language=de
 ```
+
+Ein Teilauftrag trägt höchstens 2,75 MiB. Längere Aufnahmen (bis 512 MiB) teilt das Gateway selbst: in Stücke von 10 Minuten mit 1 Minute Überlappung, als Mono-MP3 mit 16 kHz. Bis zu vier Stücke schickt es gleichzeitig durch den Schwarm und fügt die Abschriften zusammen; in jeder Überlappung sucht es die längste gemeinsame Wortfolge und schneidet in deren Mitte, sodass keine Wörter fehlen oder doppelt stehen. Bleibt ein Anbieter ausgelastet, wartet das Stück und wird erneut geschickt; scheitert ein Stück, scheitert die ganze Anfrage mit der Ursache. Zum Teilen braucht der Knoten mit dem Gateway `ffmpeg` und `ffprobe` (Debian/Ubuntu: `apt install ffmpeg`); ohne sie ergeben Aufnahmen über 2,75 MiB 413. Mit `response_format=verbose_json` enthält das Feld `swarmainet` `duration_s`, `chunks` und den Ablauf jedes Stücks in `parts[]`.
 
 In Open WebUI: *Admin-Einstellungen → Audio → Sprache-zu-Text*, Engine *OpenAI*, URL `http://127.0.0.1:7711/v1`, Schlüssel und Modell beliebig.
 
