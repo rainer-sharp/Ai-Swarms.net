@@ -63,6 +63,10 @@ type Task struct {
 	ToolChoice json.RawMessage
 	// Audio: Aufnahme für eine Transkription.
 	Audio *protocol.Audio
+	// OnDelta: nicht nil, wenn der Schritt gestreamt wird. Der Executor meldet
+	// neuen Antworttext (content) und Text der Denkphase des Modells
+	// (reasoning); maßgeblich bleibt das Ergebnis.
+	OnDelta func(content, reasoning string)
 }
 
 type Executor interface {
@@ -117,6 +121,31 @@ type Request struct {
 	// Audio: Transkription statt Chat. Läuft immer als single mit der
 	// Fähigkeit audio.transcribe und nie in der Freigabeklasse public.
 	Audio *protocol.Audio
+	// Stream: nicht nil, wenn die Antwort gestreamt wird. Run ruft es aus
+	// mehreren Goroutinen auf, nie gleichzeitig. Mit Werkzeugen und Audio
+	// wird nicht gestreamt.
+	Stream func(Event)
+}
+
+// EventKind: Art eines Zwischenstands beim Streaming.
+type EventKind int
+
+const (
+	// EventReasoning: Text der Denkphase: Überschriften der Schritte, Entwürfe,
+	// Prüfurteile und das Nachdenken des Modells, das die Antwort schreibt.
+	EventReasoning EventKind = iota
+	// EventContent: Text der Antwort, nur aus einem Schritt, nach dem keine
+	// Prüfung mehr folgt.
+	EventContent
+	// EventRestart: Der bisher gestreamte Antworttext ist verworfen (Schritt
+	// fehlgeschlagen); es folgt eine neue Fassung.
+	EventRestart
+)
+
+// Event ist ein Zwischenstand beim Streaming.
+type Event struct {
+	Kind EventKind
+	Text string
 }
 
 // SkillTranscribe: Fähigkeit von Transkriptionsmodellen.
@@ -284,6 +313,58 @@ type run struct {
 	ans    *Answer
 	n      int // verbrauchte Teilaufträge
 	mu     sync.Mutex
+
+	emitMu   sync.Mutex
+	reasoned bool // schon Text in der Denkphase
+}
+
+// target: wohin der Text eines Schritts beim Streaming geht.
+type target int
+
+const (
+	toNone      target = iota // nur die Überschrift
+	toReasoning               // Denkphase: ungeprüfter Text
+	toContent                 // Antwort: danach folgt keine Prüfung
+)
+
+// out beschreibt das Streaming eines Schritts. label: Überschrift in der
+// Denkphase (leer: keine). Der Nullwert streamt nichts.
+type out struct {
+	label string
+	to    target
+}
+
+// streaming: Diese Anfrage wird gestreamt.
+func (r *run) streaming() bool {
+	return r.req.Stream != nil && !hasTools(r.req) && r.req.Audio == nil
+}
+
+func (r *run) emit(k EventKind, s string) {
+	if !r.streaming() || s == "" && k != EventRestart {
+		return
+	}
+	r.emitMu.Lock()
+	defer r.emitMu.Unlock()
+	if k == EventReasoning {
+		r.reasoned = true
+	}
+	r.req.Stream(Event{Kind: k, Text: s})
+}
+
+// note schreibt einen eigenen Absatz in die Denkphase.
+func (r *run) note(s string) {
+	r.emitMu.Lock()
+	sep := r.reasoned
+	r.emitMu.Unlock()
+	if sep {
+		s = "\n\n" + s
+	}
+	r.emit(EventReasoning, s)
+}
+
+// agentName: kurzer Name für die Denkphase (Modell ohne Backend-Präfix).
+func agentName(a Agent) string {
+	return a.ID[strings.LastIndex(a.ID, "/")+1:]
 }
 
 func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
@@ -498,14 +579,14 @@ func skillScore(a Agent, skill string) float64 {
 // Kandidaten aus. Ein Peer-Ausfall blockiert den Auftrag nicht. Sind alle
 // Kandidaten nur ausgelastet, wartet exec und versucht es erneut, solange
 // Deadline und busyMaxWait es zulassen.
-func (r *run) exec(ctx context.Context, role protocol.Role, cands []Agent, msgs []protocol.ChatMessage, schema string) (protocol.Result, Agent, error) {
+func (r *run) exec(ctx context.Context, role protocol.Role, cands []Agent, msgs []protocol.ChatMessage, schema string, o out) (protocol.Result, Agent, error) {
 	if len(cands) == 0 {
 		return protocol.Result{}, Agent{}, ErrNoAgent
 	}
 	start := time.Now()
 	wait := busyFirstWait
 	for {
-		res, a, err := r.tryCandidates(ctx, role, cands, msgs, schema)
+		res, a, err := r.tryCandidates(ctx, role, cands, msgs, schema, o)
 		if err == nil || !errors.Is(err, ErrBusy) {
 			return res, a, err
 		}
@@ -526,7 +607,7 @@ func (r *run) exec(ctx context.Context, role protocol.Role, cands []Agent, msgs 
 // tryCandidates probiert die Kandidaten einmal der Reihe nach. Der Fehler
 // trägt ErrBusy, wenn alle nur ausgelastet waren; solche Absagen zählen
 // nicht gegen das Budget und erscheinen nicht als Schritt.
-func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Agent, msgs []protocol.ChatMessage, schema string) (protocol.Result, Agent, error) {
+func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Agent, msgs []protocol.ChatMessage, schema string, o out) (protocol.Result, Agent, error) {
 	var lastErr error
 	allBusy := true
 	for _, a := range cands {
@@ -544,6 +625,24 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 		tools, choice := toolsFor(a, r.req)
 		t := Task{TaskID: r.taskID, SubtaskID: newID(), Role: role, Skill: r.req.Skill, Messages: msgs, Limits: r.req.Limits, JSONSchema: schema,
 			Tools: tools, ToolChoice: choice, Audio: r.req.Audio}
+		streamed := false // schon Antworttext gestreamt
+		if r.streaming() {
+			if o.label != "" {
+				r.note("**" + o.label + " · " + agentName(a) + "**\n\n")
+			}
+			switch o.to {
+			case toReasoning:
+				t.OnDelta = func(c, _ string) { r.emit(EventReasoning, c) }
+			case toContent:
+				t.OnDelta = func(c, rs string) {
+					r.emit(EventReasoning, rs)
+					if c != "" {
+						streamed = true
+						r.emit(EventContent, c)
+					}
+				}
+			}
+		}
 		start := time.Now()
 		done := r.o.load.begin(a)
 		res, err := r.o.Exec.Execute(ctx, a, t)
@@ -559,6 +658,12 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 		}
 		if err == nil && !a.Local && r.req.Audio == nil && looksLikeInjection(res.Result.Content) {
 			err = errors.New("ergebnis enthält anweisungsmuster, verworfen")
+		}
+		if err != nil && streamed {
+			r.emit(EventRestart, "")
+		}
+		if err != nil && o.label != "" {
+			r.note("*nicht verwendet: " + shortErr(err) + "*")
 		}
 		if errors.Is(err, ErrBusy) {
 			r.mu.Lock()
@@ -616,6 +721,18 @@ func (r *run) limit(s string) {
 	r.mu.Unlock()
 }
 
+// shortErr: Fehler in einer Zeile für die Denkphase.
+func shortErr(err error) string {
+	if errors.Is(err, ErrBusy) {
+		return "ausgelastet"
+	}
+	s, _, _ := strings.Cut(err.Error(), "\n")
+	if len(s) > 120 {
+		s = s[:120] + "…"
+	}
+	return s
+}
+
 func short(id string) string {
 	if len(id) > 12 {
 		return id[len(id)-8:]
@@ -624,7 +741,7 @@ func short(id string) string {
 }
 
 func (r *run) single(ctx context.Context) error {
-	res, _, err := r.exec(ctx, protocol.RoleSpecialist, r.candidates(r.req.Skill, false, nil), r.req.Messages, "")
+	res, _, err := r.exec(ctx, protocol.RoleSpecialist, r.candidates(r.req.Skill, false, nil), r.req.Messages, "", out{to: toContent})
 	if err != nil {
 		return err
 	}
@@ -633,7 +750,7 @@ func (r *run) single(ctx context.Context) error {
 }
 
 func (r *run) draftVerify(ctx context.Context) error {
-	draft, drafter, err := r.exec(ctx, protocol.RoleSpecialist, r.candidates(r.req.Skill, false, nil), r.req.Messages, "")
+	draft, drafter, err := r.exec(ctx, protocol.RoleSpecialist, r.candidates(r.req.Skill, false, nil), r.req.Messages, "", out{"Entwurf", toReasoning})
 	if err != nil {
 		return err
 	}
@@ -650,7 +767,7 @@ func (r *run) verifyAndRevise(ctx context.Context, author Agent) {
 	if !ok || v.Verdict == "ok" {
 		return
 	}
-	synth, _, err := r.exec(ctx, protocol.RoleSynthesizer, r.candidates("general", true, nil), synthPrompt(r.req.Messages, []string{r.ans.Content}, v.Issues), "")
+	synth, _, err := r.exec(ctx, protocol.RoleSynthesizer, r.candidates("general", true, nil), synthPrompt(r.req.Messages, []string{r.ans.Content}, v.Issues), "", out{"Überarbeitung", toContent})
 	if err != nil {
 		r.limit("synthese fehlgeschlagen: antwort mit bekannten mängeln")
 		return
@@ -682,7 +799,7 @@ func (r *run) verify(ctx context.Context, author Agent) (verdict, bool) {
 	var judge Agent
 	valid, tried := false, 0
 	for len(verifiers) > 0 && tried < maxVerifyTries && !valid {
-		review, used, err := r.exec(ctx, protocol.RoleVerifier, verifiers, verifyPrompt(r.req.Messages, r.ans.Content, r.req.Skill), schema)
+		review, used, err := r.exec(ctx, protocol.RoleVerifier, verifiers, verifyPrompt(r.req.Messages, r.ans.Content, r.req.Skill), schema, out{label: "Prüfung"})
 		if err != nil {
 			break // alle verbleibenden Kandidaten fehlgeschlagen
 		}
@@ -696,6 +813,7 @@ func (r *run) verify(ctx context.Context, author Agent) (verdict, bool) {
 		verifiers = slices.DeleteFunc(verifiers, func(a Agent) bool { return a.key() == used.key() })
 	}
 	if !valid {
+		r.note("Urteil: keines, Antwort ungeprüft")
 		if tried > 0 {
 			r.limit("ungeprüft: prüferurteil nicht auswertbar")
 		} else {
@@ -710,18 +828,26 @@ func (r *run) verify(ctx context.Context, author Agent) (verdict, bool) {
 	}
 	r.ans.Verdict, r.ans.Issues = v.Verdict, v.Issues
 	r.markVerdict(judge, v.Verdict)
+	switch {
+	case v.Verdict == "ok":
+		r.note("Urteil: in Ordnung")
+	case len(v.Issues) == 0:
+		r.note("Urteil: Mängel")
+	default:
+		r.note("Urteil: Mängel\n- " + strings.Join(v.Issues, "\n- "))
+	}
 	return v, true
 }
 
 func (r *run) parallel(ctx context.Context) error {
-	_, err := r.combine(ctx)
+	_, err := r.combine(ctx, toContent)
 	return err
 }
 
 // parallelVerify: unabhängige Lösungen, Synthese, dann Prüfung durch eine
 // andere Familie als die der Synthese und bei Mängeln eine Überarbeitung.
 func (r *run) parallelVerify(ctx context.Context) error {
-	author, err := r.combine(ctx)
+	author, err := r.combine(ctx, toReasoning)
 	if err != nil {
 		return err
 	}
@@ -731,7 +857,8 @@ func (r *run) parallelVerify(ctx context.Context) error {
 
 // combine holt unabhängige Lösungen (je Familie eine) und führt sie zusammen.
 // Ergebnis steht in r.ans.Content; zurück kommt der Agent, der es verfasst hat.
-func (r *run) combine(ctx context.Context) (Agent, error) {
+// synthTo: wohin die Synthese gestreamt wird (Antwort nur ohne spätere Prüfung).
+func (r *run) combine(ctx context.Context, synthTo target) (Agent, error) {
 	n := r.o.Parallel
 	if n <= 1 {
 		n = 3
@@ -795,7 +922,7 @@ func (r *run) combine(ctx context.Context) (Agent, error) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			res, _, err := r.exec(ctx, protocol.RoleSpecialist, []Agent{a}, r.req.Messages, "")
+			res, _, err := r.exec(ctx, protocol.RoleSpecialist, []Agent{a}, r.req.Messages, "", out{label: "Lösung"})
 			if err == nil {
 				answers[i] = res.Result.Content
 			}
@@ -820,7 +947,7 @@ func (r *run) combine(ctx context.Context) (Agent, error) {
 		r.limit("nur eine unabhängige lösung")
 		return first, nil
 	}
-	synth, synthesizer, err := r.exec(ctx, protocol.RoleSynthesizer, r.candidates("general", true, nil), synthPrompt(r.req.Messages, got, nil), "")
+	synth, synthesizer, err := r.exec(ctx, protocol.RoleSynthesizer, r.candidates("general", true, nil), synthPrompt(r.req.Messages, got, nil), "", out{"Synthese", synthTo})
 	if err != nil {
 		r.ans.Content = got[0]
 		r.limit("synthese fehlgeschlagen: erste lösung ungeprüft")

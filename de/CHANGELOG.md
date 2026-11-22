@@ -4,6 +4,12 @@
 
 Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/); die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/) mit dem üblichen Vorbehalt für 0.x: Zwischen Minor-Versionen sind inkompatible Änderungen noch möglich.
 
+## [Unveröffentlicht]
+
+### Hinzugefügt
+
+- **Streaming:** Mit `stream: true` kommt die Antwort Stück für Stück, auch von Modellen auf anderen Knoten. Ungeprüfter Text (Entwurf, Urteil, Nachdenken des Modells) steht in `delta.reasoning_content`, das Open WebUI als eingeklappte Denkphase zeigt; `delta.content` trägt nur Text, nach dem keine Prüfung mehr folgt. Findet der Prüfer keine Mängel, folgt der geprüfte Entwurf als ein Block. Anfragen mit Werkzeugen antworten weiter als ein Block. Neue optionale Protokollfelder: `stream` im Teilauftrag und `delta`/`reasoning` in `TASK_PROGRESS`; Anbieter mit älteren Versionen antworten als ein Block. ([Nutzung](../docs/de/usage.md#streaming), [Protokoll](../spec/de/protocol-v0.1.md) § 4.2)
+
 ## [0.3.0] – 2026-11-22
 
 Phase 3 beginnt: Jeder Knoten führt ein Kompetenzprofil und kann das Muster per Bandit wählen; Aufnahmen lassen sich über den Schwarm abschreiben. Das Protokoll bleibt bei Version 0.1 und bekommt nur das optionale Feld `audio`: Knoten mit 0.3.0 und 0.2.0 arbeiten zusammen, Transkription anbieten kann aber nur ein Knoten mit 0.3.0. Bestehende Konfigurationen funktionieren ohne Änderung weiter; der neue Abschnitt `cooperation` ist optional.

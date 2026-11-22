@@ -371,3 +371,107 @@ func TestTranscriptionLong(t *testing.T) {
 		t.Fatalf("%d %s", rec.Code, rec.Body)
 	}
 }
+
+// streamBackend schickt vorgegebene Zwischenstände und dann Antwort oder Fehler.
+type streamBackend struct {
+	fakeBackend
+	events []orchestrator.Event
+	ans    string
+	err    error
+}
+
+func (s *streamBackend) Ask(_ context.Context, r orchestrator.Request) (*orchestrator.Answer, error) {
+	for _, e := range s.events {
+		if r.Stream == nil {
+			return nil, errors.New("ohne stream-rückruf")
+		}
+		r.Stream(e)
+	}
+	return &orchestrator.Answer{TaskID: "t1", Content: s.ans, Pattern: orchestrator.PatternDraftVerify}, s.err
+}
+
+// sse liest die Ereignisse eines Streams: Denkphase, Antworttext, Ende.
+func sse(t *testing.T, body string) (reasoning, content, finish string, meta bool) {
+	t.Helper()
+	if !strings.HasSuffix(body, "data: [DONE]\n\n") {
+		t.Fatalf("ende fehlt: %q", body)
+	}
+	for _, line := range strings.Split(body, "\n") {
+		data, ok := strings.CutPrefix(line, "data: ")
+		if !ok || data == "[DONE]" {
+			continue
+		}
+		var c struct {
+			Choices []struct {
+				Delta struct {
+					Content          string `json:"content"`
+					ReasoningContent string `json:"reasoning_content"`
+				} `json:"delta"`
+				FinishReason *string `json:"finish_reason"`
+			} `json:"choices"`
+			Swarmainet json.RawMessage `json:"swarmainet"`
+		}
+		if err := json.Unmarshal([]byte(data), &c); err != nil {
+			t.Fatalf("%v: %s", err, data)
+		}
+		reasoning += c.Choices[0].Delta.ReasoningContent
+		content += c.Choices[0].Delta.Content
+		if c.Choices[0].FinishReason != nil {
+			finish = *c.Choices[0].FinishReason
+		}
+		meta = meta || len(c.Swarmainet) > 0
+	}
+	return
+}
+
+func postStream(h http.Handler, privacy string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest("POST", "/v1/chat/completions",
+		strings.NewReader(`{"model":"swarmainet","stream":true,"messages":[{"role":"user","content":"x"}]}`))
+	req.RemoteAddr, req.Host = "127.0.0.1:5000", "127.0.0.1:7711"
+	if privacy != "" {
+		req.Header.Set("X-SwarmAiNet-Privacy", privacy)
+	}
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+// TestChatStreaming: Denkphase in reasoning_content, Antwort in content; was
+// nicht gestreamt wurde, folgt am Ende; Fehler vor dem ersten Stück bleiben
+// HTTP-Fehler, danach erscheinen sie im Text.
+func TestChatStreaming(t *testing.T) {
+	sb := &streamBackend{events: []orchestrator.Event{
+		{Kind: orchestrator.EventReasoning, Text: "**Entwurf · a**\n\nentwurf"},
+		{Kind: orchestrator.EventContent, Text: "Die Ant"},
+	}, ans: "Die Antwort."}
+	rec := postStream(Handler(sb), "")
+	if rec.Code != 200 || rec.Header().Get("Content-Type") != "text/event-stream" {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	r, c, fin, meta := sse(t, rec.Body.String())
+	if r != "**Entwurf · a**\n\nentwurf" || c != "Die Antwort." || fin != "stop" || !meta {
+		t.Fatalf("denkphase %q, antwort %q, ende %q, meta %v", r, c, fin, meta)
+	}
+
+	// Neustart und eine Antwort, die nicht mit dem Gestreamten beginnt.
+	sb.events = []orchestrator.Event{{Kind: orchestrator.EventContent, Text: "falsch"}, {Kind: orchestrator.EventRestart},
+		{Kind: orchestrator.EventContent, Text: "Neu"}}
+	sb.ans = "Ganz anders."
+	_, c, _, _ = sse(t, postStream(Handler(sb), "").Body.String())
+	if c != "falsch"+restartNote+"Neu"+restartNote+"Ganz anders." {
+		t.Fatalf("%q", c)
+	}
+
+	// Fehler nach Beginn: im Text, Status 200.
+	sb.events, sb.err = sb.events[:1], errors.New("prüfer weg")
+	rec = postStream(Handler(sb), "")
+	if _, c, _, _ = sse(t, rec.Body.String()); rec.Code != 200 || !strings.Contains(c, "**Fehler:** prüfer weg") {
+		t.Fatalf("%d %q", rec.Code, c)
+	}
+
+	// Fehler vor Beginn: echter HTTP-Fehler.
+	sb.events, sb.err = nil, orchestrator.ErrPrivacy
+	if rec = postStream(Handler(sb), "public"); rec.Code != 400 || !strings.Contains(rec.Body.String(), `"error"`) {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+}

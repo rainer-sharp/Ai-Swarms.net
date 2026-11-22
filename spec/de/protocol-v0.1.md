@@ -65,7 +65,7 @@ Empfänger MÜSSEN verwerfen, wenn
 | `TASK_BID` | Anbieter → Koordinator | `BidPayload` (ab Phase 3) |
 | `TASK_ACCEPT` | Anbieter → Koordinator | `subtask_id`, `lease_expiry` |
 | `TASK_REJECT` | Anbieter → Koordinator | `subtask_id`, `reason` (allgemein formuliert) |
-| `TASK_PROGRESS` | Anbieter → Koordinator | Status oder Token-Stream |
+| `TASK_PROGRESS` | Anbieter → Koordinator | Status oder Token-Stream (`ProgressPayload`, § 4.2) |
 | `TASK_RESULT` | Anbieter → Koordinator | `Result` |
 | `VERIFY_REQUEST` | Koordinator → Prüfer | ab Phase 3, bis dahin `TASK_PROPOSE` mit `role: verifier` |
 | `TASK_CANCEL` | beide | `subtask_id`, `reason` |
@@ -111,6 +111,8 @@ Die Anzeige enthält keine Prompts, internen IPs, Hardware- oder Energiedaten un
 `messages[]` folgt dem OpenAI-Format einschließlich `tool_calls` (Assistent), `tool_call_id` und `name` (Rolle `tool`). `tools` und `tool_choice` (optional) sind die Werkzeugbeschreibungen der aufrufenden Anwendung und werden unverändert an das Modell gegeben. Der Anbieter führt keine Werkzeuge aus; er liefert nur die Aufrufe zurück, ausgeführt werden sie beim Auftraggeber. Welche Werkzeuge ein Agent sehen darf, entscheidet deshalb der Auftraggeber ([Freigabeklassen](privacy-classes.md), Regel 6). Ein Anbieter MUSS einen Auftrag mit `tools` ablehnen, wenn der gewählte Agent `tools` nicht anzeigt (`agent beherrscht keine werkzeuge`).
 
 `audio` (optional) trägt eine Aufnahme für eine Transkription: `{ "data": <base64>, "mime", "filename", "language", "prompt" }`, höchstens 2,75 MiB Audio (`MaxAudioBytes`), damit die Nachricht unter 4 MiB bleibt. Ein solcher Teilauftrag hat die Fähigkeit `audio.transcribe`, das Ergebnis ist die Abschrift in `result.content`. Stimmen sind personenbezogene Daten: Ein Koordinator DARF Audio nicht mit der Freigabeklasse `public` senden, und ein Anbieter MUSS es ablehnen (`audio nur im vertrauten kreis`), ebenso Audio an einen Agenten ohne `audio.transcribe` (`agent verarbeitet kein audio`) und leere oder zu große Aufnahmen (`aufnahme leer oder zu groß`). Der Anbieter gibt die Aufnahme an `/audio/transcriptions` seines Backends oder, wenn das Backend diese Schnittstelle nicht hat, an den Chat als `audio_url`. Längere Aufnahmen teilt der Koordinator in überlappende Stücke, je ein eigener Teilauftrag, und fügt die Abschriften selbst zusammen.
+
+`stream` (optional, fehlt = false) fordert Zwischenstände an. Der Anbieter schickt dann, während das Modell arbeitet, `TASK_PROGRESS` mit `{ "subtask_id", "status": "delta", "delta", "reasoning" }`: `delta` ist neuer Text der Antwort, `reasoning` neuer Text der Denkphase des Modells, beides seit dem vorigen Zwischenstand. Er SOLLTE sie bündeln (die Referenzimplementierung schickt höchstens alle 100 ms oder 16 KiB eine Nachricht). Die aneinandergereihten `delta`-Texte sind eine Vorschau; maßgeblich sind `TASK_RESULT`, seine Prüfsumme und die Quittung. Anbieter, die `stream` nicht kennen, schicken keine Zwischenstände, und der Koordinator wartet wie bisher auf das Ergebnis. Aufträge mit `tools` oder `audio` werden nicht gestreamt.
 
 `depth` zählt die bisherigen Delegationen (beim ersten Empfänger 1). Ein Anbieter MUSS ablehnen, wenn `depth > max_depth`. Weiterdelegationen erben gleiche oder strengere Grenzen und verbrauchen dasselbe Budget.
 

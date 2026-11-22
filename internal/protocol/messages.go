@@ -135,6 +135,9 @@ type ProposePayload struct {
 	// Audio: Aufnahme für eine Transkription (Fähigkeit audio.transcribe);
 	// nie in der Freigabeklasse public (spec/protocol-v0.1.md § 4.2).
 	Audio *Audio `json:"audio,omitempty"`
+	// Stream: Der Koordinator möchte Zwischenstände als TASK_PROGRESS mit
+	// delta/reasoning. Maßgeblich bleibt das Ergebnis (spec/protocol-v0.1.md § 4.2).
+	Stream bool `json:"stream,omitempty"`
 }
 
 // MaxAudioBytes begrenzt eine Aufnahme so, dass die Nachricht mit Base64 unter
@@ -174,7 +177,14 @@ type CancelPayload struct {
 type ProgressPayload struct {
 	SubtaskID string `json:"subtask_id"`
 	Status    string `json:"status"`
+	// Delta: neuer Text der Antwort seit dem letzten Fortschritt; Reasoning:
+	// neuer Text der Denkphase des Modells (nur bei ProposePayload.Stream).
+	Delta     string `json:"delta,omitempty"`
+	Reasoning string `json:"reasoning,omitempty"`
 }
+
+// ProgressDelta: Status eines Fortschritts mit gestreamtem Text.
+const ProgressDelta = "delta"
 
 // Ergebnisstatus
 const (

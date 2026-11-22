@@ -139,8 +139,15 @@ func (l *Local) RunLocal(ctx context.Context, id string, t orchestrator.Task) (p
 		}, nil
 	}
 	msgs := withSchema(t.Messages, t.JSONSchema)
-	resp, err := a.client.Chat(ctx, backend.ChatRequest{Model: a.model, Messages: msgs, MaxTokens: t.Limits.MaxTokens,
-		Tools: t.Tools, ToolChoice: t.ToolChoice})
+	creq := backend.ChatRequest{Model: a.model, Messages: msgs, MaxTokens: t.Limits.MaxTokens,
+		Tools: t.Tools, ToolChoice: t.ToolChoice}
+	var resp backend.ChatResponse
+	var err error
+	if t.OnDelta != nil && len(t.Tools) == 0 {
+		resp, err = a.client.ChatStream(ctx, creq, t.OnDelta)
+	} else {
+		resp, err = a.client.Chat(ctx, creq)
+	}
 	if err != nil {
 		return protocol.Result{}, err
 	}

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -212,7 +213,17 @@ func (n *Node) handleTask(s network.Stream) {
 
 	task := orchestrator.Task{TaskID: env.TaskID, SubtaskID: p.SubtaskID, Role: p.Role, Skill: p.Skill,
 		Messages: p.Messages, Limits: p.Limits, JSONSchema: p.JSONSchema, Tools: p.Tools, ToolChoice: p.ToolChoice, Audio: p.Audio}
+	var prog *progress
+	if p.Stream && p.Audio == nil && len(p.Tools) == 0 {
+		prog = &progress{send: func(pp protocol.ProgressPayload) error {
+			return n.send(s, protocol.TaskProgress, env.TaskID, pp)
+		}, subtask: p.SubtaskID}
+		task.OnDelta = prog.add
+	}
 	res, err := n.opts.Provider.RunLocal(ctx, p.AgentID, task)
+	if prog != nil {
+		prog.flush()
+	}
 	if err != nil {
 		slog.Info("teilauftrag nicht ausgeführt", "peer", from, "agent", p.AgentID, "err", err)
 		reason := "ausführung fehlgeschlagen"
@@ -257,6 +268,43 @@ func (n *Node) handleTask(s network.Stream) {
 		return
 	}
 	_ = n.send(s, protocol.TaskReceipt, env.TaskID, rc)
+}
+
+// progressEvery: Höchstens so oft schickt der Anbieter einen Zwischenstand;
+// jeder ist eine signierte Nachricht.
+const progressEvery = 100 * time.Millisecond
+
+// progressMaxBytes: Ab so viel gesammeltem Text geht ein Zwischenstand sofort.
+const progressMaxBytes = 16 << 10
+
+// progress sammelt gestreamten Text und schickt ihn gebündelt als
+// TASK_PROGRESS. Läuft in der Goroutine des Teilauftrags, daher ohne Sperre.
+type progress struct {
+	send            func(protocol.ProgressPayload) error
+	subtask         string
+	content, reason strings.Builder
+	last            time.Time
+	failed          bool
+}
+
+func (p *progress) add(content, reasoning string) {
+	p.content.WriteString(content)
+	p.reason.WriteString(reasoning)
+	if time.Since(p.last) >= progressEvery || p.content.Len()+p.reason.Len() >= progressMaxBytes {
+		p.flush()
+	}
+}
+
+func (p *progress) flush() {
+	if p.failed || p.content.Len()+p.reason.Len() == 0 {
+		return
+	}
+	err := p.send(protocol.ProgressPayload{SubtaskID: p.subtask, Status: protocol.ProgressDelta,
+		Delta: p.content.String(), Reasoning: p.reason.String()})
+	p.content.Reset()
+	p.reason.Reset()
+	p.last = time.Now()
+	p.failed = err != nil // Verbindung weg: das Ergebnis scheitert ohnehin
 }
 
 // --- Koordinatorseite ---
@@ -324,7 +372,7 @@ func (n *Node) Execute(ctx context.Context, a orchestrator.Agent, t orchestrator
 	if err := send(protocol.TaskPropose, protocol.ProposePayload{
 		SubtaskID: t.SubtaskID, Role: t.Role, Skill: t.Skill, AgentID: a.ID,
 		Messages: t.Messages, Limits: limits, JSONSchema: t.JSONSchema,
-		Tools: t.Tools, ToolChoice: t.ToolChoice, Audio: t.Audio,
+		Tools: t.Tools, ToolChoice: t.ToolChoice, Audio: t.Audio, Stream: t.OnDelta != nil,
 	}); err != nil {
 		return protocol.Result{}, err
 	}
@@ -358,6 +406,11 @@ func (n *Node) Execute(ctx context.Context, a orchestrator.Agent, t orchestrator
 			}
 			state = protocol.StateRunning
 		case protocol.TaskProgress:
+			var pp protocol.ProgressPayload
+			if t.OnDelta != nil && state == protocol.StateRunning && env.Decode(&pp) == nil &&
+				pp.SubtaskID == t.SubtaskID && pp.Status == protocol.ProgressDelta {
+				t.OnDelta(pp.Delta, pp.Reasoning)
+			}
 		case protocol.TaskCancel:
 			var c protocol.CancelPayload
 			_ = env.Decode(&c)

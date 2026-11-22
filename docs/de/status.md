@@ -32,7 +32,7 @@ Runde 1 (80 Aufgaben aus HumanEval und GSM8K, [Bericht](../../bench/de/report-r1
 
 - Der Router ist eine Stichwort-Heuristik, kein Modell; Bandit und Kompetenzprofil folgen in Phase 3.
 - Freigabeklasse `reduced` ohne Pseudonymisierung; sie wird bis dahin wie `trusted` behandelt.
-- Kein Token-Streaming: Bei `stream: true` kommt die geprüfte Antwort als ein Block.
+- Streaming zeigt die Antwort nur dort live, wo keine Prüfung mehr folgt; mit Prüfung läuft der Entwurf in die Denkphase. Anfragen mit Werkzeugen kommen weiter als ein Block.
 - Bilder in Anfragen werden nicht unterstützt. Audio nur als Transkription (`/v1/audio/transcriptions`, nur bis `trusted`); lange Aufnahmen teilt das Gateway mit `ffmpeg` in überlappende Stücke. Auf Hardware getestet: eine Aufnahme von 57 Minuten in einer einzigen Anfrage, sieben Stücke von der VM über einen Knoten mit Nemotron-Transcribe in 143 s, ohne doppelte oder fehlende Wörter an den Nahtstellen. Die Stücke laufen parallel, der Gewinn hängt aber davon ab, wie viele Anbieter frei sind; mit nur einem Modell laufen sie nacheinander.
 
 **Ressourcen**

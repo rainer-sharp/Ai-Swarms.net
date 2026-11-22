@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -36,6 +37,7 @@ func fakeBackend(t *testing.T, model string, calls *atomic.Int32) *httptest.Serv
 			var req struct {
 				Messages []protocol.ChatMessage `json:"messages"`
 				Tools    json.RawMessage        `json:"tools"`
+				Stream   bool                   `json:"stream"`
 			}
 			_ = json.NewDecoder(r.Body).Decode(&req)
 			if len(req.Tools) > 0 {
@@ -57,6 +59,19 @@ func fakeBackend(t *testing.T, model string, calls *atomic.Int32) *httptest.Serv
 				out = "SYNTHESE von " + model
 			default:
 				out = "ENTWURF von " + model
+			}
+			if req.Stream {
+				// Wort für Wort, mit Pausen, damit der Anbieter mehrere
+				// Zwischenstände schickt.
+				w.Header().Set("Content-Type", "text/event-stream")
+				for _, word := range strings.SplitAfter(out, " ") {
+					b, _ := json.Marshal(map[string]any{"choices": []map[string]any{{"delta": map[string]string{"content": word}}}})
+					fmt.Fprintf(w, "data: %s\n\n", b)
+					w.(http.Flusher).Flush()
+					time.Sleep(150 * time.Millisecond)
+				}
+				fmt.Fprint(w, "data: {\"choices\":[],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":5}}\n\ndata: [DONE]\n\n")
+				return
 			}
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"choices": []map[string]any{{"message": map[string]string{"role": "assistant", "content": out}}},
@@ -364,5 +379,48 @@ func TestShortDisconnectKeepsAgents(t *testing.T) {
 	}
 	if b.calls.Load() != 1 {
 		t.Fatalf("aufrufe bei b: %d", b.calls.Load())
+	}
+}
+
+// TestStreamOverNetwork: Ein gestreamter Auftrag an den Agenten eines anderen
+// Knotens kommt in mehreren Zwischenständen an; die Antwort ist gleich dem
+// Ergebnis, und die Quittung stimmt.
+func TestStreamOverNetwork(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	idA, _ := identity.New()
+	idB, _ := identity.New()
+	a := newTestNode(t, ctx, idA, "mistral-small", "mistral", []string{"general"}, 32000, false, idB)
+	b := newTestNode(t, ctx, idB, "qwen2.5-coder:7b", "qwen", []string{"general"}, 32000, true, idA)
+	if err := a.P2P.Connect(ctx, b.P2P.Addrs()[0]); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, func() bool { return len(a.Agents()) == 2 })
+	var mu sync.Mutex
+	var parts []string
+	ans, err := a.Ask(ctx, orchestrator.Request{
+		Messages: []protocol.ChatMessage{{Role: "user", Content: "hallo"}},
+		Pattern:  orchestrator.PatternSingle, Agents: []string{"fake/qwen2.5-coder:7b"}, Privacy: protocol.PrivacyTrusted,
+		Stream: func(e orchestrator.Event) {
+			mu.Lock()
+			defer mu.Unlock()
+			if e.Kind == orchestrator.EventContent {
+				parts = append(parts, e.Text)
+			}
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if strings.Join(parts, "") != ans.Content || ans.Content != "ENTWURF von qwen2.5-coder:7b" || len(parts) < 2 {
+		t.Fatalf("stücke %q, antwort %q", parts, ans.Content)
+	}
+	// Gegengezeichnete Quittung auf beiden Seiten: Prüfsumme und Token-Zahlen
+	// aus dem Stream passen zur Leistung des Anbieters.
+	waitFor(t, func() bool { return a.Receipts.Count() == 1 && b.Receipts.Count() == 1 })
+	if len(ans.Steps) != 1 || ans.Steps[0].CompletionTokens != 5 {
+		t.Fatalf("schritte %+v", ans.Steps)
 	}
 }

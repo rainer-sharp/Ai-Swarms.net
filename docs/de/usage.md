@@ -28,6 +28,12 @@ curl -s http://127.0.0.1:7711/v1/chat/completions \
 
 Die Antwort enthält zusätzlich das Feld `swarmainet` mit Ablauf, Prüfurteil, gefundenen Mängeln und Einschränkungen. In `steps[]` stehen je Schritt Agent, Peer, Dauer und Tokens. `selected_by` nennt, wer das Muster gewählt hat (`request`, `rules` oder `bandit`), `escalated: true`, dass die Kaskade eskaliert hat.
 
+## Streaming
+
+Mit `stream: true` kommt die Antwort Stück für Stück als Server-Sent Events im OpenAI-Format. Was noch nicht geprüft ist, steht in `delta.reasoning_content`; Open WebUI zeigt das eingeklappt als Denkphase: je Schritt eine Überschrift (Entwurf, Prüfung, Überarbeitung, Synthese, Eskalation) mit dem Modell, der Text des Entwurfs, das Urteil und das Nachdenken des Modells, das die Antwort schreibt. `delta.content` trägt nur Text, nach dem keine Prüfung mehr folgt: bei `single` sofort, bei `draft_verify_synthesize`, `parallel_verify` und `cascade` die Überarbeitung oder Eskalation. Findet der Prüfer keine Mängel, folgt der geprüfte Entwurf als ein Block.
+
+Scheitert ein Schritt, nachdem er schon Text gestreamt hat, folgt ein Trenner („Diese Fassung wurde verworfen; es folgt eine neue.“) und dann die neue Fassung. Das letzte Stück trägt `finish_reason` und das Feld `swarmainet`. Fehler vor dem ersten Stück sind gewöhnliche HTTP-Fehler (etwa 400), danach erscheinen sie im Text. Anfragen mit Werkzeugen und Modelle auf Knoten mit Version 0.3.0 oder älter antworten als ein Block.
+
 ## Optionale Header
 
 | Header | Bedeutung |

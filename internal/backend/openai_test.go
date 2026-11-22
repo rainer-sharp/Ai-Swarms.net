@@ -125,3 +125,87 @@ func TestCleanTranscript(t *testing.T) {
 		t.Fatalf("%q", got)
 	}
 }
+
+// TestChatStream: Text und Denkphase kommen Stück für Stück, die ganze
+// Antwort und die Token-Zahlen am Ende.
+func TestChatStream(t *testing.T) {
+	var got struct {
+		Stream        bool            `json:"stream"`
+		StreamOptions map[string]bool `json:"stream_options"`
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&got)
+		w.Header().Set("Content-Type", "text/event-stream")
+		for _, ev := range []string{
+			`{"choices":[{"delta":{"role":"assistant","reasoning_content":"Hm, "}}]}`,
+			`{"choices":[{"delta":{"reasoning":"gut."}}]}`,
+			`{"choices":[{"delta":{"content":"Hal"}}]}`,
+			`{"choices":[{"delta":{"content":"lo"},"finish_reason":"stop"}]}`,
+			`{"choices":[],"usage":{"prompt_tokens":7,"completion_tokens":3}}`,
+		} {
+			_, _ = io.WriteString(w, ": kommentar\ndata: "+ev+"\n\n")
+		}
+		_, _ = io.WriteString(w, "data: [DONE]\n\n")
+	}))
+	defer srv.Close()
+	var content, reasoning []string
+	resp, err := New(srv.URL, "").ChatStream(context.Background(), ChatRequest{Model: "m"}, func(c, r string) {
+		if c != "" {
+			content = append(content, c)
+		}
+		if r != "" {
+			reasoning = append(reasoning, r)
+		}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.Stream || !got.StreamOptions["include_usage"] {
+		t.Fatalf("anfrage %+v", got)
+	}
+	if resp.Content != "Hallo" || resp.PromptTokens != 7 || resp.CompletionTokens != 3 ||
+		strings.Join(content, "|") != "Hal|lo" || strings.Join(reasoning, "|") != "Hm, |gut." {
+		t.Fatalf("%+v %q %q", resp, content, reasoning)
+	}
+}
+
+// TestChatStreamFallback: Lehnt das Backend den Stream ab oder antwortet ohne
+// Stream, gilt die normale Antwort; nur Denkphase ohne Text ist ein Fehler.
+func TestChatStreamFallback(t *testing.T) {
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		var req struct {
+			Stream bool `json:"stream"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		if req.Stream {
+			http.Error(w, "stream_options unbekannt", http.StatusBadRequest)
+			return
+		}
+		_, _ = io.WriteString(w, `{"choices":[{"message":{"role":"assistant","content":"ganz"}}]}`)
+	}))
+	defer srv.Close()
+	resp, err := New(srv.URL, "").ChatStream(context.Background(), ChatRequest{Model: "m"}, func(string, string) {})
+	if err != nil || resp.Content != "ganz" || calls != 2 {
+		t.Fatalf("400: %+v %v %d", resp, err, calls)
+	}
+
+	plain := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"choices":[{"message":{"role":"assistant","content":"block"}}]}`)
+	}))
+	defer plain.Close()
+	if resp, err := New(plain.URL, "").ChatStream(context.Background(), ChatRequest{Model: "m"}, func(string, string) {}); err != nil || resp.Content != "block" {
+		t.Fatalf("ohne stream: %+v %v", resp, err)
+	}
+
+	think := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"reasoning\":\"lang\"},\"finish_reason\":\"length\"}]}\n\ndata: [DONE]\n\n")
+	}))
+	defer think.Close()
+	if _, err := New(think.URL, "").ChatStream(context.Background(), ChatRequest{Model: "m", MaxTokens: 50}, func(string, string) {}); err == nil || !strings.Contains(err.Error(), "token-limit") {
+		t.Fatalf("nur denkphase: %v", err)
+	}
+}

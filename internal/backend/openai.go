@@ -6,6 +6,7 @@
 package backend
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -85,6 +86,15 @@ func (c *Client) do(ctx context.Context, method, path string, body any, out any)
 
 func (c *Client) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
 	req.Stream = false
+	var raw json.RawMessage
+	if err := c.do(ctx, http.MethodPost, "/chat/completions", req, &raw); err != nil {
+		return ChatResponse{}, err
+	}
+	return c.decodeChat(req, bytes.NewReader(raw))
+}
+
+// decodeChat wertet eine Antwort ohne Stream aus.
+func (c *Client) decodeChat(req ChatRequest, body io.Reader) (ChatResponse, error) {
 	var raw struct {
 		Choices []struct {
 			Message      protocol.ChatMessage `json:"message"`
@@ -95,27 +105,15 @@ func (c *Client) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error
 			CompletionTokens int `json:"completion_tokens"`
 		} `json:"usage"`
 	}
-	if err := c.do(ctx, http.MethodPost, "/chat/completions", req, &raw); err != nil {
+	if err := json.NewDecoder(body).Decode(&raw); err != nil {
 		return ChatResponse{}, err
 	}
 	if len(raw.Choices) == 0 {
 		return ChatResponse{}, fmt.Errorf("backend lieferte keine antwort")
 	}
-	// Leere Antworten sind Fehlschläge, damit der Orchestrator ausweicht.
-	// Typisch bei Reasoning-Modellen: Das Nachdenken verbraucht max_tokens.
-	// Ein Werkzeug-Aufruf ohne Text ist dagegen eine vollständige Antwort.
+	// Ein Werkzeug-Aufruf ohne Text ist eine vollständige Antwort.
 	if strings.TrimSpace(raw.Choices[0].Message.Content) == "" && len(raw.Choices[0].Message.ToolCalls) == 0 {
-		if raw.Choices[0].FinishReason == "length" {
-			return ChatResponse{}, fmt.Errorf("leere antwort: token-limit (max_tokens %d) erreicht, bevor eine antwort kam", req.MaxTokens)
-		}
-		// Nur Metadaten, nie Inhalte: gpt-oss etwa antwortet leer, wenn die
-		// Nachrichten auf den Assistenten enden.
-		last := ""
-		if len(req.Messages) > 0 {
-			last = req.Messages[len(req.Messages)-1].Role
-		}
-		return ChatResponse{}, fmt.Errorf("backend lieferte eine leere antwort (finish_reason %q, %d tokens, %d nachrichten, letzte rolle %q)",
-			raw.Choices[0].FinishReason, raw.Usage.CompletionTokens, len(req.Messages), last)
+		return ChatResponse{}, emptyAnswer(req, raw.Choices[0].FinishReason, raw.Usage.CompletionTokens)
 	}
 	return ChatResponse{
 		Content:          raw.Choices[0].Message.Content,
@@ -123,6 +121,128 @@ func (c *Client) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error
 		PromptTokens:     raw.Usage.PromptTokens,
 		CompletionTokens: raw.Usage.CompletionTokens,
 	}, nil
+}
+
+// emptyAnswer: Fehler für eine Antwort ohne Text und ohne Werkzeug-Aufruf.
+// Leere Antworten sind Fehlschläge, damit der Orchestrator ausweicht.
+// Typisch bei Reasoning-Modellen: Das Nachdenken verbraucht max_tokens.
+func emptyAnswer(req ChatRequest, finish string, tokens int) error {
+	if finish == "length" {
+		return fmt.Errorf("leere antwort: token-limit (max_tokens %d) erreicht, bevor eine antwort kam", req.MaxTokens)
+	}
+	// Nur Metadaten, nie Inhalte: gpt-oss etwa antwortet leer, wenn die
+	// Nachrichten auf den Assistenten enden.
+	last := ""
+	if len(req.Messages) > 0 {
+		last = req.Messages[len(req.Messages)-1].Role
+	}
+	return fmt.Errorf("backend lieferte eine leere antwort (finish_reason %q, %d tokens, %d nachrichten, letzte rolle %q)",
+		finish, tokens, len(req.Messages), last)
+}
+
+// ChatStream fragt das Backend mit stream: true und meldet jeden neuen Text
+// an onDelta: content für die Antwort, reasoning für die Denkphase des
+// Modells (reasoning_content oder reasoning, je nach Server). Zurück kommt die
+// ganze Antwort wie bei Chat. Lehnt das Backend die Streaming-Anfrage ab
+// (400/422, etwa wegen stream_options) oder antwortet es ohne Stream, gilt
+// das Ergebnis von Chat. Werkzeug-Aufrufe streamt es nicht; mit Werkzeugen
+// bitte Chat verwenden.
+func (c *Client) ChatStream(ctx context.Context, req ChatRequest, onDelta func(content, reasoning string)) (ChatResponse, error) {
+	body := struct {
+		ChatRequest
+		StreamOptions map[string]bool `json:"stream_options"`
+	}{req, map[string]bool{"include_usage": true}}
+	body.Stream = true
+	b, err := json.Marshal(body)
+	if err != nil {
+		return ChatResponse{}, err
+	}
+	hreq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/chat/completions", bytes.NewReader(b))
+	if err != nil {
+		return ChatResponse{}, err
+	}
+	hreq.Header.Set("Content-Type", "application/json")
+	hreq.Header.Set("Accept", "text/event-stream")
+	if c.APIKey != "" {
+		hreq.Header.Set("Authorization", "Bearer "+c.APIKey)
+	}
+	resp, err := c.HTTP.Do(hreq)
+	if err != nil {
+		return ChatResponse{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnprocessableEntity {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+		return c.Chat(ctx, req)
+	}
+	if resp.StatusCode/100 != 2 {
+		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return ChatResponse{}, fmt.Errorf("backend %s/chat/completions: %s: %s", c.BaseURL, resp.Status, strings.TrimSpace(string(msg)))
+	}
+	if !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream") {
+		// Server ohne Streaming: Antwort wie bei Chat auswerten.
+		return c.decodeChat(req, resp.Body)
+	}
+	var out ChatResponse
+	var content strings.Builder
+	finish := ""
+	sc := bufio.NewScanner(resp.Body)
+	sc.Buffer(make([]byte, 64<<10), 4<<20)
+	for sc.Scan() {
+		data, ok := strings.CutPrefix(sc.Text(), "data:")
+		if !ok {
+			continue // Kommentare, event:, Leerzeilen
+		}
+		data = strings.TrimSpace(data)
+		if data == "[DONE]" {
+			break
+		}
+		var ev struct {
+			Choices []struct {
+				Delta struct {
+					Content          string `json:"content"`
+					ReasoningContent string `json:"reasoning_content"`
+					Reasoning        string `json:"reasoning"`
+				} `json:"delta"`
+				FinishReason *string `json:"finish_reason"`
+			} `json:"choices"`
+			Usage *struct {
+				PromptTokens     int `json:"prompt_tokens"`
+				CompletionTokens int `json:"completion_tokens"`
+			} `json:"usage"`
+			Error *struct {
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		if err := json.Unmarshal([]byte(data), &ev); err != nil {
+			return ChatResponse{}, fmt.Errorf("backend-stream nicht lesbar: %w", err)
+		}
+		if ev.Error != nil {
+			return ChatResponse{}, fmt.Errorf("backend meldet im stream: %s", ev.Error.Message)
+		}
+		if ev.Usage != nil {
+			out.PromptTokens, out.CompletionTokens = ev.Usage.PromptTokens, ev.Usage.CompletionTokens
+		}
+		for _, ch := range ev.Choices {
+			d := ch.Delta
+			rs := d.ReasoningContent + d.Reasoning
+			if d.Content != "" || rs != "" {
+				content.WriteString(d.Content)
+				onDelta(d.Content, rs)
+			}
+			if ch.FinishReason != nil {
+				finish = *ch.FinishReason
+			}
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return ChatResponse{}, fmt.Errorf("backend-stream abgebrochen: %w", err)
+	}
+	out.Content = content.String()
+	if strings.TrimSpace(out.Content) == "" {
+		return ChatResponse{}, emptyAnswer(req, finish, out.CompletionTokens)
+	}
+	return out, nil
 }
 
 // errNoTranscriptionAPI: Das Backend kennt /audio/transcriptions nicht.

@@ -65,7 +65,7 @@ Receivers MUST discard the message if
 | `TASK_BID` | provider → coordinator | `BidPayload` (from phase 3) |
 | `TASK_ACCEPT` | provider → coordinator | `subtask_id`, `lease_expiry` |
 | `TASK_REJECT` | provider → coordinator | `subtask_id`, `reason` (worded generally) |
-| `TASK_PROGRESS` | provider → coordinator | status or token stream |
+| `TASK_PROGRESS` | provider → coordinator | status or token stream (`ProgressPayload`, § 4.2) |
 | `TASK_RESULT` | provider → coordinator | `Result` |
 | `VERIFY_REQUEST` | coordinator → verifier | from phase 3, until then `TASK_PROPOSE` with `role: verifier` |
 | `TASK_CANCEL` | both | `subtask_id`, `reason` |
@@ -111,6 +111,8 @@ The announcement contains no prompts, internal IPs, hardware or energy data and 
 `messages[]` follows the OpenAI format including `tool_calls` (assistant), `tool_call_id` and `name` (role `tool`). `tools` and `tool_choice` (optional) are the tool descriptions of the calling application and are passed to the model unchanged. The provider does not execute tools; it only returns the calls, which are executed at the requester. Which tools an agent may see is therefore decided by the requester ([privacy classes](privacy-classes.md), rule 6). A provider MUST refuse a task with `tools` if the chosen agent does not announce `tools` (reason `agent beherrscht keine werkzeuge`, "agent does not support tools").
 
 `audio` (optional) carries a recording for a transcription: `{ "data": <base64>, "mime", "filename", "language", "prompt" }`, at most 2.75 MiB of audio (`MaxAudioBytes`), so that the message stays below 4 MiB. Such a subtask has the skill `audio.transcribe`, the result is the transcript in `result.content`. Voices are personal data: a coordinator MUST NOT send audio with privacy class `public`, and a provider MUST refuse it (`audio nur im vertrauten kreis`, "audio only within the trusted circle"), as well as audio to an agent without `audio.transcribe` (`agent verarbeitet kein audio`) and empty or too large recordings (`aufnahme leer oder zu groß`). The provider passes the recording to its backend's `/audio/transcriptions`, or, if the backend has no such endpoint, to the chat as `audio_url`. A coordinator splits longer recordings into overlapping pieces, each its own subtask, and joins the transcripts itself.
+
+`stream` (optional, missing = false) asks for intermediate results. The provider then sends `TASK_PROGRESS` with `{ "subtask_id", "status": "delta", "delta", "reasoning" }` while the model is working: `delta` is new text of the answer, `reasoning` new text of the model's thinking phase, both since the previous progress message. It SHOULD bundle them (the reference implementation sends at most one message every 100 ms or 16 KiB). The concatenated `delta` texts are a preview: what counts is the `TASK_RESULT`, its digest and the receipt. Providers that do not know `stream` send no progress, and the coordinator waits for the result as before. Tasks with `tools` or `audio` are not streamed.
 
 `depth` counts the delegations so far (1 at the first receiver). A provider MUST refuse if `depth > max_depth`. Further delegations inherit equal or stricter limits and consume the same budget.
 

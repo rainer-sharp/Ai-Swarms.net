@@ -4,6 +4,12 @@
 
 All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/) with the usual caveat for 0.x: incompatible changes are still possible between minor versions.
 
+## [Unreleased]
+
+### Added
+
+- **Streaming:** with `stream: true`, the answer arrives piece by piece, also from models on other nodes. Unreviewed text (draft, verdict, the model's thinking) goes into `delta.reasoning_content`, which Open WebUI shows as a collapsed thinking phase; `delta.content` only carries text after which no review follows. If the verifier finds no flaws, the reviewed draft follows as one block. Requests with tools still answer as one block. New optional protocol fields: `stream` in the subtask and `delta`/`reasoning` in `TASK_PROGRESS`; providers with older versions answer as one block. ([usage](docs/usage.md#streaming), [protocol](spec/protocol-v0.1.md) § 4.2)
+
 ## [0.3.0] – 2026-11-22
 
 Phase 3 begins: every node keeps a competence profile and can choose the pattern by bandit; recordings can be transcribed through the swarm. The protocol stays at version 0.1 and only gains the optional field `audio`: nodes with 0.3.0 and 0.2.0 work together, but only a node with 0.3.0 can provide transcription. Existing configurations keep working without changes; the new section `cooperation` is optional.

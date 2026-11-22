@@ -8,22 +8,24 @@ package gateway
 import (
 	"cmp"
 	"context"
+	"crypto/rand"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/audio"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/orchestrator"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/profile"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
-	"os"
-	"sync"
 )
 
 type Backend interface {
@@ -233,7 +235,17 @@ func chat(b Backend, w http.ResponseWriter, r *http.Request) {
 		Trace:      r.Header.Get("X-SwarmAiNet-Trace") == "1",
 	}
 	oreq.Limits.MaxTokens = req.MaxTokens
+	var sw *sseWriter
+	if req.Stream {
+		sw = newSSEWriter(w, req.Model)
+		defer sw.stop()
+		oreq.Stream = sw.event
+	}
 	ans, err := b.Ask(r.Context(), oreq)
+	if sw != nil && sw.begun() {
+		sw.finish(ans, err)
+		return
+	}
 	if errors.Is(err, orchestrator.ErrToolsNotAllowed) || errors.Is(err, orchestrator.ErrPrivacy) {
 		writeErr(w, http.StatusBadRequest, err) // Ursache liegt in der Anfrage
 		return
@@ -242,36 +254,15 @@ func chat(b Backend, w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadGateway, err)
 		return
 	}
+	if sw != nil {
+		sw.finish(ans, nil)
+		return
+	}
 	id := "chatcmpl-" + ans.TaskID
 	created := time.Now().Unix()
 	finish := "stop"
 	if len(ans.ToolCalls) > 0 {
 		finish = "tool_calls"
-	}
-	if req.Stream {
-		// Kompatibilität mit Clients, die immer streamen (z. B. Open WebUI):
-		// die geprüfte Antwort kommt als ein Block.
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-		chunk := func(delta map[string]any, finish any) {
-			b, _ := json.Marshal(map[string]any{
-				"id": id, "object": "chat.completion.chunk", "created": created, "model": req.Model,
-				"choices": []map[string]any{{"index": 0, "delta": delta, "finish_reason": finish}},
-			})
-			fmt.Fprintf(w, "data: %s\n\n", b)
-		}
-		delta := map[string]any{"role": "assistant", "content": ans.Content}
-		if len(ans.ToolCalls) > 0 {
-			calls := make([]map[string]any, len(ans.ToolCalls))
-			for i, c := range ans.ToolCalls {
-				calls[i] = map[string]any{"index": i, "id": c.ID, "type": c.Type, "function": c.Function}
-			}
-			delta["tool_calls"] = calls
-		}
-		chunk(delta, nil)
-		chunk(map[string]any{}, finish)
-		fmt.Fprint(w, "data: [DONE]\n\n")
-		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"id": id, "object": "chat.completion", "created": created, "model": req.Model,
@@ -281,6 +272,164 @@ func chat(b Backend, w http.ResponseWriter, r *http.Request) {
 		}},
 		"swarmainet": ans,
 	})
+}
+
+// keepAliveEvery: So oft geht während einer Pause im Stream ein SSE-Kommentar,
+// damit Clients und Proxys die Verbindung nicht für tot halten.
+const keepAliveEvery = 15 * time.Second
+
+// sseWriter schreibt eine Antwort als Server-Sent Events im Format der
+// OpenAI-Chat-API. Der Kopf geht erst mit dem ersten Zwischenstand hinaus;
+// scheitert die Anfrage vorher, bleibt es bei einem normalen HTTP-Fehler.
+// Die Denkphase steht in delta.reasoning_content, die Antwort in delta.content.
+type sseWriter struct {
+	w       http.ResponseWriter
+	model   string
+	id      string
+	created int64
+
+	mu      sync.Mutex
+	started bool
+	closed  bool            // Anfrage beendet: nichts mehr schreiben
+	cur     strings.Builder // seit dem letzten Neustart gestreamter Antworttext
+	last    time.Time
+	quit    chan struct{}
+}
+
+func newSSEWriter(w http.ResponseWriter, model string) *sseWriter {
+	var b [12]byte
+	_, _ = rand.Read(b[:])
+	s := &sseWriter{w: w, model: model, id: "chatcmpl-" + hex.EncodeToString(b[:]), created: time.Now().Unix(), quit: make(chan struct{})}
+	go s.keepAlive()
+	return s
+}
+
+func (s *sseWriter) keepAlive() {
+	tk := time.NewTicker(keepAliveEvery / 3)
+	defer tk.Stop()
+	for {
+		select {
+		case <-s.quit:
+			return
+		case <-tk.C:
+			s.mu.Lock()
+			if s.started && !s.closed && time.Since(s.last) >= keepAliveEvery {
+				_, _ = io.WriteString(s.w, ": keep-alive\n\n")
+				s.flushLocked()
+			}
+			s.mu.Unlock()
+		}
+	}
+}
+
+func (s *sseWriter) stop() {
+	s.mu.Lock()
+	s.closed = true
+	s.mu.Unlock()
+	close(s.quit)
+}
+
+func (s *sseWriter) begun() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.started
+}
+
+// startLocked schickt Kopf und Rolle.
+func (s *sseWriter) startLocked() {
+	if s.started {
+		return
+	}
+	s.started = true
+	s.w.Header().Set("Content-Type", "text/event-stream")
+	s.w.Header().Set("Cache-Control", "no-cache")
+	s.w.Header().Set("X-Accel-Buffering", "no")
+	s.w.WriteHeader(http.StatusOK)
+	s.chunkLocked(map[string]any{"role": "assistant", "content": ""}, nil, nil)
+}
+
+func (s *sseWriter) chunkLocked(delta map[string]any, finish any, extra *orchestrator.Answer) {
+	m := map[string]any{
+		"id": s.id, "object": "chat.completion.chunk", "created": s.created, "model": s.model,
+		"choices": []map[string]any{{"index": 0, "delta": delta, "finish_reason": finish}},
+	}
+	if extra != nil {
+		m["swarmainet"] = extra
+	}
+	b, _ := json.Marshal(m)
+	fmt.Fprintf(s.w, "data: %s\n\n", b)
+	s.flushLocked()
+}
+
+func (s *sseWriter) flushLocked() {
+	s.last = time.Now()
+	if f, ok := s.w.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+// restartNote trennt eine verworfene Fassung von der neuen.
+const restartNote = "\n\n---\n*Diese Fassung wurde verworfen; es folgt eine neue.*\n\n"
+
+// event nimmt einen Zwischenstand des Orchestrators an.
+func (s *sseWriter) event(e orchestrator.Event) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.startLocked()
+	switch e.Kind {
+	case orchestrator.EventReasoning:
+		s.chunkLocked(map[string]any{"reasoning_content": e.Text}, nil, nil)
+	case orchestrator.EventContent:
+		s.cur.WriteString(e.Text)
+		s.chunkLocked(map[string]any{"content": e.Text}, nil, nil)
+	case orchestrator.EventRestart:
+		if s.cur.Len() > 0 {
+			s.cur.Reset()
+			s.chunkLocked(map[string]any{"content": restartNote}, nil, nil)
+		}
+	}
+}
+
+// finish schickt, was von der geprüften Antwort noch fehlt, dann das Ende mit
+// den Metadaten. Ist der gestreamte Text kein Anfang der Antwort, folgt die
+// ganze Antwort nach einem Trenner. Ein Fehler nach Beginn des Streams
+// erscheint als Text, weil der Statuscode schon gesendet ist.
+func (s *sseWriter) finish(ans *orchestrator.Answer, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.startLocked()
+	if err != nil {
+		s.chunkLocked(map[string]any{"content": "\n\n**Fehler:** " + err.Error()}, nil, nil)
+		s.chunkLocked(map[string]any{}, "stop", ans)
+		_, _ = io.WriteString(s.w, "data: [DONE]\n\n")
+		s.flushLocked()
+		return
+	}
+	cur := s.cur.String()
+	delta := map[string]any{}
+	switch {
+	case strings.HasPrefix(ans.Content, cur):
+		if rest := ans.Content[len(cur):]; rest != "" {
+			delta["content"] = rest
+		}
+	default:
+		delta["content"] = restartNote + ans.Content
+	}
+	finish := "stop"
+	if len(ans.ToolCalls) > 0 {
+		finish = "tool_calls"
+		calls := make([]map[string]any, len(ans.ToolCalls))
+		for i, c := range ans.ToolCalls {
+			calls[i] = map[string]any{"index": i, "id": c.ID, "type": c.Type, "function": c.Function}
+		}
+		delta["tool_calls"] = calls
+	}
+	if len(delta) > 0 {
+		s.chunkLocked(delta, nil, nil)
+	}
+	s.chunkLocked(map[string]any{}, finish, ans)
+	_, _ = io.WriteString(s.w, "data: [DONE]\n\n")
+	s.flushLocked()
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {

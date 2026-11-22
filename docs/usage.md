@@ -28,6 +28,12 @@ curl -s http://127.0.0.1:7711/v1/chat/completions \
 
 The response additionally contains the field `swarmainet` with the procedure, the review verdict, the flaws found and limitations. `steps[]` lists agent, peer, duration and tokens for each step. `selected_by` says who chose the pattern (`request`, `rules` or `bandit`), `escalated: true` that the cascade escalated.
 
+## Streaming
+
+With `stream: true`, the answer arrives piece by piece as Server-Sent Events in the OpenAI format. Anything not yet reviewed goes into `delta.reasoning_content`, which Open WebUI shows collapsed as the thinking phase: a heading per step (draft, review, revision, synthesis, escalation) with the model, the text of the draft, the verdict and the thinking of the model that writes the answer. `delta.content` only carries text after which no review follows: with `single` straight away, with `draft_verify_synthesize`, `parallel_verify` and `cascade` the revision or escalation. If the verifier finds no flaws, the reviewed draft follows as one block.
+
+If a step fails after it has already streamed text, a separator follows ("Diese Fassung wurde verworfen; es folgt eine neue.") and then the new version. The last chunk carries `finish_reason` and the field `swarmainet`. Errors before the first piece are ordinary HTTP errors (e.g. 400); after it, they appear in the text. Requests with tools, and models on nodes with version 0.3.0 or older, answer as one block.
+
 ## Optional headers
 
 | Header | Meaning |
