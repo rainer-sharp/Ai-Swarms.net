@@ -316,6 +316,7 @@ type run struct {
 
 	emitMu   sync.Mutex
 	reasoned bool // schon Text in der Denkphase
+	blank    bool // Denkphase endet mit einer Leerzeile
 }
 
 // target: wohin der Text eines Schritts beim Streaming geht.
@@ -346,7 +347,7 @@ func (r *run) emit(k EventKind, s string) {
 	r.emitMu.Lock()
 	defer r.emitMu.Unlock()
 	if k == EventReasoning {
-		r.reasoned = true
+		r.reasoned, r.blank = true, strings.HasSuffix(s, "\n\n")
 	}
 	r.req.Stream(Event{Kind: k, Text: s})
 }
@@ -354,7 +355,7 @@ func (r *run) emit(k EventKind, s string) {
 // note schreibt einen eigenen Absatz in die Denkphase.
 func (r *run) note(s string) {
 	r.emitMu.Lock()
-	sep := r.reasoned
+	sep := r.reasoned && !r.blank
 	r.emitMu.Unlock()
 	if sep {
 		s = "\n\n" + s

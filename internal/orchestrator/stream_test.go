@@ -111,6 +111,9 @@ func TestStreamDraftVerify(t *testing.T) {
 	if strings.Contains(r, "verdict") || ev.content.String() != ans.Content || ans.Content != "korrigiert mit test" {
 		t.Fatalf("denkphase %q, antwort %q", r, ev.content.String())
 	}
+	if strings.Contains(r, "\n\n\n") {
+		t.Fatalf("mehr als eine leerzeile:\n%s", r)
+	}
 	if !strings.HasPrefix(r, "**Entwurf") {
 		t.Fatalf("denkphase beginnt mit leerzeilen: %q", r)
 	}
