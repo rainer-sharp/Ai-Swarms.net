@@ -629,7 +629,8 @@ func (n *Node) handleCapability(s network.Stream) {
 
 // peerLost: Die letzte Verbindung zu einem Peer ist weg. Das ist oft nur
 // kurz, deshalb bleibt seine Anzeige capabilityGrace lang gültig (ein Auftrag
-// wählt ihn dann selbst neu an) und vertraute Peers werden sofort neu angewählt.
+// wählt ihn dann selbst neu an) und vertraute Peers werden neu angewählt
+// (redialLost).
 func (n *Node) peerLost(ctx context.Context, c network.Conn) {
 	p := c.RemotePeer()
 	if n.connected(p) {
@@ -637,7 +638,7 @@ func (n *Node) peerLost(ctx context.Context, c network.Conn) {
 	}
 	if ctx.Err() == nil && n.wanted(p) {
 		slog.Info("verbindung zu peer getrennt", "peer", p, "adresse", c.RemoteMultiaddr(), "dauer", time.Since(c.Stat().Opened).Round(time.Second))
-		go n.dialKnown(ctx, p)
+		go n.redialLost(ctx, p)
 	}
 	time.AfterFunc(capabilityGrace, func() {
 		if !n.connected(p) {

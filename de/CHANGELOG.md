@@ -18,6 +18,10 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 
 - **Agenten ohne passende Fähigkeit** dienen nur noch als Rückfall, wenn gar kein Agent passt; Agenten mit nur Audio-Fähigkeiten bekommen nie Textaufgaben, und Text-Generalisten (`general`) nie Audio.
 
+### Behoben
+
+- **Wiederverbinden nach kurzem Abriss:** Zwei vertraute Knoten wählten einander bisher im selben Augenblick neu an. Über TCP mit Port-Wiederverwendung entstand dabei ein Simultaneous Open, bei dem der Handshake auf beiden Seiten scheiterte, und beide sperrten einander danach einige Sekunden (dial backoff); ein Auftrag in dieser Zeit scheiterte, obwohl beide erreichbar waren. Jetzt wählt nur die Seite mit der kleineren Peer-ID sofort neu, die andere nach 2 bis 3 Sekunden, falls noch nötig, und ein Auftrag, der auf eine Wählsperre trifft, hebt sie auf und wählt einmal neu. ([Protokoll](../spec/de/protocol-v0.1.md) § 4.1)
+
 ## [0.2.0] – 2026-11-21
 
 Das Protokoll ist unverändert (Version 0.1): Knoten mit 0.2.0 und 0.1.0 arbeiten zusammen. Bestehende Konfigurationen funktionieren ohne Änderung weiter.

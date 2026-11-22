@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"math/rand/v2"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/network"
@@ -217,6 +218,33 @@ func (n *Node) dialKnown(ctx context.Context, p peer.ID) {
 		return
 	}
 	k.fails, k.next = 0, time.Time{}
+}
+
+// redialYield: So lange lässt der Peer mit der größeren ID dem anderen den
+// Vortritt beim Neuwählen, plus bis zu einer Sekunde Zufall.
+const redialYield = 2 * time.Second
+
+// redialLost wählt einen Peer nach einem Abriss neu an. Wählen beide Seiten
+// zugleich, entsteht über TCP mit Port-Wiederverwendung ein Simultaneous
+// Open: eine Verbindung, auf der beide Client sind; der Sicherheits-Handshake
+// scheitert auf beiden Seiten und beide sperren einander (dial backoff).
+// Deshalb wählt nur der Peer mit der kleineren ID sofort; der andere wartet
+// und wählt nur, wenn dann noch keine Verbindung besteht (etwa weil der
+// andere hinter NAT nicht durchkommt).
+func (n *Node) redialLost(ctx context.Context, p peer.ID) {
+	if n.host.ID() > p {
+		t := time.NewTimer(redialYield + rand.N(time.Second))
+		select {
+		case <-ctx.Done():
+			t.Stop()
+			return
+		case <-t.C:
+		}
+		if n.connected(p) {
+			return
+		}
+	}
+	n.dialKnown(ctx, p)
 }
 
 // connectKnown baut im privaten Schwarm Verbindungen zu allen bekannten

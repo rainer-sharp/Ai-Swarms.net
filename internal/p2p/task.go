@@ -18,6 +18,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	lp2pproto "github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/libp2p/go-libp2p/p2p/net/swarm"
 
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/orchestrator"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
@@ -268,6 +269,24 @@ const (
 	rejectBusy       = "busy"            // Ratenlimit (spec/p2p-layer.md § 8)
 )
 
+// newTaskStream öffnet einen Auftrags-Stream. Trifft er auf eine Wählsperre
+// (dial backoff), etwa nach einem gescheiterten gleichzeitigen Neuwählen
+// beider Seiten (redialLost), hebt er sie für diesen Peer auf und versucht es
+// einmal neu: Der Auftrag ist wichtiger als die Schonung des Netzes.
+func (n *Node) newTaskStream(ctx context.Context, p peer.ID) (network.Stream, error) {
+	s, err := n.host.NewStream(allowLimited(ctx), p, lp2pproto.ID(protocol.ProtoTask))
+	if err == nil || !errors.Is(err, swarm.ErrDialBackoff) {
+		return s, err
+	}
+	sw, ok := n.host.Network().(*swarm.Swarm)
+	if !ok {
+		return nil, err
+	}
+	slog.Debug("wählsperre aufgehoben, neuer versuch", "peer", p)
+	sw.Backoff().Clear(p)
+	return n.host.NewStream(allowLimited(ctx), p, lp2pproto.ID(protocol.ProtoTask))
+}
+
 // Execute schickt einen Teilauftrag an einen anderen Knoten (implementiert
 // orchestrator.Executor für entfernte Agenten).
 func (n *Node) Execute(ctx context.Context, a orchestrator.Agent, t orchestrator.Task) (protocol.Result, error) {
@@ -278,7 +297,7 @@ func (n *Node) Execute(ctx context.Context, a orchestrator.Agent, t orchestrator
 	if n.member != nil && (!n.Trusted(pid) || !n.memberCanTask()) {
 		return protocol.Result{}, errors.New("mitgliedsnetz: aufträge nur zwischen zugelassenen mitgliedern")
 	}
-	s, err := n.host.NewStream(allowLimited(ctx), pid, lp2pproto.ID(protocol.ProtoTask))
+	s, err := n.newTaskStream(ctx, pid)
 	if err != nil {
 		return protocol.Result{}, err
 	}

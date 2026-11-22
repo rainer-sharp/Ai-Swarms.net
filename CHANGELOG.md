@@ -18,6 +18,10 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 - **Agents without a matching skill** only serve as a fallback if no agent fits at all; agents with only audio skills never receive text tasks, and text generalists (`general`) never receive audio.
 
+### Fixed
+
+- **Reconnecting after a short disconnect:** two trusted nodes used to redial each other at the same moment. Over TCP with port reuse, this produced a simultaneous open in which the handshake failed on both sides, and both then blocked each other for several seconds (dial backoff); a task in that window failed although both were reachable. Now only the side with the smaller peer ID redials immediately, the other after 2 to 3 seconds if still needed, and a task that hits a dial backoff clears it and dials once more. ([protocol](spec/protocol-v0.1.md) § 4.1)
+
 ## [0.2.0] – 2026-11-21
 
 The protocol is unchanged (version 0.1): nodes with 0.2.0 and 0.1.0 work together. Existing configurations keep working without changes.

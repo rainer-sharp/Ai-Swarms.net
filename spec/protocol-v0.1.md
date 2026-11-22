@@ -92,7 +92,7 @@ Receivers MUST discard the message if
 
 `tools` (optional, missing = false) indicates that the model can handle tool calls in the OpenAI format (configuration `models[].tools: true`).
 
-The announcement contains no prompts, internal IPs, hardware or energy data and not the reason for availability. `peer_id` MUST match the envelope sender. TTL: 5 minutes, fetched when a connection is established and every minute. If the last connection to a peer breaks, its announcement remains valid for another 30 seconds (after that it is discarded, even before the TTL expires), and trusted peers are redialled immediately.
+The announcement contains no prompts, internal IPs, hardware or energy data and not the reason for availability. `peer_id` MUST match the envelope sender. TTL: 5 minutes, fetched when a connection is established and every minute. If the last connection to a peer breaks, its announcement remains valid for another 30 seconds (after that it is discarded, even before the TTL expires), and trusted peers are redialled: the side with the smaller peer ID immediately, the other only after 2 to 3 seconds and only if no connection exists by then. If both dialled at the same time, TCP with port reuse would produce a simultaneous open in which the handshake fails on both sides. A subtask that hits libp2p's dial backoff clears it for this peer and dials once more.
 
 ### 4.2 ProposePayload
 

@@ -92,7 +92,7 @@ Empfänger MÜSSEN verwerfen, wenn
 
 `tools` (optional, fehlt = false) zeigt an, dass das Modell Werkzeug-Aufrufe im OpenAI-Format beherrscht (Konfiguration `models[].tools: true`).
 
-Die Anzeige enthält keine Prompts, internen IPs, Hardware- oder Energiedaten und nicht den Grund der Verfügbarkeit. `peer_id` MUSS dem Envelope-Absender entsprechen. TTL: 5 Minuten, Abruf beim Verbindungsaufbau und jede Minute. Reißt die letzte Verbindung zu einem Peer ab, bleibt seine Anzeige noch 30 Sekunden gültig (danach wird sie verworfen, auch vor Ablauf der TTL), und vertraute Peers werden sofort neu angewählt.
+Die Anzeige enthält keine Prompts, internen IPs, Hardware- oder Energiedaten und nicht den Grund der Verfügbarkeit. `peer_id` MUSS dem Envelope-Absender entsprechen. TTL: 5 Minuten, Abruf beim Verbindungsaufbau und jede Minute. Reißt die letzte Verbindung zu einem Peer ab, bleibt seine Anzeige noch 30 Sekunden gültig (danach wird sie verworfen, auch vor Ablauf der TTL), und vertraute Peers werden neu angewählt: von der Seite mit der kleineren Peer-ID sofort, von der anderen erst nach 2 bis 3 Sekunden und nur, wenn bis dahin keine Verbindung besteht. Wählten beide zugleich, entstünde über TCP mit Port-Wiederverwendung ein Simultaneous Open, bei dem der Handshake auf beiden Seiten scheitert. Ein Teilauftrag, der auf die Wählsperre von libp2p trifft (dial backoff), hebt sie für diesen Peer auf und wählt einmal neu.
 
 ### 4.2 ProposePayload
 
