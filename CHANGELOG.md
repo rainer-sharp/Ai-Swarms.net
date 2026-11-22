@@ -4,7 +4,9 @@
 
 All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/) with the usual caveat for 0.x: incompatible changes are still possible between minor versions.
 
-## [Unreleased]
+## [0.3.0] – 2026-11-22
+
+Phase 3 begins: every node keeps a competence profile and can choose the pattern by bandit; recordings can be transcribed through the swarm. The protocol stays at version 0.1 and only gains the optional field `audio`: nodes with 0.3.0 and 0.2.0 work together, but only a node with 0.3.0 can provide transcription. Existing configurations keep working without changes; the new section `cooperation` is optional.
 
 ### Added
 
@@ -21,6 +23,12 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 ### Fixed
 
 - **Reconnecting after a short disconnect:** two trusted nodes used to redial each other at the same moment. Over TCP with port reuse, this produced a simultaneous open in which the handshake failed on both sides, and both then blocked each other for several seconds (dial backoff); a task in that window failed although both were reachable. Now only the side with the smaller peer ID redials immediately, the other after 2 to 3 seconds if still needed, and a task that hits a dial backoff clears it and dials once more. ([protocol](spec/protocol-v0.1.md) § 4.1)
+
+### Upgrade notes
+
+- For transcription, the node with the model needs 0.3.0, as does the node whose gateway receives the recording. To split recordings over 2.75 MiB, that gateway node also needs `ffmpeg` and `ffprobe` (Debian/Ubuntu: `apt install ffmpeg`).
+- On first start, the node creates `~/.swarmainet/profile.json` for the competence profile. The pattern choice only changes with `cooperation.selection: bandit`.
+- The fix for reconnecting only takes full effect once both sides of a connection run 0.3.0.
 
 ## [0.2.0] – 2026-11-21
 
@@ -50,5 +58,6 @@ The protocol is unchanged (version 0.1): nodes with 0.2.0 and 0.1.0 work togethe
 
 First public version: local swarm (phase 1) and P2P layer with private networks and membership networks, tested on hardware across two sites.
 
+[0.3.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rainer-sharp/Ai-Swarms.net/releases/tag/v0.1.0

@@ -4,7 +4,9 @@
 
 Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/); die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/) mit dem üblichen Vorbehalt für 0.x: Zwischen Minor-Versionen sind inkompatible Änderungen noch möglich.
 
-## [Unveröffentlicht]
+## [0.3.0] – 2026-11-22
+
+Phase 3 beginnt: Jeder Knoten führt ein Kompetenzprofil und kann das Muster per Bandit wählen; Aufnahmen lassen sich über den Schwarm abschreiben. Das Protokoll bleibt bei Version 0.1 und bekommt nur das optionale Feld `audio`: Knoten mit 0.3.0 und 0.2.0 arbeiten zusammen, Transkription anbieten kann aber nur ein Knoten mit 0.3.0. Bestehende Konfigurationen funktionieren ohne Änderung weiter; der neue Abschnitt `cooperation` ist optional.
 
 ### Hinzugefügt
 
@@ -21,6 +23,12 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 ### Behoben
 
 - **Wiederverbinden nach kurzem Abriss:** Zwei vertraute Knoten wählten einander bisher im selben Augenblick neu an. Über TCP mit Port-Wiederverwendung entstand dabei ein Simultaneous Open, bei dem der Handshake auf beiden Seiten scheiterte, und beide sperrten einander danach einige Sekunden (dial backoff); ein Auftrag in dieser Zeit scheiterte, obwohl beide erreichbar waren. Jetzt wählt nur die Seite mit der kleineren Peer-ID sofort neu, die andere nach 2 bis 3 Sekunden, falls noch nötig, und ein Auftrag, der auf eine Wählsperre trifft, hebt sie auf und wählt einmal neu. ([Protokoll](../spec/de/protocol-v0.1.md) § 4.1)
+
+### Hinweise zum Aktualisieren
+
+- Für die Transkription braucht der Knoten mit dem Modell 0.3.0, ebenso der Knoten, dessen Gateway die Aufnahme annimmt. Um Aufnahmen über 2,75 MiB zu teilen, braucht dieser Gateway-Knoten außerdem `ffmpeg` und `ffprobe` (Debian/Ubuntu: `apt install ffmpeg`).
+- Beim ersten Start legt der Knoten `~/.swarmainet/profile.json` für das Kompetenzprofil an. Die Wahl des Musters ändert sich nur mit `cooperation.selection: bandit`.
+- Die Korrektur beim Wiederverbinden wirkt erst ganz, wenn beide Seiten einer Verbindung 0.3.0 verwenden.
 
 ## [0.2.0] – 2026-11-21
 
@@ -50,5 +58,6 @@ Das Protokoll ist unverändert (Version 0.1): Knoten mit 0.2.0 und 0.1.0 arbeite
 
 Erste öffentliche Version: lokaler Schwarm (Phase 1) und P2P-Schicht mit privaten Netzen und Mitgliedsnetzen, auf Hardware über zwei Standorte getestet.
 
+[0.3.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rainer-sharp/Ai-Swarms.net/releases/tag/v0.1.0
