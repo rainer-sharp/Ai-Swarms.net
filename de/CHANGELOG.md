@@ -6,6 +6,10 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 
 ## [Unveröffentlicht]
 
+## [0.5.0] – 2026-11-23
+
+Fremde Knoten können jetzt auch bei persönlichen Anfragen helfen: Mit der Freigabeklasse `reduced` sehen sie nur Platzhalter statt Namen, Adressen und Kontonummern. Pause und Sofort-Stopp überstehen jetzt einen Neustart. Das Protokoll bleibt bei Version 0.1: Knoten mit 0.5.0 und 0.4.0 arbeiten zusammen. Bestehende Konfigurationen funktionieren ohne Änderung weiter.
+
 ### Hinzugefügt
 
 - **Freigabeklasse `reduced` mit Pseudonymisierung:** Auch fremde Knoten bekommen jetzt `reduced`-Anfragen, aber nur mit Platzhaltern wie `[PERSON_1]` oder `[EMAIL_1]` statt Namen, Firmen, Orten, E-Mail-Adressen, Telefonnummern, IBAN, Kartennummern, IP-Adressen und Zugangsdaten in URLs; Antworten kommen mit den Originalen zurück, auch beim Streaming. Namen erkennt ein eigenes oder vertrautes Modell, dazu kommt die neue Liste `tasks.pseudonymize_terms`; ohne Erkennung geht nichts an Fremde. Eigene und vertraute Knoten sehen weiter das Original; Audio bleibt im vertrauten Kreis. Anbieter nehmen `reduced` von Fremden mit `accept_public_tasks` an, wie bei `public`; Anbieter mit älteren Versionen lehnen weiter ab. ([Freigabeklassen](../spec/de/privacy-classes.md) Regel 9, [Nutzung](../docs/de/usage.md#optionale-header))
@@ -13,6 +17,16 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 ### Geändert
 
 - **Pause und Sofort-Stopp überstehen einen Neustart:** `swarmainet pause` und `stop` werden in `~/.swarmainet/control.json` gespeichert und gelten auch nach einem Neustart weiter, etwa wenn systemd den Dienst neu startet, bis `swarmainet resume`. Das Startprotokoll und der erste Hinweis in `swarmainet status` sagen es, mit Zeitpunkt. Eine unlesbare Steuerdatei führt zum Sofort-Stopp, statt übergangen zu werden. Lässt sich der Zustand nicht speichern, gilt er trotzdem sofort; der Befehl meldet dann aber einen Fehler, weil er einen Neustart nicht übersteht. ([Nutzung](../docs/de/usage.md#befehle))
+
+### Behoben
+
+- Firewall-Hinweise in `swarmainet status` und `swarmainet ping` nennen die Ports, die der Knoten tatsächlich verwendet (etwa `4711/tcp und 4711/udp`), statt immer `4711/tcp`.
+
+### Hinweise zum Aktualisieren
+
+- Fremde bekommen `reduced`-Anfragen erst, wenn sie 0.5.0 verwenden und `accept_public_tasks` eingeschaltet haben; bis dahin bleiben solche Anfragen wie bisher bei eigenen und vertrauten Knoten. Auch der koordinierende Knoten braucht 0.5.0, dazu ein eigenes oder vertrautes Modell, das Namen erkennt; ohne ein solches geht nichts an Fremde.
+- Die Pseudonymisierung kostet einen zusätzlichen Modellaufruf je Anfrage, aber nur, wenn wirklich ein fremder Agent beteiligt ist. Was den vertrauten Kreis auf keinen Fall verlassen darf, gehört zu `trusted`: Modelle können Namen übersehen, und mittelbare Hinweise wie Rollen oder ungewöhnliche Einzelheiten bleiben im Text.
+- Ein Knoten, der vor dem Aktualisieren pausiert oder gestoppt war, läuft nach dem Aktualisieren normal an; ab dann gelten `pause` und `stop` bis `swarmainet resume`.
 
 ## [0.4.0] – 2026-11-23
 
@@ -84,6 +98,7 @@ Das Protokoll ist unverändert (Version 0.1): Knoten mit 0.2.0 und 0.1.0 arbeite
 
 Erste öffentliche Version: lokaler Schwarm (Phase 1) und P2P-Schicht mit privaten Netzen und Mitgliedsnetzen, auf Hardware über zwei Standorte getestet.
 
+[0.5.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.1.0...v0.2.0

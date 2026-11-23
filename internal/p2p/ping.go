@@ -148,7 +148,7 @@ func (n *Node) pingConnect(ctx context.Context, id peer.ID, r *PingReport) bool 
 		return true
 	}
 	r.step("Verbindung fehlgeschlagen: %v", err)
-	r.hint("Läuft der Knoten, und lässt seine Firewall Port 4711/tcp eingehend zu?")
+	r.hint("Läuft der Knoten, und lässt seine Firewall " + portPhrase(addrs, "") + " eingehend zu?")
 	if n.private {
 		r.hint("Privater Schwarm: Beide Seiten brauchen denselben Netzschlüssel (network_key_file); mit falschem Schlüssel scheitert schon der Verbindungsaufbau.")
 	}

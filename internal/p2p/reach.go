@@ -119,7 +119,8 @@ func (n *Node) familyHint() string {
 		return "Über IPv4 nicht erreichbar und keine geprüfte IPv6-Adresse. Bei DS-Lite/CGNAT hilft nur IPv6 " +
 			"(Freigabe in der Firewall des Routers) oder ein Relay."
 	case r["ip6"] == "private" && r["ip4"] == "public":
-		return "Über IPv6 nicht erreichbar, über IPv4 schon: Die IPv6-Firewall des Routers lässt Port 4711 nicht durch."
+		return "Über IPv6 nicht erreichbar, über IPv4 schon: Die IPv6-Firewall des Routers lässt " +
+			portPhrase(n.host.Network().ListenAddresses(), "ip6") + " nicht durch."
 	}
 	return ""
 }

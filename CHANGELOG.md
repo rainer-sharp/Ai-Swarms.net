@@ -6,6 +6,10 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+## [0.5.0] – 2026-11-23
+
+Foreign nodes can now help with personal requests too: with the privacy class `reduced`, they only see placeholders instead of names, addresses and account numbers. Pause and emergency stop now survive a restart. The protocol stays at version 0.1: nodes with 0.5.0 and 0.4.0 work together. Existing configurations keep working without changes.
+
 ### Added
 
 - **Privacy class `reduced` with pseudonymisation:** foreign nodes now also receive `reduced` requests, but only with placeholders such as `[PERSON_1]` or `[EMAIL_1]` instead of names, organisations, places, email addresses, phone numbers, IBANs, card numbers, IP addresses and credentials in URLs; answers come back with the originals, also when streaming. Names are recognised by an own or trusted model, plus the new list `tasks.pseudonymize_terms`; without recognition, nothing goes to strangers. Own and trusted nodes still see the original; audio stays in the trusted circle. Providers accept `reduced` from strangers with `accept_public_tasks`, as for `public`; providers with older versions keep refusing. ([privacy classes](spec/privacy-classes.md) rule 9, [usage](docs/usage.md#optional-headers))
@@ -13,6 +17,16 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 ### Changed
 
 - **Pause and emergency stop survive a restart:** `swarmainet pause` and `stop` are stored in `~/.swarmainet/control.json` and keep applying after a restart, e.g. when systemd restarts the service, until `swarmainet resume`. The start-up log and the first hint in `swarmainet status` say so, with the time since when. An unreadable control file leads to an emergency stop rather than being ignored. If the state cannot be saved, it still applies at once, but the command reports an error because it will not survive a restart. ([usage](docs/usage.md#commands))
+
+### Fixed
+
+- Firewall hints in `swarmainet status` and `swarmainet ping` name the ports the node actually uses (e.g. `4711/tcp and 4711/udp`) instead of always `4711/tcp`.
+
+### Upgrade notes
+
+- Strangers only receive `reduced` requests once they run 0.5.0 and have `accept_public_tasks` enabled; until then, such requests stay with own and trusted nodes, as before. The coordinating node needs 0.5.0 as well, plus an own or trusted model that recognises names; without one, nothing goes to strangers.
+- Pseudonymisation costs one additional model call per request, but only when a foreign agent actually takes part. What must not leave the trusted circle under any circumstances belongs to `trusted`: models can miss names, and indirect hints such as roles or unusual details stay in the text.
+- After updating, a node that was paused or stopped before the update starts running normally; from then on, `pause` and `stop` persist until `swarmainet resume`.
 
 ## [0.4.0] – 2026-11-23
 
@@ -84,6 +98,7 @@ The protocol is unchanged (version 0.1): nodes with 0.2.0 and 0.1.0 work togethe
 
 First public version: local swarm (phase 1) and P2P layer with private networks and membership networks, tested on hardware across two sites.
 
+[0.5.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.1.0...v0.2.0

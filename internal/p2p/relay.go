@@ -211,7 +211,8 @@ func (n *Node) Hints() []string {
 	peers := n.host.Network().Peers()
 	var out []string
 	if len(peers) == 0 {
-		out = append(out, "Keine Peers verbunden: mDNS, static_peers und Firewall (Port 4711/tcp) prüfen.")
+		out = append(out, "Keine Peers verbunden: mDNS, static_peers und Firewall ("+
+			portPhrase(n.host.Network().ListenAddresses(), "")+" eingehend) prüfen.")
 	}
 	if len(n.Reservations()) == 0 && len(n.host.Network().ListenAddresses()) == 0 {
 		out = append(out, "Keine Listen-Adresse und kein Relay-Platz: Andere Knoten können diesen Knoten nicht anwählen.")
