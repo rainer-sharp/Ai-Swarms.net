@@ -127,6 +127,7 @@ The response is 204, or 404 for an unknown task, 409 if feedback was already giv
 | `member invite\|request\|issue\|install\|revoke\|import-crl\|list` | Admit members and manage certificates |
 | `tracker [-listen ADDR] [-tls-cert F -tls-key F] [-trust-proxy]` | Run an address mailbox |
 | `bench run\|report\|hash` | Benchmark, see [`bench/`](../bench/README.md) |
+| `version` | Show the version |
 
 All commands accept `-config PATH` (default `~/.swarmainet/config.yaml`) and `-v` for verbose logs; options come before the other arguments. The program's own messages and help texts are in German.
 

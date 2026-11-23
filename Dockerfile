@@ -1,12 +1,15 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # SwarmAiNet-Knoten als Container, vor allem für Helferknoten und Tracker
 # (spec/p2p-layer.md § 6.1). Bauen: docker build -t swarmainet .
+# Mit Version (sonst meldet der Knoten „dev“, .git kommt nicht ins Image):
+#   docker build --build-arg VERSION=$(git describe --tags --always --dirty) -t swarmainet .
 FROM golang:1.27.2-bookworm AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/swarmainet ./cmd/swarmainet && mkdir /out/data
+ARG VERSION=""
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=${VERSION}" -o /out/swarmainet ./cmd/swarmainet && mkdir /out/data
 
 # Statisches Binary, kein Shell, läuft als Benutzer nonroot (UID 65532).
 FROM gcr.io/distroless/static-debian12:nonroot

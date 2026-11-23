@@ -12,7 +12,12 @@
 # verschiedene Ports und Gateway-Ports.
 services:
   seed:
-    build: ../..
+    build:
+      context: ../..
+      # Version im Programm; .git kommt nicht ins Image, sonst „dev“:
+      #   SWARMAINET_VERSION=$(git describe --tags --always) docker compose build
+      args:
+        VERSION: ${SWARMAINET_VERSION:-}
     image: swarmainet:latest
     network_mode: host
     restart: unless-stopped

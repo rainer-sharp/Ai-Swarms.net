@@ -30,7 +30,7 @@ Round 1 (80 tasks from HumanEval and GSM8K, [report](../bench/report-r1.md)): th
 
 **Collaboration of the models**
 
-- The router is a keyword heuristic, not a model; bandit and competence profile follow in phase 3.
+- The router is a keyword heuristic, not a model. The competence profile rates agents, but agent selection does not use it yet; the bandit (opt-in) only chooses the pattern.
 - Privacy class `reduced` without pseudonymisation; until then it is treated like `trusted`.
 - Streaming shows the answer live only where no further review follows; with review, the draft streams into the thinking phase.
 - Images in requests are not supported. Audio only as a transcription (`/v1/audio/transcriptions`, only up to `trusted`); the gateway splits long recordings into overlapping pieces with `ffmpeg`. Tested on hardware: a 57-minute recording in a single request, seven pieces from the VM via a node with Nemotron-Transcribe in 143 s, without doubled or lost words at the seams. The pieces run in parallel, but the gain depends on how many providers are free; with only one model, they run one after another.
@@ -53,5 +53,5 @@ Round 1 (80 tasks from HumanEval and GSM8K, [report](../bench/report-r1.md)): th
 
 **Distribution**
 
-- No prebuilt binaries; build from source.
+- Prebuilt binaries from version 0.4.0, but not signed; Windows and macOS have not been tested on hardware yet.
 - Protocol at version 0.1, incompatible changes are possible.

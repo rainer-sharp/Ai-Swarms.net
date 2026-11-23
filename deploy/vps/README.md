@@ -75,7 +75,7 @@ The configurations list the names `seed.ai-swarms.net`, `helper.ai-swarms.net` a
 ## 4. Starting the start node
 
 ```sh
-docker compose build seed
+SWARMAINET_VERSION=$(git describe --tags --always) docker compose build seed
 docker compose up -d seed
 docker compose exec seed swarmainet status -config /data/config.yaml | grep -m1 peer_id
 ```

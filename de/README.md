@@ -20,7 +20,7 @@
 
 ## Schnellstart
 
-Voraussetzungen: Go 1.27 und ein laufender Inferenz-Server mit OpenAI-kompatibler API, z. B. Ollama.
+Voraussetzungen: ein laufender Inferenz-Server mit OpenAI-kompatibler API, z. B. Ollama. Ab Version 0.4.0 enthalten die [Releases](https://github.com/rainer-sharp/Ai-Swarms.net/releases) das Programm fertig für Linux, macOS und Windows ([Installation](../docs/de/installation.md#fertige-programmdateien)); selbst bauen braucht Go 1.27:
 
 ```sh
 git clone https://github.com/rainer-sharp/Ai-Swarms.net.git

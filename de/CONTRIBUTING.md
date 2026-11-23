@@ -20,6 +20,17 @@ go test -race ./...
 
 Die Tests starten mehrere Knoten im selben Prozess und brauchen weder Netz noch Modelle. `internal/node` läuft etwa eine Minute.
 
+## Veröffentlichen
+
+Für Maintainer: den Abschnitt der Version in `CHANGELOG.md` und `de/CHANGELOG.md` vervollständigen, dann einen annotierten Tag pushen:
+
+```sh
+git tag -a v0.4.0 -m "SwarmAiNet 0.4.0"
+git push origin v0.4.0
+```
+
+Der [Release-Workflow](../.github/workflows/release.yml) testet dann, baut mit [`scripts/build-release.sh`](../scripts/build-release.sh) die Archive für alle Plattformen und hängt sie mit `SHA256SUMS` an das GitHub-Release; den Text nimmt er aus dem englischen Changelog. Gibt es das Release schon, werden nur die Dateien ergänzt. Das Skript läuft auch lokal (`scripts/build-release.sh v0.4.0` schreibt nach `dist/`).
+
 ## Konventionen
 
 - **Sprache:** Bezeichner im Code, Konfigurationsschlüssel und -werte, Protokoll- und API-Namen auf Englisch (z. B. `node.trusted_peers`, `tasks.pattern: draft_verify_synthesize`). Protokollmeldungen, Texte für Nutzer und Code-Kommentare auf Deutsch. Die Dokumentation gibt es auf Englisch und Deutsch: die englische Fassung am Hauptpfad, die deutsche mit gleichem Dateinamen im Unterordner `de/` daneben (z. B. `docs/networks.md` und `docs/de/networks.md`). Bitte beide Fassungen ändern oder im Pull Request vermerken, dass die andere noch nachzuziehen ist.

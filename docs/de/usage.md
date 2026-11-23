@@ -127,6 +127,7 @@ Die Antwort ist 204, bei unbekanntem Auftrag 404, bei schon gemeldetem Schritt 4
 | `member invite\|request\|issue\|install\|revoke\|import-crl\|list` | Mitglieder aufnehmen und Zertifikate verwalten |
 | `tracker [-listen ADR] [-tls-cert F -tls-key F] [-trust-proxy]` | Adressbriefkasten betreiben |
 | `bench run\|report\|hash` | Benchmark, siehe [`bench/`](../../bench/de/README.md) |
+| `version` | Version anzeigen |
 
 Alle Befehle nehmen `-config PFAD` (Standard `~/.swarmainet/config.yaml`) und `-v` für ausführliche Protokolle; Optionen stehen vor den übrigen Argumenten.
 

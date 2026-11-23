@@ -40,6 +40,7 @@ type Node struct {
 	// Profile: Kompetenzprofil aus eigenen Beobachtungen (spec/cooperation.md § 2).
 	Profile *profile.Profile
 	Orch    *orchestrator.Orchestrator
+	version string
 	started time.Time
 	// NetErrors: Netze, die wegen ihres Zertifikats nicht gestartet sind.
 	NetErrors []string
@@ -50,6 +51,8 @@ type Options struct {
 	Identity *identity.Identity // nur für das erste Netz
 	HW       rem.HWSensor
 	Energy   rem.EnergySource
+	// Version des Programms, nur für die Statusanzeige.
+	Version string
 }
 
 func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
@@ -89,7 +92,7 @@ func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
 		backends = nil // Helferknoten rechnen nicht
 	}
 	local := NewLocal(backends, m)
-	n := &Node{Cfg: cfg, ID: id, REM: m, Local: local, Receipts: store, started: time.Now(),
+	n := &Node{Cfg: cfg, ID: id, REM: m, Local: local, Receipts: store, started: time.Now(), version: o.Version,
 		Profile: profile.Open(filepath.Join(dir, "profile.json"))}
 	// Ressourcenmanager, Backends und Quittungen teilen sich alle Netze;
 	// fremde Aufträge aus allen Netzen konkurrieren um dieselben Slots.
@@ -240,6 +243,7 @@ func (n *Node) Ask(ctx context.Context, req orchestrator.Request) (*orchestrator
 
 type Status struct {
 	NetErrors []string                   `json:"network_errors,omitempty"`
+	Version   string                     `json:"version,omitempty"`
 	PeerID    string                     `json:"peer_id"`
 	Addrs     []string                   `json:"addrs"`
 	Private   bool                       `json:"private_network"`
@@ -293,6 +297,7 @@ func (n *Node) Status() Status {
 		Private: first.Private, Relay: first.Relay, Relays: first.Relays,
 		Hints: first.Hints, DHT: first.DHT,
 		Uptime:  time.Since(n.started).Truncate(time.Second).String(),
+		Version: n.version,
 		Provide: n.Cfg.Node.Provide,
 		Local:   n.Local.Agents(), Offered: n.Local.Offer(),
 		REM:      n.REM.Status(),

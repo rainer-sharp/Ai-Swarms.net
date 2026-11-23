@@ -1,0 +1,43 @@
+name: Release
+
+# Bei einem Tag v* (etwa v0.4.0): testen, Archive für alle Plattformen bauen
+# (scripts/build-release.sh) und mit SHA256SUMS an das GitHub-Release hängen.
+# Gibt es das Release schon (im Browser angelegt), werden nur die Dateien
+# ergänzt; sonst entsteht es mit dem Abschnitt der Version aus CHANGELOG.md.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Formatierung
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+      - run: go vet ./...
+      - run: go test ./...
+      - name: Archive bauen
+        run: scripts/build-release.sh "$GITHUB_REF_NAME"
+      - name: Release-Text aus CHANGELOG.md
+        run: scripts/release-notes.py "$GITHUB_REF_NAME" "$GITHUB_REPOSITORY" > notes.md
+      - name: Release anlegen oder ergänzen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/* --clobber
+          else
+            pre=""
+            case "$tag" in *-*) pre="--prerelease" ;; esac
+            gh release create "$tag" dist/* --verify-tag $pre \
+              --title "SwarmAiNet ${tag#v}" --notes-file notes.md
+          fi

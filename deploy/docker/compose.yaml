@@ -10,7 +10,12 @@
 # Firewall: 4711/tcp eingehend (offenes Netz zusätzlich 4712/tcp und 4712/udp).
 services:
   helper:
-    build: ../..
+    build:
+      context: ../..
+      # Version im Programm; .git kommt nicht ins Image, sonst „dev“:
+      #   SWARMAINET_VERSION=$(git describe --tags --always) docker compose build
+      args:
+        VERSION: ${SWARMAINET_VERSION:-}
     image: swarmainet:latest
     # Host-Netz, damit AutoNAT, beobachtete Adressen und IPv6 stimmen
     # (spec/p2p-layer.md § 6.1); das Gateway bleibt auf 127.0.0.1.

@@ -15,6 +15,7 @@
 //	swarmainet member    Zertifikate eines Mitgliedsnetzes verwalten
 //	swarmainet tracker   HTTPS-Adressbriefkasten betreiben
 //	swarmainet bench     Benchmark ausführen und auswerten
+//	swarmainet version   Version anzeigen
 package main
 
 import (
@@ -76,6 +77,7 @@ Befehle:
               -tls-cert DATEI, -tls-key DATEI   selbst per HTTPS lauschen
               -trust-proxy     Absender-IP aus X-Forwarded-For
   bench     Benchmark ausführen und auswerten (spec/benchmark.md)
+  version   Version anzeigen
 
 Optionen:
   -config PFAD   (Standard ~/.swarmainet/config.yaml)
@@ -148,6 +150,8 @@ func main() {
 		err = cmdTracker(*listen, *tlsCert, *tlsKey, *trustProxy)
 	case "bench":
 		err = cmdBench(fs.Args())
+	case "version", "-version", "--version":
+		fmt.Println("swarmainet", versionString())
 	case "help", "-h", "--help":
 		usage()
 	default:
@@ -171,7 +175,7 @@ func cmdRun(path string) error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	n, err := node.New(ctx, cfg, node.Options{})
+	n, err := node.New(ctx, cfg, node.Options{Version: versionString()})
 	if err != nil {
 		return err
 	}
@@ -185,7 +189,7 @@ func cmdRun(path string) error {
 		defer cancel()
 		_ = srv.Shutdown(sctx)
 	}()
-	slog.Info("knoten gestartet", "peer", n.ID.ID.String(), "gateway", "http://"+cfg.Node.Gateway, "provide", cfg.Node.Provide)
+	slog.Info("knoten gestartet", "version", versionString(), "peer", n.ID.ID.String(), "gateway", "http://"+cfg.Node.Gateway, "provide", cfg.Node.Provide)
 	for _, pn := range n.Nets {
 		for _, a := range pn.Addrs() {
 			slog.Info("p2p-adresse", "netz", pn.NetworkID(), "addr", a)

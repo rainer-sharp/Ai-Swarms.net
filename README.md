@@ -22,7 +22,7 @@
 
 ## Quick start
 
-Requirements: Go 1.27 and a running inference server with an OpenAI-compatible API, e.g. Ollama.
+Requirements: a running inference server with an OpenAI-compatible API, e.g. Ollama. From version 0.4.0, [releases](https://github.com/rainer-sharp/Ai-Swarms.net/releases) contain the program ready to run for Linux, macOS and Windows ([installation](docs/installation.md#prebuilt-binaries)); building it yourself needs Go 1.27:
 
 ```sh
 git clone https://github.com/rainer-sharp/Ai-Swarms.net.git

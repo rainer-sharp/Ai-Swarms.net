@@ -5,10 +5,30 @@
 ## Requirements
 
 - **An inference server with an OpenAI-compatible API** on every device that contributes models: Ollama, llama.cpp, vLLM, LM Studio or MLX. Devices without their own models can still submit tasks or carry the network.
-- **Go 1.27** for building (version see `go.mod`). There are no prebuilt binaries yet.
+- **Go 1.27** only for building from source (version see `go.mod`); from version 0.4.0, [prebuilt binaries](#prebuilt-binaries) are available.
 - Linux is the main platform. macOS should work but has not been tested. Windows has not been tested either.
 
-## Building
+## Prebuilt binaries
+
+From version 0.4.0, every [release](https://github.com/rainer-sharp/Ai-Swarms.net/releases) contains archives for Linux, macOS and Windows, each for `amd64` and `arm64` (`arm64`, for example, for a Raspberry Pi 4 or 5 with a 64-bit system or a Mac with Apple silicon). Each archive contains the program, the licences, `README.md`, `CHANGELOG.md` and `config.example.yaml`. On Linux:
+
+```sh
+v=0.4.0
+curl -LO https://github.com/rainer-sharp/Ai-Swarms.net/releases/download/v$v/swarmainet_${v}_linux_amd64.tar.gz
+curl -LO https://github.com/rainer-sharp/Ai-Swarms.net/releases/download/v$v/SHA256SUMS
+sha256sum -c SHA256SUMS --ignore-missing
+tar -xzf swarmainet_${v}_linux_amd64.tar.gz
+install -m 755 swarmainet_${v}_linux_amd64/swarmainet ~/.local/bin/
+swarmainet version
+```
+
+- **macOS:** the archives are named `…_darwin_arm64.tar.gz` (Apple silicon) or `…_darwin_amd64.tar.gz` (Intel); check with `shasum -a 256 -c SHA256SUMS --ignore-missing`. The program is not signed; macOS blocks it until the quarantine flag is removed: `xattr -d com.apple.quarantine swarmainet`.
+- **Windows:** a ZIP archive with `swarmainet.exe`; check with `Get-FileHash swarmainet_….zip` in PowerShell and compare with `SHA256SUMS`. SmartScreen may warn about an unknown publisher.
+- **Reproducible:** the archives are built by [`scripts/build-release.sh`](../scripts/build-release.sh) on GitHub. Checking out the tag and running the script with the Go version from `go.mod` should produce byte-identical archives.
+
+`swarmainet version` shows the version; a running node also reports it in `swarmainet status` and at start-up. A build of your own reports the Git commit instead (`dev-1a2b3c4d`).
+
+## Building from source
 
 ```sh
 git clone https://github.com/rainer-sharp/Ai-Swarms.net.git
