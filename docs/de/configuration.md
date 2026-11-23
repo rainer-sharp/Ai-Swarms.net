@@ -9,7 +9,7 @@ Die Konfiguration liegt in `~/.swarmainet/config.yaml` (anlegen mit `swarmainet 
 | `node` | Adressen, Gateway, Netz, Vertrauen, Erreichbarkeit (Tabelle unten) |
 | `backends` | Inferenz-Server und ihre Modelle: `family`, `skills`, `context`, `strength`, `tools`, `offer` |
 | `resources` | Ressourcenmanager: parallele Aufträge, GPU-Grenzen, Temperatur, RAM-Reserve, Zeitfenster, GPU-Minuten, Energie (PV-Überschuss, Strompreis über Home Assistant) |
-| `tasks` | Standardmuster, Standard-Freigabeklasse, Token-Grenze, Frist, Teilaufträge |
+| `tasks` | Standardmuster, Standard-Freigabeklasse, Token-Grenze, Frist, Teilaufträge; `pseudonymize_terms`: eigene Begriffe (Namen, Projekte, Kunden), die bei `reduced` für fremde Knoten immer ersetzt werden ([Nutzung](usage.md#optionale-header)) |
 | `cooperation` | Wie das Muster gewählt wird, wenn eine Anfrage keines nennt (Tabelle unten) |
 
 Geheimnisse gehören nicht in die Datei: Der Home-Assistant-Token kommt aus einer Umgebungsvariablen (`token_env`), Netzschlüssel stehen in eigenen Dateien mit Rechten 0600.

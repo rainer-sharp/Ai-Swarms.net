@@ -8,7 +8,7 @@ Transport encryption protects the path, not the content from the executing peer.
 |---|---|---|---|
 | Local only | `local` | exclusively on your own devices | local agents only; providers refuse |
 | Trusted circle | `trusted` | only with keys you have approved yourself or in private swarms | `trusted_peers` or PSK network |
-| Reduced | `reduced` | only minimised, pseudonymised fragments | **pseudonymisation still missing**; until then like `trusted` |
+| Reduced | `reduced` | only minimised, pseudonymised fragments | own and trusted agents see the original, foreign agents only placeholders (rule 9); providers accept it from strangers like `public` |
 | Public | `public` | after explicit approval on any peer | at the provider only with `accept_public_tasks: true` |
 
 ## Rules
@@ -29,10 +29,16 @@ Transport encryption protects the path, not the content from the executing peer.
    | open network, strangers | none | only the list |
 
    Your own node enforces this: it removes other tools before sending, discards responses with calls that were not listed and gives a restricted agent no history containing calls of other tools. The list only checks names; the node does not know what a tool does. Read-only tools also disclose data, because the result goes to the foreign node; `run_command` and file access therefore do not belong on the list of an open network.
-7. Audio recordings (transcription, skill `audio.transcribe`) go at most to `trusted`, never to `public`: voices are personal data, and the content of a recording cannot be minimised. Coordinator and provider both enforce this ([protocol](protocol-v0.1.md) § 4.2).
+7. Audio recordings (transcription, skill `audio.transcribe`) go at most to `trusted`, never to `public`: voices are personal data, and the content of a recording cannot be minimised. Not as `reduced` either, because a recording cannot be pseudonymised. Coordinator and provider both enforce this ([protocol](protocol-v0.1.md) § 4.2).
 8. Local knowledge indexes (RAG) are not shared (open question, default: no).
+9. **Pseudonymisation (`reduced`):** own and trusted agents see the original. Before a subtask goes to a foreign agent, the coordinator replaces personal data with placeholders such as `[PERSON_1]`, `[ORG_1]`, `[LOCATION_1]` or `[EMAIL_1]`, tells the model to keep them, and swaps them back in the answer, also when streaming and in the arguments of tool calls.
+   - **Fixed rules** find email addresses, phone numbers, IBANs (with checksum), card numbers (Luhn check), IP addresses (except loopback) and URLs with credentials.
+   - **Names, organisations and places** are marked by an own or trusted model (step with role `router`; it sees the original anyway). Only findings that occur verbatim in the text count. In addition, the terms in `tasks.pseudonymize_terms` are always replaced.
+   - **Without recognition, nothing goes to strangers:** if no own or trusted model is available or recognition fails, foreign agents get nothing for the whole request; with only foreign agents the request fails with 400.
+   - **Providers** accept `reduced` from strangers only with `accept_public_tasks`, as for `public`.
+   - **Limits:** a model can miss names, and whatever identifies a person indirectly (a role, unusual details) stays in the text. Content that must not leave the trusted circle under any circumstances belongs in `trusted`.
 
 ## Open
 
-- How much may automatic pseudonymisation change the domain context? (to be clarified by phase 3)
+- How much may automatic pseudonymisation change the domain context? Placeholders keep the structure of a text but lose, for example, gender or region; whether realistic substitute values would serve better remains open. Minimisation (sending only the fragment a subtask needs) is not implemented yet.
 - Confidential computing (TEE) remains a later option, not a promise.

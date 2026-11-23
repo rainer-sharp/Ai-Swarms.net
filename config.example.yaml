@@ -106,6 +106,9 @@ tasks:
   max_tokens: 2048
   deadline_s: 300
   max_subtasks: 8
+  # Bei privacy_class reduced für fremde Knoten immer ersetzt, zusätzlich zur
+  # Erkennung durch das eigene Modell (spec/privacy-classes.md, Regel 9).
+  pseudonymize_terms: []            # z. B. ["Projekt Falke", "Muster GmbH"]
 
 # Wahl des Musters, wenn eine Anfrage keines nennt (spec/cooperation.md § 3).
 cooperation:

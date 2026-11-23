@@ -8,7 +8,7 @@ Transportverschlüsselung schützt den Weg, nicht den Inhalt vor dem ausführend
 |---|---|---|---|
 | Nur lokal | `local` | ausschließlich auf eigenen Geräten | nur lokale Agenten; Anbieter lehnen ab |
 | Vertrauter Kreis | `trusted` | nur bei selbst freigegebenen Schlüsseln oder in privaten Schwärmen | `trusted_peers` oder PSK-Netz |
-| Reduziert | `reduced` | nur minimierte, pseudonymisierte Fragmente | **Pseudonymisierung fehlt noch**; bis dahin wie `trusted` |
+| Reduziert | `reduced` | nur minimierte, pseudonymisierte Fragmente | eigene und vertraute Agenten sehen das Original, fremde nur Platzhalter (Regel 9); Anbieter nehmen es von Fremden an wie `public` |
 | Öffentlich | `public` | nach expliziter Freigabe auf beliebigen Peers | beim Anbieter nur mit `accept_public_tasks: true` |
 
 ## Regeln
@@ -29,10 +29,16 @@ Transportverschlüsselung schützt den Weg, nicht den Inhalt vor dem ausführend
    | offenes Netz, Fremde | keine | nur die Liste |
 
    Der eigene Knoten setzt das durch: Er entfernt andere Werkzeuge vor dem Versand, verwirft Antworten mit nicht genannten Aufrufen und gibt einem eingeschränkten Agenten keinen Verlauf, der Aufrufe anderer Werkzeuge enthält. Die Liste prüft nur Namen; was ein Werkzeug tut, weiß der Knoten nicht. Auch lesende Werkzeuge geben Daten preis, denn das Ergebnis geht an den fremden Knoten; `run_command` und Dateizugriffe gehören deshalb nicht auf die Liste eines offenen Netzes.
-7. Tonaufnahmen (Transkription, Fähigkeit `audio.transcribe`) gehen höchstens bis `trusted`, nie `public`: Stimmen sind personenbezogene Daten, und der Inhalt einer Aufnahme lässt sich nicht minimieren. Koordinator und Anbieter setzen das beide durch ([Protokoll](protocol-v0.1.md) § 4.2).
+7. Tonaufnahmen (Transkription, Fähigkeit `audio.transcribe`) gehen höchstens bis `trusted`, nie `public`: Stimmen sind personenbezogene Daten, und der Inhalt einer Aufnahme lässt sich nicht minimieren. Auch nicht als `reduced`, denn eine Aufnahme lässt sich nicht pseudonymisieren. Koordinator und Anbieter setzen das beide durch ([Protokoll](protocol-v0.1.md) § 4.2).
 8. Lokale Wissensindizes (RAG) werden nicht geteilt (offene Frage, Standard: nein).
+9. **Pseudonymisierung (`reduced`):** Eigene und vertraute Agenten sehen das Original. Bevor ein Teilauftrag an einen fremden Agenten geht, ersetzt der Koordinator persönliche Daten durch Platzhalter wie `[PERSON_1]`, `[ORG_1]`, `[LOCATION_1]` oder `[EMAIL_1]`, weist das Modell an, sie beizubehalten, und tauscht sie in der Antwort zurück, auch beim Streaming und in den Argumenten von Werkzeug-Aufrufen.
+   - **Feste Regeln** finden E-Mail-Adressen, Telefonnummern, IBAN (mit Prüfsumme), Kartennummern (Luhn-Prüfung), IP-Adressen (außer Loopback) und URLs mit Zugangsdaten.
+   - **Namen, Firmen und Orte** markiert ein eigenes oder vertrautes Modell (Schritt mit der Rolle `router`; es sieht das Original ohnehin). Es zählen nur Funde, die wörtlich im Text stehen. Dazu werden die Begriffe aus `tasks.pseudonymize_terms` immer ersetzt.
+   - **Ohne Erkennung geht nichts an Fremde:** Ist kein eigenes oder vertrautes Modell verfügbar oder scheitert die Erkennung, bekommen fremde Agenten für die ganze Anfrage nichts; gibt es nur fremde, scheitert die Anfrage mit 400.
+   - **Anbieter** nehmen `reduced` von Fremden nur mit `accept_public_tasks` an, wie bei `public`.
+   - **Grenzen:** Ein Modell kann Namen übersehen, und was eine Person mittelbar erkennbar macht (eine Rolle, ungewöhnliche Einzelheiten), bleibt im Text. Was den vertrauten Kreis auf keinen Fall verlassen darf, gehört zu `trusted`.
 
 ## Offen
 
-- Wie stark darf automatische Pseudonymisierung den fachlichen Kontext verändern? (Klärung bis Phase 3)
+- Wie stark darf automatische Pseudonymisierung den fachlichen Kontext verändern? Platzhalter erhalten den Aufbau eines Textes, verlieren aber etwa Geschlecht oder Region; ob realistische Ersatzwerte besser wären, ist offen. Die Minimierung (nur das Bruchstück schicken, das ein Teilauftrag braucht) fehlt noch.
 - Confidential Computing (TEE) bleibt eine spätere Option, kein Versprechen.

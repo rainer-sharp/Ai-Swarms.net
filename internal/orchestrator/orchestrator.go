@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
+	"github.com/rainer-sharp/Ai-Swarms.net/internal/pseudo"
 )
 
 // Agent ist ein Modell auf einem Knoten, lokal oder entfernt.
@@ -67,6 +68,9 @@ type Task struct {
 	// neuen Antworttext (content) und Text der Denkphase des Modells
 	// (reasoning); maßgeblich bleibt das Ergebnis.
 	OnDelta func(content, reasoning string)
+	// flush gibt nach dem Teilauftrag aus, was das Zurücktauschen der
+	// Platzhalter beim Streaming noch zurückhält (reduced).
+	flush func()
 }
 
 type Executor interface {
@@ -121,6 +125,9 @@ type Request struct {
 	// Audio: Transkription statt Chat. Läuft immer als single mit der
 	// Fähigkeit audio.transcribe und nie in der Freigabeklasse public.
 	Audio *protocol.Audio
+	// PseudonymizeTerms: eigene Begriffe, die bei reduced für fremde Knoten
+	// immer ersetzt werden (tasks.pseudonymize_terms).
+	PseudonymizeTerms []string
 	// Stream: nicht nil, wenn die Antwort gestreamt wird. Run ruft es aus
 	// mehreren Goroutinen auf, nie gleichzeitig. Audio wird nicht gestreamt,
 	// Werkzeug-Aufrufe nicht als Zwischenstand (nur der Text).
@@ -314,6 +321,11 @@ type run struct {
 	n      int // verbrauchte Teilaufträge
 	mu     sync.Mutex
 
+	// Pseudonymisierung bei reduced, angelegt beim ersten fremden Agenten.
+	pzMu  sync.Mutex
+	pz    *pseudo.Mapping
+	pzErr error
+
 	emitMu   sync.Mutex
 	reasoned bool // schon Text in der Denkphase
 	blank    bool // Denkphase endet mit einer Leerzeile
@@ -383,6 +395,11 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 			return nil, fmt.Errorf("aufnahme leer oder größer als %d bytes", protocol.MaxAudioBytes)
 		}
 		req.Skill, req.Pattern, req.Tools = SkillTranscribe, PatternSingle, nil
+		// Eine Aufnahme lässt sich nicht pseudonymisieren: reduced bleibt
+		// bei Audio im vertrauten Kreis.
+		if req.Privacy == protocol.PrivacyReduced {
+			req.Privacy = protocol.PrivacyTrusted
+		}
 	}
 	if req.Skill == "" {
 		req.Skill = Route(req.Messages)
@@ -429,6 +446,12 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 		err = ErrToolsNotAllowed
 	case errors.Is(err, ErrNoAgent):
 		err = noAgentReason(o.Dir.Agents(), req)
+	case errors.Is(err, ErrNotPseudonymized):
+		// Nur fremde Agenten, und für sie fehlt die Pseudonymisierung: die
+		// Ursache liegt in Anfrage und Einrichtung, nicht bei einem Peer.
+		err = privacyError{fmt.Sprintf("%v: freigabeklasse reduced schickt fremden knoten nur pseudonymisierte anfragen, "+
+			"und namen erkennt ein eigenes oder vertrautes modell; das ging nicht (%v). "+
+			"darf der inhalt öffentlich sein, die anfrage mit X-SwarmAiNet-Privacy: public senden", ErrNoAgent, r.pzErr)}
 	}
 	if err != nil {
 		return r.ans, err
@@ -530,15 +553,16 @@ func noAgentReason(agents []Agent, req Request) error {
 		"die anfrage mit dem header X-SwarmAiNet-Privacy: public senden", ErrNoAgent, req.Privacy, len(agents))}
 }
 
-// allowed setzt die Freigabeklassen um. "reduced" verlangt Pseudonymisierung,
-// die noch nicht implementiert ist; bis dahin gilt sie wie "trusted".
+// allowed setzt die Freigabeklassen um. Bei reduced kommen auch fremde
+// Agenten in Frage; sie bekommen nur pseudonymisierte Teilaufträge
+// (pseudo.go), und scheitert die Pseudonymisierung, gar keine.
 func allowed(a Agent, p protocol.PrivacyClass) bool {
 	switch p {
 	case protocol.PrivacyLocal:
 		return a.Local
-	case protocol.PrivacyTrusted, protocol.PrivacyReduced:
+	case protocol.PrivacyTrusted:
 		return a.Local || a.Trusted
-	case protocol.PrivacyPublic:
+	case protocol.PrivacyReduced, protocol.PrivacyPublic:
 		return true
 	}
 	return false
@@ -628,6 +652,20 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 		tools, choice := toolsFor(a, r.req)
 		t := Task{TaskID: r.taskID, SubtaskID: newID(), Role: role, Skill: r.req.Skill, Messages: msgs, Limits: r.req.Limits, JSONSchema: schema,
 			Tools: tools, ToolChoice: choice, Audio: r.req.Audio}
+		// reduced: für fremde Agenten erst die Pseudonymisierung (vor der
+		// Überschrift des Schritts, denn die Erkennung ist ein eigener Schritt).
+		var pz *pseudo.Mapping
+		if r.needsPseudo(a) {
+			m, err := r.pseudonymizer(ctx)
+			if err != nil {
+				r.mu.Lock()
+				r.n-- // keine Arbeit angefallen
+				r.mu.Unlock()
+				lastErr, allBusy = err, false
+				continue
+			}
+			pz = m
+		}
 		streamed := false // schon Antworttext gestreamt
 		if r.streaming() {
 			if o.label != "" {
@@ -637,7 +675,13 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 			case toReasoning:
 				t.OnDelta = func(c, _ string) { r.emit(EventReasoning, c) }
 			case toContent:
+				thinking := false // Nachdenken des Modells als eigener Absatz
 				t.OnDelta = func(c, rs string) {
+					if rs != "" && !thinking {
+						thinking = true
+						r.note(rs)
+						rs = ""
+					}
 					r.emit(EventReasoning, rs)
 					if c != "" {
 						streamed = true
@@ -646,10 +690,19 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 				}
 			}
 		}
+		if pz != nil {
+			pseudoTask(pz, &t)
+		}
 		start := time.Now()
 		done := r.o.load.begin(a)
 		res, err := r.o.Exec.Execute(ctx, a, t)
 		done()
+		if t.flush != nil {
+			t.flush()
+		}
+		if err == nil && pz != nil {
+			revertResult(pz, &res)
+		}
 		if err == nil && res.Result.Status == protocol.StatusFailed {
 			err = fmt.Errorf("agent meldet fehler: %s", res.Result.Summary)
 		}

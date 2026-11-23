@@ -45,6 +45,8 @@ Scheitert ein Schritt, nachdem er schon Text gestreamt hat, folgt ein Trenner (�
 
 Ohne Header gilt `tasks.privacy_class` aus der Konfiguration (Standard `trusted`): Die Anfrage geht nur an eigene oder vertraute Geräte. An fremde Knoten im offenen Netz geht nur, was als `public` markiert ist. Lässt die Freigabeklasse keinen der bekannten Agenten zu, antwortet das Gateway mit 400 und nennt den Grund, etwa bei `trusted` ohne eigenes Modell und ohne vertraute Knoten.
 
+Mit `reduced` kommen auch fremde Knoten im offenen Netz in Frage, sie sehen aber nur Platzhalter: Namen, Firmen, Orte, E-Mail-Adressen, Telefonnummern, IBAN und Ähnliches werden zu `[PERSON_1]`, `[EMAIL_1]` usw., und die Antwort kommt mit den Originalen zurück. Namen erkennt das eigene oder ein vertrautes Modell; Begriffe aus `tasks.pseudonymize_terms` werden immer ersetzt. Eigene und vertraute Geräte sehen weiter das Original. In der Denkphase zeigt der Schritt „Pseudonymisierung“, wie viele Begriffe ersetzt werden. Ohne Modell für die Erkennung geht nichts an fremde Knoten. Einzelheiten und Grenzen: [Freigabeklassen, Regel 9](../../spec/de/privacy-classes.md).
+
 ## Open WebUI
 
 1. *Einstellungen → Verbindungen → OpenAI-API*: URL `http://127.0.0.1:7711/v1`, Schlüssel beliebig.

@@ -6,6 +6,10 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- **Freigabeklasse `reduced` mit Pseudonymisierung:** Auch fremde Knoten bekommen jetzt `reduced`-Anfragen, aber nur mit Platzhaltern wie `[PERSON_1]` oder `[EMAIL_1]` statt Namen, Firmen, Orten, E-Mail-Adressen, Telefonnummern, IBAN, Kartennummern, IP-Adressen und Zugangsdaten in URLs; Antworten kommen mit den Originalen zurück, auch beim Streaming. Namen erkennt ein eigenes oder vertrautes Modell, dazu kommt die neue Liste `tasks.pseudonymize_terms`; ohne Erkennung geht nichts an Fremde. Eigene und vertraute Knoten sehen weiter das Original; Audio bleibt im vertrauten Kreis. Anbieter nehmen `reduced` von Fremden mit `accept_public_tasks` an, wie bei `public`; Anbieter mit älteren Versionen lehnen weiter ab. ([Freigabeklassen](../spec/de/privacy-classes.md) Regel 9, [Nutzung](../docs/de/usage.md#optionale-header))
+
 ### Geändert
 
 - **Pause und Sofort-Stopp überstehen einen Neustart:** `swarmainet pause` und `stop` werden in `~/.swarmainet/control.json` gespeichert und gelten auch nach einem Neustart weiter, etwa wenn systemd den Dienst neu startet, bis `swarmainet resume`. Das Startprotokoll und der erste Hinweis in `swarmainet status` sagen es, mit Zeitpunkt. Eine unlesbare Steuerdatei führt zum Sofort-Stopp, statt übergangen zu werden. Lässt sich der Zustand nicht speichern, gilt er trotzdem sofort; der Befehl meldet dann aber einen Fehler, weil er einen Neustart nicht übersteht. ([Nutzung](../docs/de/usage.md#befehle))

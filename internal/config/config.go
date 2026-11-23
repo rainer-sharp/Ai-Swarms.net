@@ -379,6 +379,10 @@ type Tasks struct {
 	MaxTokens    int    `yaml:"max_tokens"`
 	DeadlineS    int    `yaml:"deadline_s"`
 	MaxSubtasks  int    `yaml:"max_subtasks"`
+	// PseudonymizeTerms: eigene Begriffe (Namen, Projekte, Kunden), die bei
+	// privacy_class reduced für fremde Knoten immer ersetzt werden, zusätzlich
+	// zu dem, was die Erkennung findet (spec/privacy-classes.md).
+	PseudonymizeTerms []string `yaml:"pseudonymize_terms"`
 }
 
 // Default liefert die Werte aus dem Gesamtkonzept; fremde Aufträge sind aus (Opt-in).

@@ -151,7 +151,7 @@ Ein Übergang in denselben Zustand ist erlaubt (idempotente Wiederholung).
 |---|---|---|
 | `local` | ablehnen | ablehnen |
 | `trusted` | annehmen* | ablehnen |
-| `reduced` | annehmen* | ablehnen |
+| `reduced` | annehmen* | nur mit `accept_public_tasks: true`*, vom Koordinator pseudonymisiert ([Freigabeklassen](privacy-classes.md), Regel 9) |
 | `public` | annehmen* | nur mit `accept_public_tasks: true`* |
 
 \* sofern der Ressourcenmanager zustimmt. Lehnt er wegen fehlender Kapazität ab (`keine kapazität`) oder greift das Ratenlimit (`busy`), versucht der Koordinator es mit anderen Kandidaten und wartet, wenn alle ausgelastet sind, mit wachsendem Abstand (1 s bis 8 s, höchstens 2 Minuten bzw. bis zur Deadline) erneut. Vertraut ist ein Peer, dessen Schlüssel unter `trusted_peers` steht, jeder Teilnehmer eines privaten Schwarms (PSK) oder ein zugelassener Peer mit Rolle `member` oder `issuer` in einem [Mitgliedsnetz](membership.md).

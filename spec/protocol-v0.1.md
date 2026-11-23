@@ -151,7 +151,7 @@ A transition into the same state is allowed (idempotent repetition).
 |---|---|---|
 | `local` | refuse | refuse |
 | `trusted` | accept* | refuse |
-| `reduced` | accept* | refuse |
+| `reduced` | accept* | only with `accept_public_tasks: true`*, pseudonymised by the coordinator ([privacy classes](privacy-classes.md), rule 9) |
 | `public` | accept* | only with `accept_public_tasks: true`* |
 
 \* provided the resource manager agrees. If it refuses for lack of capacity (reason `keine kapazität`, "no capacity") or the rate limit applies (`busy`), the coordinator tries other candidates and, if all are busy, retries with increasing intervals (1 s to 8 s, at most 2 minutes or until the deadline). A peer is trusted if its key is listed under `trusted_peers`, if it is a participant of a private swarm (PSK) or if it is an admitted peer with role `member` or `issuer` in a [membership network](membership.md).

@@ -229,7 +229,10 @@ func (n *Node) Ask(ctx context.Context, req orchestrator.Request) (*orchestrator
 		req.Limits.MaxSubtasks = a.MaxSubtasks
 	}
 	req.Limits.MaxDepth = 1 // Phase 1: keine Weiterdelegation
-	if req.Privacy == protocol.PrivacyPublic {
+	if req.PseudonymizeTerms == nil {
+		req.PseudonymizeTerms = a.PseudonymizeTerms
+	}
+	if req.Privacy == protocol.PrivacyPublic || req.Privacy == protocol.PrivacyReduced {
 		// Im offenen Netz fehlende Anbieter über die DHT suchen.
 		skill := req.Skill
 		if skill == "" {

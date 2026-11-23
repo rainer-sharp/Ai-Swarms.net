@@ -122,11 +122,12 @@ func (n *Node) handleTask(s network.Stream) {
 	case p.Limits.PrivacyClass == protocol.PrivacyLocal || !p.Limits.PrivacyClass.Valid():
 		reject("freigabeklasse erlaubt keine fremdverarbeitung")
 		return
-	case !trusted && p.Limits.PrivacyClass != protocol.PrivacyPublic:
+	case !trusted && p.Limits.PrivacyClass != protocol.PrivacyPublic && p.Limits.PrivacyClass != protocol.PrivacyReduced:
 		reject("nur für vertrauten kreis bestimmt")
 		return
 	case !trusted && !n.opts.AcceptsPublic:
-		// accept_public_tasks gilt je Netz (spec/p2p-layer.md § 9).
+		// accept_public_tasks gilt je Netz (spec/p2p-layer.md § 9), für
+		// public und für pseudonymisierte reduced-Aufträge.
 		reject("keine öffentlichen aufträge in diesem netz")
 		return
 	case !p.Limits.Deadline.IsZero() && time.Now().After(p.Limits.Deadline):
@@ -156,7 +157,8 @@ func (n *Node) handleTask(s network.Stream) {
 	// Agenten, die Audio verarbeiten (spec/protocol-v0.1.md § 4.2).
 	if p.Audio != nil {
 		switch {
-		case p.Limits.PrivacyClass == protocol.PrivacyPublic:
+		case p.Limits.PrivacyClass == protocol.PrivacyPublic || !trusted:
+			// Auch nicht als reduced: eine Aufnahme lässt sich nicht pseudonymisieren.
 			reject("audio nur im vertrauten kreis")
 			return
 		case !slices.Contains(agent.Skills, orchestrator.SkillTranscribe):

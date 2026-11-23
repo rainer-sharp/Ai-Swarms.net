@@ -45,6 +45,8 @@ If a step fails after it has already streamed text, a separator follows ("Diese 
 
 Without the header, `tasks.privacy_class` from the configuration applies (default `trusted`): the request only goes to your own or trusted devices. Only what is marked `public` goes to foreign nodes in the open network. If the privacy class excludes all known agents, the gateway responds with 400 and states the reason, e.g. for `trusted` without your own model and without trusted nodes.
 
+With `reduced`, foreign nodes in the open network also come into question, but they only see placeholders: names, organisations, places, email addresses, phone numbers, IBANs and the like become `[PERSON_1]`, `[EMAIL_1]` etc., and the answer comes back with the originals. Names are recognised by your own or a trusted model; terms in `tasks.pseudonymize_terms` are always replaced. Own and trusted devices still see the original. In the thinking phase, the step "Pseudonymisierung" shows how many terms are replaced. Without a model for the recognition, nothing goes to foreign nodes. Details and limits: [privacy classes, rule 9](../spec/privacy-classes.md).
+
 ## Open WebUI
 
 1. *Settings → Connections → OpenAI API*: URL `http://127.0.0.1:7711/v1`, any key.

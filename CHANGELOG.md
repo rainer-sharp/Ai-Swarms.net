@@ -6,6 +6,10 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **Privacy class `reduced` with pseudonymisation:** foreign nodes now also receive `reduced` requests, but only with placeholders such as `[PERSON_1]` or `[EMAIL_1]` instead of names, organisations, places, email addresses, phone numbers, IBANs, card numbers, IP addresses and credentials in URLs; answers come back with the originals, also when streaming. Names are recognised by an own or trusted model, plus the new list `tasks.pseudonymize_terms`; without recognition, nothing goes to strangers. Own and trusted nodes still see the original; audio stays in the trusted circle. Providers accept `reduced` from strangers with `accept_public_tasks`, as for `public`; providers with older versions keep refusing. ([privacy classes](spec/privacy-classes.md) rule 9, [usage](docs/usage.md#optional-headers))
+
 ### Changed
 
 - **Pause and emergency stop survive a restart:** `swarmainet pause` and `stop` are stored in `~/.swarmainet/control.json` and keep applying after a restart, e.g. when systemd restarts the service, until `swarmainet resume`. The start-up log and the first hint in `swarmainet status` say so, with the time since when. An unreadable control file leads to an emergency stop rather than being ignored. If the state cannot be saved, it still applies at once, but the command reports an error because it will not survive a restart. ([usage](docs/usage.md#commands))

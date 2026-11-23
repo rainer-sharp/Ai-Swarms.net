@@ -289,7 +289,7 @@ Transport encryption protects the path, not the content from the executing peer:
 |---|---|
 | Local only (`local`) | exclusively on your own devices |
 | Trusted circle (`trusted`) | in the private network, at admitted members of a group network or with keys you have approved yourself |
-| Reduced (`reduced`) | only minimised, pseudonymised fragments (pseudonymisation still open, until then like `trusted`) |
+| Reduced (`reduced`) | only minimised, pseudonymised fragments: foreign nodes see placeholders instead of names, addresses and account details (minimisation still open) |
 | Public (`public`) | after explicit approval on any peer |
 
 No personal data in public tasks. Confidential computing (TEE) remains a later option, not a promise. Details: [privacy classes](../spec/privacy-classes.md).
