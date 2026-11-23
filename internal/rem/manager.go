@@ -28,6 +28,8 @@ type Manager struct {
 	hwWin    *window
 	paused   bool
 	stopped  bool
+	since    time.Time // seit wann pausiert oder gestoppt
+	ctlPath  string    // Steuerdatei (Persist), leer: nur im Speicher
 	ownUse   int
 	nextID   int
 	foreign  map[int]*Slot
@@ -221,16 +223,37 @@ func (m *Manager) denyLocked(req AdmitRequest) string {
 	return ""
 }
 
-func (m *Manager) Pause()  { m.mu.Lock(); m.paused = true; m.mu.Unlock() }
-func (m *Manager) Resume() { m.mu.Lock(); m.paused, m.stopped = false, false; m.mu.Unlock() }
+// Pause, Resume und EmergencyStop wirken sofort. Der Fehler sagt nur, dass
+// der Zustand nicht gespeichert werden konnte und einen Neustart nicht übersteht.
 
-// EmergencyStop beendet die Teilnahme: laufende Fremdjobs werden abgebrochen,
-// künftige Annahmen abgelehnt.
-func (m *Manager) EmergencyStop() {
+func (m *Manager) Pause() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if !m.paused && !m.stopped {
+		m.since = m.now()
+	}
+	m.paused = true
+	return m.saveLocked()
+}
+
+func (m *Manager) Resume() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.paused, m.stopped, m.since = false, false, time.Time{}
+	return m.saveLocked()
+}
+
+// EmergencyStop beendet die Teilnahme: laufende Fremdjobs werden abgebrochen,
+// künftige Annahmen abgelehnt, auch nach einem Neustart.
+func (m *Manager) EmergencyStop() error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if !m.stopped {
+		m.since = m.now()
+	}
 	m.stopped = true
 	m.cancelForeignLocked(fmt.Errorf("sofort-stopp"))
+	return m.saveLocked()
 }
 
 // SlotsNow liefert die aktuell freien Slots (0, wenn eine Grenze greift).
@@ -245,15 +268,16 @@ func (m *Manager) SlotsNow() int {
 }
 
 type Status struct {
-	Paused         bool    `json:"paused"`
-	Stopped        bool    `json:"stopped"`
-	OwnUse         bool    `json:"own_use"`
-	ForeignRunning int     `json:"foreign_running"`
-	SlotsNow       int     `json:"slots_now"`
-	GPUMinutesUsed float64 `json:"gpu_minutes_used_today"`
-	GPUUtilMean    float64 `json:"gpu_util_mean"`
-	PVOn           bool    `json:"pv_on"`
-	Blocked        string  `json:"blocked,omitempty"`
+	Paused         bool       `json:"paused"`
+	Stopped        bool       `json:"stopped"`
+	Since          *time.Time `json:"since,omitempty"` // seit wann pausiert oder gestoppt
+	OwnUse         bool       `json:"own_use"`
+	ForeignRunning int        `json:"foreign_running"`
+	SlotsNow       int        `json:"slots_now"`
+	GPUMinutesUsed float64    `json:"gpu_minutes_used_today"`
+	GPUUtilMean    float64    `json:"gpu_util_mean"`
+	PVOn           bool       `json:"pv_on"`
+	Blocked        string     `json:"blocked,omitempty"`
 }
 
 // Status ist nur für die lokale Oberfläche bestimmt.
@@ -265,8 +289,13 @@ func (m *Manager) Status() Status {
 	if reason == "" {
 		slots = m.cfg.Hardware.MaxParallelJobs - len(m.foreign)
 	}
+	var since *time.Time
+	if m.paused || m.stopped {
+		s := m.since
+		since = &s
+	}
 	return Status{
-		Paused: m.paused, Stopped: m.stopped, OwnUse: m.ownUse > 0,
+		Paused: m.paused, Stopped: m.stopped, Since: since, OwnUse: m.ownUse > 0,
 		ForeignRunning: len(m.foreign), SlotsNow: slots,
 		GPUMinutesUsed: m.usage.Used(m.now()).Minutes(),
 		GPUUtilMean:    m.hwWin.meanGPUUtil(),

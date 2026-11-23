@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -477,5 +478,35 @@ func TestStreamToolsOverNetwork(t *testing.T) {
 	if strings.Join(parts, "") != "Ich lese main.go." || len(parts) < 2 || len(ans.ToolCalls) != 1 ||
 		ans.ToolCalls[0].Function.Arguments != `{"path":"main.go"}` {
 		t.Fatalf("stücke %q, aufrufe %+v", parts, ans.ToolCalls)
+	}
+}
+
+// TestStopSurvivesNodeRestart: Ein Sofort-Stopp gilt nach einem Neustart des
+// Knotens weiter, der Status sagt es deutlich; resume hebt ihn auf.
+func TestStopSurvivesNodeRestart(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	id, _ := identity.New()
+	dir := t.TempDir()
+	keepDir := func(c *config.Config) { c.Node.DataDir = dir }
+	a := newTestNodeWith(t, ctx, id, "qwen2.5-coder:7b", "qwen", []string{"general"}, 32000, true, keepDir)
+	if err := a.Stop(); err != nil {
+		t.Fatal(err)
+	}
+	_ = a.Close()
+
+	b := newTestNodeWith(t, ctx, id, "qwen2.5-coder:7b", "qwen", []string{"general"}, 32000, true, keepDir)
+	st := b.Status()
+	if !st.REM.Stopped || st.REM.SlotsNow != 0 || len(st.Hints) == 0 || !strings.HasPrefix(st.Hints[0], "Sofort-Stopp aktiv seit ") {
+		t.Fatalf("nach neustart: %+v, hinweise %q", st.REM, st.Hints)
+	}
+	if _, err := b.REM.Admit(rem.AdmitRequest{}); err == nil {
+		t.Fatal("fremder auftrag trotz sofort-stopp angenommen")
+	}
+	if err := b.Resume(); err != nil {
+		t.Fatal(err)
+	}
+	if st := b.Status(); st.REM.Stopped || st.REM.SlotsNow == 0 || slices.ContainsFunc(st.Hints, func(h string) bool { return strings.Contains(h, "Sofort-Stopp") }) {
+		t.Fatalf("nach resume: %+v %q", st.REM, st.Hints)
 	}
 }

@@ -28,6 +28,7 @@ import (
 type fakeBackend struct {
 	last     orchestrator.Request
 	calls    []protocol.ToolCall // Antwort mit Werkzeug-Aufrufen statt Text
+	ctlErr   error               // Fehler beim Speichern von Pause/Stopp
 	err      error               // Fehler statt Antwort
 	feedback []profile.Feedback
 }
@@ -51,9 +52,9 @@ func (f *fakeBackend) Feedback(fb profile.Feedback) error {
 	}
 	return nil
 }
-func (f *fakeBackend) Pause()                                {}
-func (f *fakeBackend) Resume()                               {}
-func (f *fakeBackend) Stop()                                 {}
+func (f *fakeBackend) Pause() error                          { return f.ctlErr }
+func (f *fakeBackend) Resume() error                         { return f.ctlErr }
+func (f *fakeBackend) Stop() error                           { return f.ctlErr }
 func (f *fakeBackend) Connect(context.Context, string) error { return nil }
 func (f *fakeBackend) Ping(context.Context, string, string) (any, error) {
 	return map[string]bool{"ok": true}, nil
@@ -488,5 +489,25 @@ func TestChatStreamingTools(t *testing.T) {
 	if c != "Ich lese " || fin != "tool_calls" ||
 		!strings.Contains(body, `"tool_calls":[{"function":{"name":"read_file","arguments":"{\"path\":\"main.go\"}"},"id":"call_1","index":0,"type":"function"}]`) {
 		t.Fatalf("%q %q\n%s", c, fin, body)
+	}
+}
+
+// TestControlNotSaved: Lässt sich Pause oder Stopp nicht speichern, meldet
+// das Gateway 500 mit dem Hinweis, dass er nur bis zum Neustart gilt.
+func TestControlNotSaved(t *testing.T) {
+	fb := &fakeBackend{}
+	post := func(path string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("POST", path, nil)
+		req.RemoteAddr, req.Host = "127.0.0.1:5000", "127.0.0.1:7711"
+		rec := httptest.NewRecorder()
+		Handler(fb).ServeHTTP(rec, req)
+		return rec
+	}
+	if rec := post("/api/stop"); rec.Code != 200 || !strings.Contains(rec.Body.String(), "sofort-stopp") {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+	fb.ctlErr = errors.New("platte voll")
+	if rec := post("/api/stop"); rec.Code != 500 || !strings.Contains(rec.Body.String(), "sofort-stopp, aber nicht gespeichert; gilt nur bis zum nächsten neustart: platte voll") {
+		t.Fatalf("%d %s", rec.Code, rec.Body)
 	}
 }

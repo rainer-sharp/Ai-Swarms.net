@@ -31,9 +31,11 @@ import (
 type Backend interface {
 	Ask(ctx context.Context, req orchestrator.Request) (*orchestrator.Answer, error)
 	StatusJSON() any
-	Pause()
-	Resume()
-	Stop()
+	// Pause, Resume und Stop wirken sofort; ein Fehler heißt, dass der
+	// Zustand nicht gespeichert wurde und keinen Neustart übersteht.
+	Pause() error
+	Resume() error
+	Stop() error
 	Connect(ctx context.Context, addr string) error
 	Ping(ctx context.Context, target, network string) (any, error)
 	// Feedback und ProfileJSON: Kompetenzprofil (spec/cooperation.md § 2, § 8).
@@ -62,18 +64,18 @@ func Handler(b Backend) http.Handler {
 	mux.HandleFunc("POST /v1/chat/completions", func(w http.ResponseWriter, r *http.Request) { chat(b, w, r) })
 	mux.HandleFunc("POST /v1/audio/transcriptions", func(w http.ResponseWriter, r *http.Request) { transcribe(b, w, r) })
 	mux.HandleFunc("GET /api/status", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, http.StatusOK, b.StatusJSON()) })
-	mux.HandleFunc("POST /api/pause", func(w http.ResponseWriter, _ *http.Request) {
-		b.Pause()
-		writeJSON(w, 200, map[string]string{"ok": "pausiert"})
-	})
-	mux.HandleFunc("POST /api/resume", func(w http.ResponseWriter, _ *http.Request) {
-		b.Resume()
-		writeJSON(w, 200, map[string]string{"ok": "fortgesetzt"})
-	})
-	mux.HandleFunc("POST /api/stop", func(w http.ResponseWriter, _ *http.Request) {
-		b.Stop()
-		writeJSON(w, 200, map[string]string{"ok": "sofort-stopp"})
-	})
+	control := func(path string, do func() error, done string) {
+		mux.HandleFunc("POST "+path, func(w http.ResponseWriter, _ *http.Request) {
+			if err := do(); err != nil {
+				writeErr(w, http.StatusInternalServerError, fmt.Errorf("%s, aber nicht gespeichert; gilt nur bis zum nächsten neustart: %w", done, err))
+				return
+			}
+			writeJSON(w, 200, map[string]string{"ok": done})
+		})
+	}
+	control("/api/pause", b.Pause, "pausiert")
+	control("/api/resume", b.Resume, "fortgesetzt")
+	control("/api/stop", b.Stop, "sofort-stopp")
 	mux.HandleFunc("POST /api/connect", func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Addr string `json:"addr"`

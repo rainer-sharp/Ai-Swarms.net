@@ -118,7 +118,7 @@ The response is 204, or 404 for an unknown task, 409 if feedback was already giv
 | `init [-open]` | Create configuration and keys, by default with a private network of your own; `-open` for the open network |
 | `run` | Start the node |
 | `status` | Status of the running node (JSON) |
-| `pause`, `resume`, `stop` | Pause, resume foreign tasks, emergency stop |
+| `pause`, `resume`, `stop` | Pause or resume foreign tasks, emergency stop (aborts running foreign tasks); pause and emergency stop also apply after a restart until `resume` |
 | `ping [-net ID] <peer>` | Check the path to a peer |
 | `psk FILE` | Create a key for a private network |
 | `invite [-with-key] [-lan] [-peer ADDR] [-net ID] [-qr]` | Create an invitation link (the node must be running), with `-qr` also as a QR code |

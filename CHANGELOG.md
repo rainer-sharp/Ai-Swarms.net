@@ -4,6 +4,12 @@
 
 All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/) with the usual caveat for 0.x: incompatible changes are still possible between minor versions.
 
+## [Unreleased]
+
+### Changed
+
+- **Pause and emergency stop survive a restart:** `swarmainet pause` and `stop` are stored in `~/.swarmainet/control.json` and keep applying after a restart, e.g. when systemd restarts the service, until `swarmainet resume`. The start-up log and the first hint in `swarmainet status` say so, with the time since when. An unreadable control file leads to an emergency stop rather than being ignored. If the state cannot be saved, it still applies at once, but the command reports an error because it will not survive a restart. ([usage](docs/usage.md#commands))
+
 ## [0.4.0] – 2026-11-23
 
 Answers now stream, also from models on other nodes and with tools, and every release comes with ready-to-run programs for Linux, macOS and Windows. The protocol stays at version 0.1 and only gains optional fields: nodes with 0.4.0 and 0.3.0 work together. Existing configurations keep working without changes.

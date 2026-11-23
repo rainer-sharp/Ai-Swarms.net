@@ -4,6 +4,12 @@
 
 Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/); die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/) mit dem üblichen Vorbehalt für 0.x: Zwischen Minor-Versionen sind inkompatible Änderungen noch möglich.
 
+## [Unveröffentlicht]
+
+### Geändert
+
+- **Pause und Sofort-Stopp überstehen einen Neustart:** `swarmainet pause` und `stop` werden in `~/.swarmainet/control.json` gespeichert und gelten auch nach einem Neustart weiter, etwa wenn systemd den Dienst neu startet, bis `swarmainet resume`. Das Startprotokoll und der erste Hinweis in `swarmainet status` sagen es, mit Zeitpunkt. Eine unlesbare Steuerdatei führt zum Sofort-Stopp, statt übergangen zu werden. Lässt sich der Zustand nicht speichern, gilt er trotzdem sofort; der Befehl meldet dann aber einen Fehler, weil er einen Neustart nicht übersteht. ([Nutzung](../docs/de/usage.md#befehle))
+
 ## [0.4.0] – 2026-11-23
 
 Antworten kommen jetzt gestreamt, auch von Modellen auf anderen Knoten und mit Werkzeugen, und jedes Release bringt fertige Programmdateien für Linux, macOS und Windows mit. Das Protokoll bleibt bei Version 0.1 und bekommt nur optionale Felder: Knoten mit 0.4.0 und 0.3.0 arbeiten zusammen. Bestehende Konfigurationen funktionieren ohne Änderung weiter.

@@ -229,7 +229,7 @@ Ein lokaler Ressourcen- und Energiemanager (REM) lässt fremde Aufträge nur inn
 | Dimension | Einstellbar | Durchsetzung | Stand |
 |---|---|---|---|
 | Hardware | Parallel-Jobs, mittlere GPU-Auslastung über ein Zeitfenster, RAM-Reserve, VRAM-Budget, Zusatzleistung in W, Temperaturgrenze | Zulassungskontrolle, Slots, Abbrechen | umgesetzt bis auf VRAM-Budget und Zusatzleistung; GPU-Messung über `nvidia-smi` |
-| Zeit | Zeitfenster pro Wochentag, GPU-Minuten pro Tag, manuelle Pause | Zeitplan, Laufzeitzähler, Leases mit Ablaufzeit | umgesetzt; Pause gilt bis zum Neustart |
+| Zeit | Zeitfenster pro Wochentag, GPU-Minuten pro Tag, manuelle Pause | Zeitplan, Laufzeitzähler, Leases mit Ablaufzeit | umgesetzt; Pause und Sofort-Stopp gelten auch nach einem Neustart |
 | Energie | PV-Überschuss, Mindest-Ladestand des Hausakkus, optional Strompreisgrenze | lokale Messwerte, Schwellen mit Hysterese, sicherer Rückfall | umgesetzt über Home Assistant; MQTT und Modbus/SunSpec folgen |
 
 Sind mehrere Grenzen aktiv, gilt die strengste. Eine Momentangrenze wie „GPU max. 70 %“ wird nicht verwendet, weil einzelne Kernels kurzzeitig 100 % erreichen.

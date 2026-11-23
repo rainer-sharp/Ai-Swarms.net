@@ -118,7 +118,7 @@ Die Antwort ist 204, bei unbekanntem Auftrag 404, bei schon gemeldetem Schritt 4
 | `init [-open]` | Konfiguration und Schlüssel anlegen, standardmäßig mit eigenem privatem Netz; `-open` für das offene Netz |
 | `run` | Knoten starten |
 | `status` | Status des laufenden Knotens (JSON) |
-| `pause`, `resume`, `stop` | fremde Aufträge pausieren, fortsetzen, Sofort-Stopp |
+| `pause`, `resume`, `stop` | fremde Aufträge pausieren, fortsetzen, Sofort-Stopp (bricht laufende fremde Aufträge ab); Pause und Sofort-Stopp gelten auch nach einem Neustart, bis `resume` |
 | `ping [-net ID] <peer>` | Weg zu einem Peer prüfen |
 | `psk DATEI` | Schlüssel für ein privates Netz erzeugen |
 | `invite [-with-key] [-lan] [-peer ADR] [-net ID] [-qr]` | Einladungslink erzeugen (Knoten muss laufen), mit `-qr` auch als QR-Code |

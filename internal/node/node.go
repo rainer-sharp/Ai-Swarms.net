@@ -81,6 +81,18 @@ func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
 	if err != nil {
 		return nil, err
 	}
+	if dir != "" {
+		// Pause und Sofort-Stopp überstehen einen Neustart.
+		if err := m.Persist(filepath.Join(dir, "control.json")); err != nil {
+			slog.Warn("bedienzustand", "err", err)
+		}
+		switch st := m.Status(); {
+		case st.Stopped:
+			slog.Warn("sofort-stopp aus voriger sitzung aktiv: keine fremden aufträge; aufheben mit swarmainet resume")
+		case st.Paused:
+			slog.Info("pause aus voriger sitzung aktiv: keine fremden aufträge; fortsetzen mit swarmainet resume")
+		}
+	}
 	go m.Run(ctx)
 
 	store, err := receipt.OpenStore(filepath.Join(dir, "receipts.jsonl"))
@@ -303,12 +315,31 @@ func (n *Node) Status() Status {
 		REM:      n.REM.Status(),
 		Receipts: n.Receipts.Count(), Ledger: map[string]receipt.Summary{},
 	}
+	if h := controlHint(st.REM); h != "" {
+		st.Hints = append([]string{h}, st.Hints...)
+	}
 	for _, pn := range n.Nets {
 		st.Networks = append(st.Networks, netStatus(pn))
 		st.Peers = append(st.Peers, pn.Peers()...)
 		maps.Copy(st.Ledger, n.Receipts.Summary(pn.ID().String()))
 	}
 	return st
+}
+
+// controlHint: Hinweis, solange Pause oder Sofort-Stopp gilt; sie überstehen
+// einen Neustart, deshalb soll niemand rätseln, warum keine Aufträge kommen.
+func controlHint(s rem.Status) string {
+	since := ""
+	if s.Since != nil && !s.Since.IsZero() {
+		since = " seit " + s.Since.Local().Format("02.01.2006 15:04")
+	}
+	switch {
+	case s.Stopped:
+		return "Sofort-Stopp aktiv" + since + ": keine fremden Aufträge, auch nach einem Neustart. Aufheben mit swarmainet resume."
+	case s.Paused:
+		return "Pausiert" + since + ": keine fremden Aufträge, auch nach einem Neustart. Fortsetzen mit swarmainet resume."
+	}
+	return ""
 }
 
 // ProbeBackends protokolliert, welche Modelle erreichbar sind.
@@ -328,11 +359,12 @@ func (n *Node) ProbeBackends(ctx context.Context) {
 // Bedienfunktionen für das lokale Gateway.
 
 func (n *Node) StatusJSON() any { return n.Status() }
-func (n *Node) Pause()          { n.REM.Pause() }
-func (n *Node) Resume()         { n.REM.Resume() }
+func (n *Node) Pause() error    { return n.REM.Pause() }
+func (n *Node) Resume() error   { return n.REM.Resume() }
 
-// Stop ist der Sofort-Stopp: laufende Fremdjobs abbrechen, keine Annahmen mehr.
-func (n *Node) Stop() { n.REM.EmergencyStop() }
+// Stop ist der Sofort-Stopp: laufende Fremdjobs abbrechen, keine Annahmen
+// mehr, auch nach einem Neustart (bis Resume).
+func (n *Node) Stop() error { return n.REM.EmergencyStop() }
 
 func (n *Node) Connect(ctx context.Context, addr string) error { return n.P2P.Connect(ctx, addr) }
 

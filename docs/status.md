@@ -39,7 +39,6 @@ Round 1 (80 tasks from HumanEval and GSM8K, [report](../bench/report-r1.md)): th
 
 - `vram_budget_gib` and `extra_power_max_w` are not enforced yet; GPU measurement only via `nvidia-smi` (ROCm and macOS to follow).
 - Energy source only Home Assistant (REST, read-only); MQTT and Modbus/SunSpec to follow.
-- Pause and emergency stop apply until the next restart.
 
 **Network**
 

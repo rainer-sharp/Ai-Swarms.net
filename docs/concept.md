@@ -229,7 +229,7 @@ A local resource and energy manager (REM) only admits foreign tasks within the l
 | Dimension | Configurable | Enforcement | Status |
 |---|---|---|---|
 | Hardware | parallel jobs, mean GPU utilisation over a time window, RAM reserve, VRAM budget, additional power in W, temperature limit | admission control, slots, abort | implemented except VRAM budget and additional power; GPU measurement via `nvidia-smi` |
-| Time | time windows per weekday, GPU minutes per day, manual pause | schedule, runtime counter, leases with expiry | implemented; pause applies until restart |
+| Time | time windows per weekday, GPU minutes per day, manual pause | schedule, runtime counter, leases with expiry | implemented; pause and emergency stop also apply after a restart |
 | Energy | PV surplus, minimum charge of the home battery, optionally an electricity price limit | local measurements, thresholds with hysteresis, safe fallback | implemented via Home Assistant; MQTT and Modbus/SunSpec to follow |
 
 If several limits are active, the strictest applies. An instantaneous limit such as "GPU max. 70 %" is not used, because individual kernels briefly reach 100 %.
