@@ -8,7 +8,7 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 
 ### Hinzugefügt
 
-- **Streaming:** Mit `stream: true` kommt die Antwort Stück für Stück, auch von Modellen auf anderen Knoten. Ungeprüfter Text (Entwurf, Urteil, Nachdenken des Modells) steht in `delta.reasoning_content`, das Open WebUI als eingeklappte Denkphase zeigt; `delta.content` trägt nur Text, nach dem keine Prüfung mehr folgt. Findet der Prüfer keine Mängel, folgt der geprüfte Entwurf als ein Block. Anfragen mit Werkzeugen antworten weiter als ein Block. Neue optionale Protokollfelder: `stream` im Teilauftrag und `delta`/`reasoning` in `TASK_PROGRESS`; Anbieter mit älteren Versionen antworten als ein Block. ([Nutzung](../docs/de/usage.md#streaming), [Protokoll](../spec/de/protocol-v0.1.md) § 4.2)
+- **Streaming:** Mit `stream: true` kommt die Antwort Stück für Stück, auch von Modellen auf anderen Knoten. Ungeprüfter Text (Entwurf, Urteil, Nachdenken des Modells) steht in `delta.reasoning_content`, das Open WebUI als eingeklappte Denkphase zeigt; `delta.content` trägt nur Text, nach dem keine Prüfung mehr folgt. Findet der Prüfer keine Mängel, folgt der geprüfte Entwurf als ein Block. Mit Werkzeugen läuft der Text live, und die Werkzeug-Aufrufe folgen vollständig am Ende, nach der Prüfung gegen die erlaubten Werkzeuge. Neue optionale Protokollfelder: `stream` im Teilauftrag und `delta`/`reasoning` in `TASK_PROGRESS`; Anbieter mit älteren Versionen antworten als ein Block. ([Nutzung](../docs/de/usage.md#streaming), [Protokoll](../spec/de/protocol-v0.1.md) § 4.2)
 
 ## [0.3.0] – 2026-11-22
 

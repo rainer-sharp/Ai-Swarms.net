@@ -123,6 +123,9 @@ func (c *Client) decodeChat(req ChatRequest, body io.Reader) (ChatResponse, erro
 	}, nil
 }
 
+// maxToolCalls: So viele Werkzeug-Aufrufe nimmt ChatStream aus einer Antwort an.
+const maxToolCalls = 64
+
 // emptyAnswer: Fehler für eine Antwort ohne Text und ohne Werkzeug-Aufruf.
 // Leere Antworten sind Fehlschläge, damit der Orchestrator ausweicht.
 // Typisch bei Reasoning-Modellen: Das Nachdenken verbraucht max_tokens.
@@ -145,8 +148,9 @@ func emptyAnswer(req ChatRequest, finish string, tokens int) error {
 // Modells (reasoning_content oder reasoning, je nach Server). Zurück kommt die
 // ganze Antwort wie bei Chat. Lehnt das Backend die Streaming-Anfrage ab
 // (400/422, etwa wegen stream_options) oder antwortet es ohne Stream, gilt
-// das Ergebnis von Chat. Werkzeug-Aufrufe streamt es nicht; mit Werkzeugen
-// bitte Chat verwenden.
+// das Ergebnis von Chat. Werkzeug-Aufrufe kommen im Stream in Bruchstücken;
+// sie werden zusammengesetzt und erst mit der ganzen Antwort zurückgegeben,
+// nie über onDelta.
 func (c *Client) ChatStream(ctx context.Context, req ChatRequest, onDelta func(content, reasoning string)) (ChatResponse, error) {
 	body := struct {
 		ChatRequest
@@ -203,6 +207,15 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest, onDelta func(c
 					Content          string `json:"content"`
 					ReasoningContent string `json:"reasoning_content"`
 					Reasoning        string `json:"reasoning"`
+					ToolCalls        []struct {
+						Index    *int   `json:"index"`
+						ID       string `json:"id"`
+						Type     string `json:"type"`
+						Function struct {
+							Name      string `json:"name"`
+							Arguments string `json:"arguments"`
+						} `json:"function"`
+					} `json:"tool_calls"`
 				} `json:"delta"`
 				FinishReason *string `json:"finish_reason"`
 			} `json:"choices"`
@@ -230,6 +243,33 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest, onDelta func(c
 				content.WriteString(d.Content)
 				onDelta(d.Content, rs)
 			}
+			for _, tc := range d.ToolCalls {
+				// Mit index: Bruchstück des Aufrufs an dieser Stelle. Ohne
+				// index (manche Server schicken Aufrufe am Stück): eine neue
+				// id beginnt einen neuen Aufruf, sonst gehört es zum letzten.
+				i := len(out.ToolCalls) - 1
+				switch {
+				case tc.Index != nil:
+					i = *tc.Index
+				case tc.ID != "" || i < 0:
+					i = len(out.ToolCalls)
+				}
+				if i < 0 || i > len(out.ToolCalls) || i >= maxToolCalls {
+					return ChatResponse{}, fmt.Errorf("backend-stream: werkzeug-aufruf mit index %d", i)
+				}
+				if i == len(out.ToolCalls) {
+					out.ToolCalls = append(out.ToolCalls, protocol.ToolCall{Type: "function"})
+				}
+				c := &out.ToolCalls[i]
+				if tc.ID != "" {
+					c.ID = tc.ID
+				}
+				if tc.Type != "" {
+					c.Type = tc.Type
+				}
+				c.Function.Name += tc.Function.Name
+				c.Function.Arguments += tc.Function.Arguments
+			}
 			if ch.FinishReason != nil {
 				finish = *ch.FinishReason
 			}
@@ -239,7 +279,12 @@ func (c *Client) ChatStream(ctx context.Context, req ChatRequest, onDelta func(c
 		return ChatResponse{}, fmt.Errorf("backend-stream abgebrochen: %w", err)
 	}
 	out.Content = content.String()
-	if strings.TrimSpace(out.Content) == "" {
+	for i, c := range out.ToolCalls {
+		if c.Function.Name == "" {
+			return ChatResponse{}, fmt.Errorf("backend-stream: werkzeug-aufruf %d ohne namen", i)
+		}
+	}
+	if strings.TrimSpace(out.Content) == "" && len(out.ToolCalls) == 0 {
 		return ChatResponse{}, emptyAnswer(req, finish, out.CompletionTokens)
 	}
 	return out, nil

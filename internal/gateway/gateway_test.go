@@ -377,6 +377,7 @@ type streamBackend struct {
 	fakeBackend
 	events []orchestrator.Event
 	ans    string
+	calls  []protocol.ToolCall
 	err    error
 }
 
@@ -387,7 +388,7 @@ func (s *streamBackend) Ask(_ context.Context, r orchestrator.Request) (*orchest
 		}
 		r.Stream(e)
 	}
-	return &orchestrator.Answer{TaskID: "t1", Content: s.ans, Pattern: orchestrator.PatternDraftVerify}, s.err
+	return &orchestrator.Answer{TaskID: "t1", Content: s.ans, ToolCalls: s.calls, Pattern: orchestrator.PatternDraftVerify}, s.err
 }
 
 // sse liest die Ereignisse eines Streams: Denkphase, Antworttext, Ende.
@@ -473,5 +474,19 @@ func TestChatStreaming(t *testing.T) {
 	sb.events, sb.err = nil, orchestrator.ErrPrivacy
 	if rec = postStream(Handler(sb), "public"); rec.Code != 400 || !strings.Contains(rec.Body.String(), `"error"`) {
 		t.Fatalf("%d %s", rec.Code, rec.Body)
+	}
+}
+
+// TestChatStreamingTools: Der Text läuft live, die Werkzeug-Aufrufe kommen im
+// letzten Stück mit index, und das Ende heißt tool_calls.
+func TestChatStreamingTools(t *testing.T) {
+	sb := &streamBackend{events: []orchestrator.Event{{Kind: orchestrator.EventContent, Text: "Ich lese "}},
+		ans: "Ich lese ", calls: []protocol.ToolCall{{ID: "call_1", Type: "function",
+			Function: protocol.ToolFunction{Name: "read_file", Arguments: `{"path":"main.go"}`}}}}
+	body := postStream(Handler(sb), "").Body.String()
+	_, c, fin, _ := sse(t, body)
+	if c != "Ich lese " || fin != "tool_calls" ||
+		!strings.Contains(body, `"tool_calls":[{"function":{"name":"read_file","arguments":"{\"path\":\"main.go\"}"},"id":"call_1","index":0,"type":"function"}]`) {
+		t.Fatalf("%q %q\n%s", c, fin, body)
 	}
 }

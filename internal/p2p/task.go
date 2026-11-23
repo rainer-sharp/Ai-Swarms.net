@@ -214,7 +214,7 @@ func (n *Node) handleTask(s network.Stream) {
 	task := orchestrator.Task{TaskID: env.TaskID, SubtaskID: p.SubtaskID, Role: p.Role, Skill: p.Skill,
 		Messages: p.Messages, Limits: p.Limits, JSONSchema: p.JSONSchema, Tools: p.Tools, ToolChoice: p.ToolChoice, Audio: p.Audio}
 	var prog *progress
-	if p.Stream && p.Audio == nil && len(p.Tools) == 0 {
+	if p.Stream && p.Audio == nil {
 		prog = &progress{send: func(pp protocol.ProgressPayload) error {
 			return n.send(s, protocol.TaskProgress, env.TaskID, pp)
 		}, subtask: p.SubtaskID}

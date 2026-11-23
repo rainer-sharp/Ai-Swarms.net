@@ -138,23 +138,51 @@ func TestStreamRestart(t *testing.T) {
 	}
 }
 
-// TestNoStreamWithTools: Mit Werkzeugen bleibt es beim Block.
-func TestNoStreamWithTools(t *testing.T) {
-	dir := staticDir{{ID: "coder", PeerID: "p1", Trusted: true, Family: "qwen", Skills: []string{"code.python"}, Tools: true}}
-	ev := &events{}
-	o := &Orchestrator{Dir: dir, Exec: &streamExec{fakeExec{fn: map[string]func(Task) (string, error){
-		"coder": func(t Task) (string, error) {
-			if t.OnDelta != nil {
-				return "", errors.New("mit werkzeugen gestreamt")
-			}
-			return "ok", nil
-		},
-	}}}}
-	_, err := o.Run(context.Background(), Request{
-		Messages: []protocol.ChatMessage{{Role: "user", Content: "lies datei"}}, Privacy: protocol.PrivacyTrusted,
-		Tools: json.RawMessage(`[{"type":"function","function":{"name":"read_file"}}]`), Stream: ev.add,
-	})
-	if err != nil || len(ev.order) != 0 {
-		t.Fatalf("%v, %v", err, ev.order)
+// toolExec streamt Text und liefert Werkzeug-Aufrufe nur im Ergebnis.
+type toolExec struct {
+	calls map[string][]protocol.ToolCall
+}
+
+func (x toolExec) Execute(_ context.Context, a Agent, t Task) (protocol.Result, error) {
+	if t.OnDelta != nil {
+		t.OnDelta("Ich lese ", "")
+		t.OnDelta("die Datei.", "")
+	}
+	return protocol.Result{Role: t.Role, Result: protocol.ResultBody{Status: protocol.StatusOK,
+		Content: "Ich lese die Datei.", ToolCalls: x.calls[a.ID]}}, nil
+}
+
+// TestStreamWithTools: Mit Werkzeugen läuft der Text live, die Aufrufe kommen
+// nur mit dem Ergebnis. Ruft ein eingeschränkter Agent ein nicht
+// freigegebenes Werkzeug auf, wird sein schon gestreamter Text verworfen.
+func TestStreamWithTools(t *testing.T) {
+	tools := json.RawMessage(`[{"type":"function","function":{"name":"read_file"}},{"type":"function","function":{"name":"run_shell"}}]`)
+	dir := staticDir{
+		{ID: "fremd", PeerID: "p1", Family: "x", Skills: []string{"general"}, Tools: true, ToolsRestricted: true, ToolsAllow: []string{"read_file"}},
+		{ID: "eigen", Local: true, Family: "y", Skills: []string{"general"}, Tools: true},
+	}
+	call := func(name string) []protocol.ToolCall {
+		return []protocol.ToolCall{{ID: "c1", Type: "function", Function: protocol.ToolFunction{Name: name, Arguments: "{}"}}}
+	}
+	run := func(x toolExec) (*Answer, *events) {
+		ev := &events{}
+		o := &Orchestrator{Dir: dir, Exec: x}
+		ans, err := o.Run(context.Background(), Request{
+			Messages: []protocol.ChatMessage{{Role: "user", Content: "lies datei"}}, Privacy: protocol.PrivacyPublic,
+			Tools: tools, Stream: ev.add, Agents: []string{"fremd", "eigen"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return ans, ev
+	}
+	ans, ev := run(toolExec{calls: map[string][]protocol.ToolCall{"fremd": call("read_file")}})
+	if ev.content.String() != "Ich lese die Datei." || len(ans.ToolCalls) != 1 || ans.ToolCalls[0].Function.Name != "read_file" {
+		t.Fatalf("%q %+v", ev.content.String(), ans.ToolCalls)
+	}
+	// fremd ruft run_shell auf (nicht freigegeben): verworfen, eigen antwortet.
+	ans, ev = run(toolExec{calls: map[string][]protocol.ToolCall{"fremd": call("run_shell"), "eigen": call("run_shell")}})
+	if ev.content.String() != "Ich lese die Datei.<neu>Ich lese die Datei." || len(ans.Steps) != 2 || ans.Steps[0].Status != protocol.StatusFailed {
+		t.Fatalf("%q %+v", ev.content.String(), ans.Steps)
 	}
 }

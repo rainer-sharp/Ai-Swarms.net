@@ -40,6 +40,21 @@ func fakeBackend(t *testing.T, model string, calls *atomic.Int32) *httptest.Serv
 				Stream   bool                   `json:"stream"`
 			}
 			_ = json.NewDecoder(r.Body).Decode(&req)
+			if len(req.Tools) > 0 && req.Stream {
+				w.Header().Set("Content-Type", "text/event-stream")
+				for _, ev := range []string{
+					`{"choices":[{"delta":{"content":"Ich lese "}}]}`,
+					`{"choices":[{"delta":{"content":"main.go."}}]}`,
+					`{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"read_file","arguments":"{\"path\":"}}]}}]}`,
+					`{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"main.go\"}"}}]},"finish_reason":"tool_calls"}]}`,
+				} {
+					fmt.Fprintf(w, "data: %s\n\n", ev)
+					w.(http.Flusher).Flush()
+					time.Sleep(150 * time.Millisecond)
+				}
+				fmt.Fprint(w, "data: [DONE]\n\n")
+				return
+			}
 			if len(req.Tools) > 0 {
 				_ = json.NewEncoder(w).Encode(map[string]any{
 					"choices": []map[string]any{{"finish_reason": "tool_calls", "message": map[string]any{
@@ -422,5 +437,45 @@ func TestStreamOverNetwork(t *testing.T) {
 	waitFor(t, func() bool { return a.Receipts.Count() == 1 && b.Receipts.Count() == 1 })
 	if len(ans.Steps) != 1 || ans.Steps[0].CompletionTokens != 5 {
 		t.Fatalf("schritte %+v", ans.Steps)
+	}
+}
+
+// TestStreamToolsOverNetwork: Eine Werkzeug-Anfrage an einen anderen Knoten
+// streamt den Text; der Aufruf kommt zusammengesetzt mit dem Ergebnis.
+func TestStreamToolsOverNetwork(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	idA, _ := identity.New()
+	idB, _ := identity.New()
+	a := newTestNode(t, ctx, idA, "mistral-small", "mistral", []string{"general"}, 32000, false, idB)
+	b := newTestNodeWith(t, ctx, idB, "gpt-oss:20b", "gpt-oss", []string{"general"}, 32000, true, func(c *config.Config) {
+		c.Backends[0].Models[0].Tools = true
+	}, idA)
+	if err := a.P2P.Connect(ctx, b.P2P.Addrs()[0]); err != nil {
+		t.Fatal(err)
+	}
+	waitFor(t, func() bool { return len(a.Agents()) == 2 })
+	var mu sync.Mutex
+	var parts []string
+	ans, err := a.Ask(ctx, orchestrator.Request{
+		Messages: []protocol.ChatMessage{{Role: "user", Content: "Lies main.go"}}, Privacy: protocol.PrivacyTrusted,
+		Tools:  json.RawMessage(`[{"type":"function","function":{"name":"read_file","parameters":{"type":"object"}}}]`),
+		Agents: []string{"fake/gpt-oss:20b"},
+		Stream: func(e orchestrator.Event) {
+			mu.Lock()
+			defer mu.Unlock()
+			if e.Kind == orchestrator.EventContent {
+				parts = append(parts, e.Text)
+			}
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if strings.Join(parts, "") != "Ich lese main.go." || len(parts) < 2 || len(ans.ToolCalls) != 1 ||
+		ans.ToolCalls[0].Function.Arguments != `{"path":"main.go"}` {
+		t.Fatalf("stücke %q, aufrufe %+v", parts, ans.ToolCalls)
 	}
 }

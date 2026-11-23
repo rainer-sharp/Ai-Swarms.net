@@ -8,7 +8,7 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 ### Added
 
-- **Streaming:** with `stream: true`, the answer arrives piece by piece, also from models on other nodes. Unreviewed text (draft, verdict, the model's thinking) goes into `delta.reasoning_content`, which Open WebUI shows as a collapsed thinking phase; `delta.content` only carries text after which no review follows. If the verifier finds no flaws, the reviewed draft follows as one block. Requests with tools still answer as one block. New optional protocol fields: `stream` in the subtask and `delta`/`reasoning` in `TASK_PROGRESS`; providers with older versions answer as one block. ([usage](docs/usage.md#streaming), [protocol](spec/protocol-v0.1.md) § 4.2)
+- **Streaming:** with `stream: true`, the answer arrives piece by piece, also from models on other nodes. Unreviewed text (draft, verdict, the model's thinking) goes into `delta.reasoning_content`, which Open WebUI shows as a collapsed thinking phase; `delta.content` only carries text after which no review follows. If the verifier finds no flaws, the reviewed draft follows as one block. With tools, the text streams live and the tool calls follow complete at the end, after the check against the allowed tools. New optional protocol fields: `stream` in the subtask and `delta`/`reasoning` in `TASK_PROGRESS`; providers with older versions answer as one block. ([usage](docs/usage.md#streaming), [protocol](spec/protocol-v0.1.md) § 4.2)
 
 ## [0.3.0] – 2026-11-22
 

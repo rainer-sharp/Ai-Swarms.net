@@ -209,3 +209,54 @@ func TestChatStreamFallback(t *testing.T) {
 		t.Fatalf("nur denkphase: %v", err)
 	}
 }
+
+// TestChatStreamToolCalls: Werkzeug-Aufrufe in Bruchstücken (mit index) und
+// am Stück (ohne index) werden zusammengesetzt und nie als Text gemeldet.
+func TestChatStreamToolCalls(t *testing.T) {
+	for name, events := range map[string][]string{
+		"bruchstücke": {
+			`{"choices":[{"delta":{"content":"Ich lese "}}]}`,
+			`{"choices":[{"delta":{"tool_calls":[{"index":0,"id":"call_1","type":"function","function":{"name":"read_","arguments":""}}]}}]}`,
+			`{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"file","arguments":"{\"path\":"}}]}}]}`,
+			`{"choices":[{"delta":{"tool_calls":[{"index":1,"id":"call_2","type":"function","function":{"name":"ls","arguments":"{}"}}]}}]}`,
+			`{"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"\"main.go\"}"}}]},"finish_reason":"tool_calls"}]}`,
+		},
+		"am stück": {
+			`{"choices":[{"delta":{"content":"Ich lese "}}]}`,
+			`{"choices":[{"delta":{"tool_calls":[{"id":"call_1","type":"function","function":{"name":"read_file","arguments":"{\"path\":\"main.go\"}"}}]}}]}`,
+			`{"choices":[{"delta":{"tool_calls":[{"id":"call_2","type":"function","function":{"name":"ls","arguments":"{}"}}]},"finish_reason":"tool_calls"}]}`,
+		},
+	} {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Content-Type", "text/event-stream")
+			for _, ev := range events {
+				_, _ = io.WriteString(w, "data: "+ev+"\n\n")
+			}
+			_, _ = io.WriteString(w, "data: [DONE]\n\n")
+		}))
+		var text string
+		resp, err := New(srv.URL, "").ChatStream(context.Background(), ChatRequest{Model: "m", Tools: json.RawMessage(`[]`)},
+			func(c, _ string) { text += c })
+		srv.Close()
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		want := []protocol.ToolCall{
+			{ID: "call_1", Type: "function", Function: protocol.ToolFunction{Name: "read_file", Arguments: `{"path":"main.go"}`}},
+			{ID: "call_2", Type: "function", Function: protocol.ToolFunction{Name: "ls", Arguments: "{}"}},
+		}
+		if text != "Ich lese " || resp.Content != text || len(resp.ToolCalls) != 2 || resp.ToolCalls[0] != want[0] || resp.ToolCalls[1] != want[1] {
+			t.Fatalf("%s: %q %+v", name, text, resp.ToolCalls)
+		}
+	}
+
+	// Nur ein Aufruf, kein Text: vollständige Antwort.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = io.WriteString(w, `data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c","function":{"name":"ls","arguments":"{}"}}]}}]}`+"\n\ndata: [DONE]\n\n")
+	}))
+	defer srv.Close()
+	if resp, err := New(srv.URL, "").ChatStream(context.Background(), ChatRequest{Model: "m"}, func(string, string) {}); err != nil || len(resp.ToolCalls) != 1 {
+		t.Fatalf("%+v %v", resp, err)
+	}
+}

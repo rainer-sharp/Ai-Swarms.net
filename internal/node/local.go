@@ -143,7 +143,7 @@ func (l *Local) RunLocal(ctx context.Context, id string, t orchestrator.Task) (p
 		Tools: t.Tools, ToolChoice: t.ToolChoice}
 	var resp backend.ChatResponse
 	var err error
-	if t.OnDelta != nil && len(t.Tools) == 0 {
+	if t.OnDelta != nil {
 		resp, err = a.client.ChatStream(ctx, creq, t.OnDelta)
 	} else {
 		resp, err = a.client.Chat(ctx, creq)

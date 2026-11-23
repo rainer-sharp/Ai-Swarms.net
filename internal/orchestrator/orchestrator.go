@@ -122,8 +122,8 @@ type Request struct {
 	// Fähigkeit audio.transcribe und nie in der Freigabeklasse public.
 	Audio *protocol.Audio
 	// Stream: nicht nil, wenn die Antwort gestreamt wird. Run ruft es aus
-	// mehreren Goroutinen auf, nie gleichzeitig. Mit Werkzeugen und Audio
-	// wird nicht gestreamt.
+	// mehreren Goroutinen auf, nie gleichzeitig. Audio wird nicht gestreamt,
+	// Werkzeug-Aufrufe nicht als Zwischenstand (nur der Text).
 	Stream func(Event)
 }
 
@@ -335,9 +335,11 @@ type out struct {
 	to    target
 }
 
-// streaming: Diese Anfrage wird gestreamt.
+// streaming: Diese Anfrage wird gestreamt. Mit Werkzeugen läuft nur der
+// Text live; die Aufrufe kommen erst mit dem geprüften Ergebnis
+// (checkToolCalls), damit kein nicht freigegebener Aufruf den Client erreicht.
 func (r *run) streaming() bool {
-	return r.req.Stream != nil && !hasTools(r.req) && r.req.Audio == nil
+	return r.req.Stream != nil && r.req.Audio == nil
 }
 
 func (r *run) emit(k EventKind, s string) {
