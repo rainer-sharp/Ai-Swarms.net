@@ -4,13 +4,21 @@
 
 All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/) with the usual caveat for 0.x: incompatible changes are still possible between minor versions.
 
-## [Unreleased]
+## [0.4.0] – 2026-11-23
+
+Answers now stream, also from models on other nodes and with tools, and every release comes with ready-to-run programs for Linux, macOS and Windows. The protocol stays at version 0.1 and only gains optional fields: nodes with 0.4.0 and 0.3.0 work together. Existing configurations keep working without changes.
 
 ### Added
 
 - **Streaming:** with `stream: true`, the answer arrives piece by piece, also from models on other nodes. Unreviewed text (draft, verdict, the model's thinking) goes into `delta.reasoning_content`, which Open WebUI shows as a collapsed thinking phase; `delta.content` only carries text after which no review follows. If the verifier finds no flaws, the reviewed draft follows as one block. With tools, the text streams live and the tool calls follow complete at the end, after the check against the allowed tools. New optional protocol fields: `stream` in the subtask and `delta`/`reasoning` in `TASK_PROGRESS`; providers with older versions answer as one block. ([usage](docs/usage.md#streaming), [protocol](spec/protocol-v0.1.md) § 4.2)
 - **Prebuilt binaries:** every release from 0.4.0 contains archives for Linux, macOS and Windows (amd64 and arm64) with `SHA256SUMS`, built reproducibly by a GitHub workflow on every tag `v*` (`scripts/build-release.sh`). ([installation](docs/installation.md#prebuilt-binaries))
 - **`swarmainet version`**; a running node also reports its version in `swarmainet status` and at start-up. Container images take it via the build argument `VERSION`.
+
+### Upgrade notes
+
+- A model on another node streams only once that node runs 0.4.0; until then its answer arrives as one block, as before. The node whose gateway receives the request needs 0.4.0 as well.
+- Clients that ignore `delta.reasoning_content` do not see drafts and verdicts; they receive the answer once it starts. Open WebUI shows them as a collapsed thinking phase.
+- Container images built yourself report `dev` as their version unless the version is passed in: `SWARMAINET_VERSION=$(git describe --tags --always) docker compose build`.
 
 ## [0.3.0] – 2026-11-22
 
@@ -66,6 +74,7 @@ The protocol is unchanged (version 0.1): nodes with 0.2.0 and 0.1.0 work togethe
 
 First public version: local swarm (phase 1) and P2P layer with private networks and membership networks, tested on hardware across two sites.
 
+[0.4.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/rainer-sharp/Ai-Swarms.net/releases/tag/v0.1.0
