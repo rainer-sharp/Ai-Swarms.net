@@ -10,6 +10,8 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 
 - **Task-Graph (Kooperation Stufe 4):** neues Muster `decompose` (Modellname `swarmainet/decompose`). Ein Planer, bevorzugt das eigene Modell, zerlegt eine mehrteilige Aufgabe in Teilaufgaben mit Abhängigkeiten; unabhängige laufen parallel, jede mit eigenem Muster, und eine Synthese führt die Ergebnisse zusammen. Scheitert eine Teilaufgabe, entfallen ihre Nachfolger, und die Lücke wird genannt. Gibt es nichts zu zerlegen oder ist der Plan ungültig, läuft der Auftrag ohne Zerlegung. Die Antwort nennt die Teilaufgaben unter `graph`. Vorerst nur auf Wunsch; der Bandit wählt es nicht. ([Kooperation](../spec/de/cooperation.md) § 6, [Nutzung](../docs/de/usage.md#modellnamen-wie-der-schwarm-arbeitet))
 
+### Geändert
+
 - Der Standard für `tasks.max_tokens` ist jetzt 8192 statt 2048: Reasoning-Modelle mit langen Verläufen (etwa Open WebUI mit Werkzeugen) verbrauchten 2048 Tokens schon mit Nachdenken. Der Anbieter senkt die Grenze, damit Eingabe und Antwort in den `context` des Modells passen. ([Konfiguration](../docs/de/configuration.md))
 - Verbraucht ein Modell `max_tokens` ohne Antwort, meldet der Anbieter jetzt `token-limit erreicht` statt `ausführung fehlgeschlagen`, und der Gateway ergänzt, wie es sich beheben lässt. ([Protokoll](../spec/de/protocol-v0.1.md) § 4.2, [Nutzung](../docs/de/usage.md#diagnose))
 
