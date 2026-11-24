@@ -244,9 +244,13 @@ func (n *Node) handleTask(s network.Stream) {
 	}
 	if err != nil {
 		slog.Info("teilauftrag nicht ausgeführt", "peer", from, "agent", p.AgentID, "err", err)
+		// Nur Gründe ohne Inhalte gehen an den Auftraggeber.
 		reason := "ausführung fehlgeschlagen"
-		if c := context.Cause(slot.Context()); c != nil {
+		switch {
+		case context.Cause(slot.Context()) != nil:
 			reason = "abbruch durch anbieter"
+		case errors.Is(err, protocol.ErrTokenLimit):
+			reason = protocol.ReasonTokenLimit
 		}
 		_ = n.send(s, protocol.TaskCancel, env.TaskID, protocol.CancelPayload{SubtaskID: p.SubtaskID, Reason: reason})
 		close(stopWatch)
@@ -432,6 +436,9 @@ func (n *Node) Execute(ctx context.Context, a orchestrator.Agent, t orchestrator
 		case protocol.TaskCancel:
 			var c protocol.CancelPayload
 			_ = env.Decode(&c)
+			if c.Reason == protocol.ReasonTokenLimit {
+				return protocol.Result{}, fmt.Errorf("anbieter brach ab: %w", protocol.ErrTokenLimit)
+			}
 			return protocol.Result{}, fmt.Errorf("anbieter brach ab: %s", c.Reason)
 		case protocol.TaskResult:
 			if state != protocol.StateRunning {

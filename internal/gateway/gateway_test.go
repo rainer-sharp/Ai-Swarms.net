@@ -511,3 +511,14 @@ func TestControlNotSaved(t *testing.T) {
 		t.Fatalf("%d %s", rec.Code, rec.Body)
 	}
 }
+
+// TestTokenLimitHint: Ein Abbruch am Token-Limit kommt mit Rat zurück.
+func TestTokenLimitHint(t *testing.T) {
+	err := withHint(fmt.Errorf("alle kandidaten für specialist fehlgeschlagen: anbieter brach ab: %w", protocol.ErrTokenLimit))
+	if !errors.Is(err, protocol.ErrTokenLimit) || !strings.Contains(err.Error(), "tasks.max_tokens erhöhen") {
+		t.Fatalf("%v", err)
+	}
+	if withHint(nil) != nil || withHint(errors.New("x")).Error() != "x" {
+		t.Fatal("andere fehler verändert")
+	}
+}

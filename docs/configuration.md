@@ -9,7 +9,7 @@ The configuration lives in `~/.swarmainet/config.yaml` (create it with `swarmain
 | `node` | Addresses, gateway, network, trust, reachability (table below) |
 | `backends` | Inference servers and their models: `family`, `skills`, `context`, `strength`, `tools`, `vision` (understands images), `offer` |
 | `resources` | Resource manager: parallel tasks, GPU limits, temperature, RAM reserve, time windows, GPU minutes, energy (PV surplus, electricity price via Home Assistant) |
-| `tasks` | Default pattern, default privacy class, token limit, deadline, subtasks; `pseudonymize_terms`: own terms (names, projects, customers) that are always replaced for foreign nodes with `reduced` ([usage](usage.md#optional-headers)) |
+| `tasks` | Default pattern, default privacy class, token limit `max_tokens` (default 8192, applies when a request names none; the provider lowers it to fit the model's `context`), deadline, subtasks; `pseudonymize_terms`: own terms (names, projects, customers) that are always replaced for foreign nodes with `reduced` ([usage](usage.md#optional-headers)) |
 | `cooperation` | How the pattern is chosen when a request names none (table below) |
 
 Secrets do not belong in the file: the Home Assistant token comes from an environment variable (`token_env`), network keys are kept in separate files with permissions 0600.

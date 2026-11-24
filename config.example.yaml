@@ -104,7 +104,7 @@ resources:
 tasks:
   pattern: draft_verify_synthesize  # single | parallel | draft_verify_synthesize | parallel_verify | cascade
   privacy_class: trusted            # local | trusted | reduced | public
-  max_tokens: 2048
+  max_tokens: 8192                  # Reasoning-Modelle denken zuerst; der Anbieter begrenzt auf den Kontext des Modells
   deadline_s: 300
   max_subtasks: 8
   # Bei privacy_class reduced für fremde Knoten immer ersetzt, zusätzlich zur

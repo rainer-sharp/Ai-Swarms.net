@@ -6,6 +6,11 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 
 ## [Unveröffentlicht]
 
+### Geändert
+
+- Der Standard für `tasks.max_tokens` ist jetzt 8192 statt 2048: Reasoning-Modelle mit langen Verläufen (etwa Open WebUI mit Werkzeugen) verbrauchten 2048 Tokens schon mit Nachdenken. Der Anbieter senkt die Grenze, damit Eingabe und Antwort in den `context` des Modells passen. ([Konfiguration](../docs/de/configuration.md))
+- Verbraucht ein Modell `max_tokens` ohne Antwort, meldet der Anbieter jetzt `token-limit erreicht` statt `ausführung fehlgeschlagen`, und der Gateway ergänzt, wie es sich beheben lässt. ([Protokoll](../spec/de/protocol-v0.1.md) § 4.2, [Nutzung](../docs/de/usage.md#diagnose))
+
 ## [0.6.0] – 2026-11-24
 
 Anfragen dürfen jetzt Bilder enthalten, und mit `reduced` bekommen fremde Knoten nur noch eine gekürzte Aufgabe statt des ganzen Gesprächs. Mit dem Bandit passen zwei Regler den Prüfaufwand an die Sollwerte an. Das Protokoll bleibt bei Version 0.1 und bekommt nur das optionale Feld `images`: Knoten mit 0.6.0 und 0.5.0 arbeiten zusammen. Bestehende Konfigurationen funktionieren ohne Änderung weiter.

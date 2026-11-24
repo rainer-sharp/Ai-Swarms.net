@@ -6,6 +6,11 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### Changed
+
+- The default for `tasks.max_tokens` is now 8192 instead of 2048: reasoning models with long histories (e.g. Open WebUI with tools) used up 2048 tokens by thinking alone. The provider lowers the limit so that input and answer fit into the model's `context`. ([configuration](docs/configuration.md))
+- If a model uses up `max_tokens` without an answer, the provider now reports `token-limit erreicht` (token limit reached) instead of `ausführung fehlgeschlagen` (execution failed), and the gateway adds how to fix it. ([protocol](spec/protocol-v0.1.md) § 4.2, [usage](docs/usage.md#diagnostics))
+
 ## [0.6.0] – 2026-11-24
 
 Requests may now contain images, and with `reduced`, foreign nodes only receive a shortened task instead of the whole conversation. With the bandit, two controllers adjust the review effort to the targets. The protocol stays at version 0.1 and only gains the optional field `images`: nodes with 0.6.0 and 0.5.0 work together. Existing configurations keep working without changes.

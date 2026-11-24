@@ -5,6 +5,7 @@ package protocol
 
 import (
 	"encoding/json"
+	"errors"
 	"slices"
 	"time"
 )
@@ -210,6 +211,14 @@ type RejectPayload struct {
 	SubtaskID string `json:"subtask_id"`
 	Reason    string `json:"reason"`
 }
+
+// ReasonTokenLimit: Abbruchgrund (TASK_CANCEL), wenn das Modell max_tokens
+// erreicht hat, bevor eine Antwort kam, typisch bei Reasoning-Modellen. Der
+// Grund nennt keine Inhalte; der Auftraggeber kann ihn dem Nutzer zeigen.
+const ReasonTokenLimit = "token-limit erreicht"
+
+// ErrTokenLimit: lokaler wie entfernter Abbruch aus diesem Grund.
+var ErrTokenLimit = errors.New(ReasonTokenLimit)
 
 type CancelPayload struct {
 	SubtaskID string `json:"subtask_id"`

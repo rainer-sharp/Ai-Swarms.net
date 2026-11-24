@@ -17,7 +17,7 @@ import (
 
 func TestChatEmptyContentIsError(t *testing.T) {
 	for _, tc := range []struct{ body, want string }{
-		{`{"choices":[{"message":{"role":"assistant","content":""},"finish_reason":"length"}]}`, "token-limit (max_tokens 2048)"},
+		{`{"choices":[{"message":{"role":"assistant","content":""},"finish_reason":"length"}]}`, "token-limit erreicht (max_tokens 2048)"},
 		{`{"choices":[{"message":{"role":"assistant","content":"  "},"finish_reason":"stop"}]}`, "leere antwort"},
 	} {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(tc.body)) }))

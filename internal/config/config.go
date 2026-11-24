@@ -447,7 +447,7 @@ func Default() Config {
 		Tasks: Tasks{
 			Pattern:      "draft_verify_synthesize",
 			PrivacyClass: "trusted",
-			MaxTokens:    2048,
+			MaxTokens:    8192,
 			DeadlineS:    300,
 			MaxSubtasks:  8,
 		},

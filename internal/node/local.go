@@ -111,6 +111,34 @@ func (l *Local) Admit(public bool) (*rem.Slot, error) {
 // withSchema ergänzt den Schema-Hinweis. Steht schon eine System-Nachricht am
 // Anfang, wird er dort angehängt: manche Chat-Templates (z. B. Qwen in vLLM)
 // lehnen mehr als eine System-Nachricht ab.
+// Schätzung der Eingabe in Tokens: Bytes je Token (eher zu viele Tokens, also
+// eher zu wenig Platz für die Antwort) und pauschal je Bild.
+const (
+	bytesPerToken  = 3
+	tokensPerImage = 1500
+	minAnswerRoom  = 256
+)
+
+// fitTokens begrenzt max_tokens, damit Eingabe und Antwort in den Kontext des
+// Modells passen: vLLM etwa lehnt eine Anfrage ab, deren Summe größer ist.
+// Ohne bekannten Kontext bleibt die Grenze, wie sie ist.
+func fitTokens(maxTokens, contextMax int, msgs []protocol.ChatMessage, toolBytes int) int {
+	if contextMax <= 0 || maxTokens <= 0 {
+		return maxTokens
+	}
+	n := toolBytes
+	images := 0
+	for _, m := range msgs {
+		n += len(m.Content) + len(m.Role) + 8
+		for _, c := range m.ToolCalls {
+			n += len(c.Function.Name) + len(c.Function.Arguments) + 16
+		}
+		images += len(m.Images)
+	}
+	free := contextMax - n/bytesPerToken - images*tokensPerImage
+	return max(min(maxTokens, free), minAnswerRoom)
+}
+
 func withSchema(msgs []protocol.ChatMessage, schema string) []protocol.ChatMessage {
 	if schema == "" {
 		return msgs
@@ -144,7 +172,7 @@ func (l *Local) RunLocal(ctx context.Context, id string, t orchestrator.Task) (p
 		}, nil
 	}
 	msgs := withSchema(t.Messages, t.JSONSchema)
-	creq := backend.ChatRequest{Model: a.model, Messages: msgs, MaxTokens: t.Limits.MaxTokens,
+	creq := backend.ChatRequest{Model: a.model, Messages: msgs, MaxTokens: fitTokens(t.Limits.MaxTokens, a.info.ContextMax, msgs, len(t.Tools)),
 		Tools: t.Tools, ToolChoice: t.ToolChoice}
 	var resp backend.ChatResponse
 	var err error

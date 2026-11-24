@@ -168,7 +168,7 @@ const maxToolCalls = 64
 // Typisch bei Reasoning-Modellen: Das Nachdenken verbraucht max_tokens.
 func emptyAnswer(req ChatRequest, finish string, tokens int) error {
 	if finish == "length" {
-		return fmt.Errorf("leere antwort: token-limit (max_tokens %d) erreicht, bevor eine antwort kam", req.MaxTokens)
+		return fmt.Errorf("leere antwort: %w (max_tokens %d), bevor eine antwort kam", protocol.ErrTokenLimit, req.MaxTokens)
 	}
 	// Nur Metadaten, nie Inhalte: gpt-oss etwa antwortet leer, wenn die
 	// Nachrichten auf den Assistenten enden.

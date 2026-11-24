@@ -290,6 +290,7 @@ func chat(b Backend, w http.ResponseWriter, r *http.Request) {
 		oreq.Stream = sw.event
 	}
 	ans, err := b.Ask(r.Context(), oreq)
+	err = withHint(err)
 	if sw != nil && sw.begun() {
 		sw.finish(ans, err)
 		return
@@ -497,6 +498,14 @@ func splitList(s string) []string {
 		}
 	}
 	return out
+}
+
+// withHint ergänzt Fehler, die der Nutzer selbst beheben kann, um einen Rat.
+func withHint(err error) error {
+	if errors.Is(err, protocol.ErrTokenLimit) {
+		return fmt.Errorf("%w; das modell hat die token-grenze mit nachdenken verbraucht: max_tokens der anfrage oder tasks.max_tokens erhöhen", err)
+	}
+	return err
 }
 
 func writeErr(w http.ResponseWriter, code int, err error) {
