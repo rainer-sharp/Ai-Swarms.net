@@ -73,7 +73,7 @@ Der Ressourcenmanager unter `resources` begrenzt, wie viel ein Knoten für ander
 ## Dauerbetrieb
 
 - **Linux:** als systemd-Benutzerdienst, siehe [`deploy/linux/`](../../deploy/linux/de/README.md).
-- **Docker:** für Helferknoten ohne Modelle, siehe [Netzarten – Helfer mit Docker](networks.md#helferknoten-mit-docker).
+- **Docker:** für Helferknoten ohne Modelle, siehe [Netzarten – Helfer mit Docker](networks.md#helferknoten-mit-docker). Für ein Gateway, das lange Aufnahmen teilt, die Image-Variante mit `ffmpeg`: `docker build --target audio -t swarmainet:audio .` ([Transkription](usage.md#transkription)).
 - **Raspberry Pi** als Helfer hinter einer Portfreigabe: [`deploy/raspberry-pi/`](../../deploy/raspberry-pi/de/README.md).
 - **VPS** mit Startknoten und Helfer: [`deploy/vps/`](../../deploy/vps/de/README.md).
 

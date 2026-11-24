@@ -6,6 +6,16 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **Images in requests:** chat messages may contain images as `image_url` parts with an embedded data URL (PNG, JPEG, WebP, GIF, together at most 2.75 MiB), as Open WebUI sends them. They only go to models with the new setting `vision: true`, also as verifier or synthesiser; the backend receives them in the OpenAI format. With `reduced`, requests with images stay in the trusted circle, because an image cannot be pseudonymised. New optional protocol field `images` in the messages; providers with older versions never announce the modality `image` and therefore never receive images. ([usage](docs/usage.md#coding-agents-and-tools), [privacy classes](spec/privacy-classes.md) rule 10, [protocol](spec/protocol-v0.1.md) § 4.2)
+- **Minimisation for `reduced`:** if a request contains a history or system instructions, an own or trusted model first rewrites the last request as a self-contained task with only what is needed; foreign nodes, also as verifier or synthesiser, receive this task, pseudonymised, instead of the conversation. Without it, nothing goes to strangers. With tools, the history stays complete. ([privacy classes](spec/privacy-classes.md) rule 9)
+- **Container image with `ffmpeg`:** `docker build --target audio` builds a variant (Alpine, about 230 MB instead of 50 MB) for a gateway that splits long recordings. ([installation](docs/installation.md#continuous-operation))
+
+### Changed
+
+- If the request restricts the choice to agents (`X-SwarmAiNet-Agents`) that the privacy class excludes, the gateway now responds with 400 and the reason instead of 502.
+
 ## [0.5.0] – 2026-11-23
 
 Foreign nodes can now help with personal requests too: with the privacy class `reduced`, they only see placeholders instead of names, addresses and account numbers. Pause and emergency stop now survive a restart. The protocol stays at version 0.1: nodes with 0.5.0 and 0.4.0 work together. Existing configurations keep working without changes.

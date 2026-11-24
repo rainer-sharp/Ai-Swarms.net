@@ -318,6 +318,9 @@ type Model struct {
 	// Tools: Das Modell beherrscht Werkzeug-Aufrufe (OpenAI tools); nur
 	// solche Modelle bekommen Aufträge von Coding-Agenten mit Werkzeugen.
 	Tools bool `yaml:"tools,omitempty"`
+	// Vision: Das Modell versteht Bilder; nur solche Modelle bekommen
+	// Anfragen mit Bildern.
+	Vision bool `yaml:"vision,omitempty"`
 }
 
 type Resources struct {

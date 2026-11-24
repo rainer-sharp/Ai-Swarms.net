@@ -16,6 +16,8 @@ services:
       #   SWARMAINET_VERSION=$(git describe --tags --always) docker compose build
       args:
         VERSION: ${SWARMAINET_VERSION:-}
+      # Für ein Gateway, das lange Aufnahmen teilt, die Variante mit ffmpeg:
+      # target: audio
     image: swarmainet:latest
     # Host-Netz, damit AutoNAT, beobachtete Adressen und IPv6 stimmen
     # (spec/p2p-layer.md § 6.1); das Gateway bleibt auf 127.0.0.1.

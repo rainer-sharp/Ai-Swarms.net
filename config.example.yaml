@@ -57,6 +57,7 @@ backends:
         context: 32768
         strength: 5                 # 1 (schwach) bis 10 (stark), 0 = unbekannt; wählt den Prüfer
         tools: true                 # beherrscht Werkzeug-Aufrufe (für Coding-Agenten)
+        vision: false               # versteht Bilder; nur solche Modelle bekommen Anfragen mit Bildern
         offer: true
       - name: llama3.1:8b
         family: llama

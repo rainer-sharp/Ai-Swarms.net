@@ -3,9 +3,11 @@
 
 package protocol
 
-import "encoding/json"
-
-import "time"
+import (
+	"encoding/json"
+	"slices"
+	"time"
+)
 
 // Freigabeklassen (spec/privacy-classes.md). Die Reihenfolge ist relevant:
 // eine Delegation darf nur gleich streng oder strenger sein.
@@ -94,6 +96,46 @@ type ChatMessage struct {
 	ToolCalls  []ToolCall `json:"tool_calls,omitempty"`
 	ToolCallID string     `json:"tool_call_id,omitempty"`
 	Name       string     `json:"name,omitempty"`
+	// Images: eingebettete Bilder (Nachrichten mit role "user"); nur an
+	// Agenten mit der Modalität "image", bei reduced nie an Fremde
+	// (spec/protocol-v0.1.md § 4.2).
+	Images []Image `json:"images,omitempty"`
+}
+
+// Image ist ein eingebettetes Bild.
+type Image struct {
+	MIME string `json:"mime"` // image/png, image/jpeg, image/webp, image/gif
+	Data []byte `json:"data"` // im JSON Base64
+}
+
+// MaxImageBytes begrenzt alle Bilder eines Teilauftrags zusammen, aus
+// demselben Grund wie MaxAudioBytes.
+const MaxImageBytes = 2816 << 10 // 2,75 MiB
+
+// ImageMIME: Bildformate, die der Schwarm weiterreicht.
+var ImageMIME = []string{"image/png", "image/jpeg", "image/webp", "image/gif"}
+
+// ValidImages: alle Bilder haben Daten und ein unterstütztes Format.
+func ValidImages(msgs []ChatMessage) bool {
+	for _, m := range msgs {
+		for _, img := range m.Images {
+			if len(img.Data) == 0 || !slices.Contains(ImageMIME, img.MIME) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// ImageBytes zählt die Bilddaten aller Nachrichten.
+func ImageBytes(msgs []ChatMessage) int {
+	n := 0
+	for _, m := range msgs {
+		for _, img := range m.Images {
+			n += len(img.Data)
+		}
+	}
+	return n
 }
 
 // ToolCall ist ein Werkzeug-Aufruf des Modells. Ausgeführt wird er nie im

@@ -1,3 +1,4 @@
 /swarmainet
 *.key
 /dist/
+/todo.md

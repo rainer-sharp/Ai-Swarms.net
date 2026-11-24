@@ -46,6 +46,43 @@ type ChatRequest struct {
 	Stream      bool                   `json:"stream"`
 	Tools       json.RawMessage        `json:"tools,omitempty"`
 	ToolChoice  json.RawMessage        `json:"tool_choice,omitempty"`
+	// StreamOptions nur beim Streaming (Verbrauch in der letzten Nachricht).
+	StreamOptions map[string]bool `json:"stream_options,omitempty"`
+}
+
+// MarshalJSON schreibt Nachrichten mit Bildern im OpenAI-Format: content als
+// Liste von Teilen, Bilder als data-URL in image_url.
+func (r ChatRequest) MarshalJSON() ([]byte, error) {
+	type plain ChatRequest
+	msgs := make([]any, len(r.Messages))
+	for i, m := range r.Messages {
+		msgs[i] = wireMessage(m)
+	}
+	return json.Marshal(struct {
+		plain
+		Messages []any `json:"messages"`
+	}{plain(r), msgs})
+}
+
+func wireMessage(m protocol.ChatMessage) any {
+	if len(m.Images) == 0 {
+		return m
+	}
+	parts := []map[string]any{}
+	if m.Content != "" {
+		parts = append(parts, map[string]any{"type": "text", "text": m.Content})
+	}
+	for _, img := range m.Images {
+		url := "data:" + img.MIME + ";base64," + base64.StdEncoding.EncodeToString(img.Data)
+		parts = append(parts, map[string]any{"type": "image_url", "image_url": map[string]string{"url": url}})
+	}
+	return struct {
+		Role       string              `json:"role"`
+		Content    []map[string]any    `json:"content"`
+		ToolCalls  []protocol.ToolCall `json:"tool_calls,omitempty"`
+		ToolCallID string              `json:"tool_call_id,omitempty"`
+		Name       string              `json:"name,omitempty"`
+	}{m.Role, parts, m.ToolCalls, m.ToolCallID, m.Name}
 }
 
 type ChatResponse struct {
@@ -152,11 +189,8 @@ func emptyAnswer(req ChatRequest, finish string, tokens int) error {
 // sie werden zusammengesetzt und erst mit der ganzen Antwort zurückgegeben,
 // nie über onDelta.
 func (c *Client) ChatStream(ctx context.Context, req ChatRequest, onDelta func(content, reasoning string)) (ChatResponse, error) {
-	body := struct {
-		ChatRequest
-		StreamOptions map[string]bool `json:"stream_options"`
-	}{req, map[string]bool{"include_usage": true}}
-	body.Stream = true
+	body := req
+	body.Stream, body.StreamOptions = true, map[string]bool{"include_usage": true}
 	b, err := json.Marshal(body)
 	if err != nil {
 		return ChatResponse{}, err

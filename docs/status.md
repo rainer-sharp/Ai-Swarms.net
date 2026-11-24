@@ -31,9 +31,9 @@ Round 1 (80 tasks from HumanEval and GSM8K, [report](../bench/report-r1.md)): th
 **Collaboration of the models**
 
 - The router is a keyword heuristic, not a model. The competence profile rates agents, but agent selection does not use it yet; the bandit (opt-in) only chooses the pattern.
-- Privacy class `reduced` pseudonymises for foreign nodes, but recognising names by a model is not complete, and minimisation (sending only the needed fragment) is missing. Not yet tested across sites with foreign nodes on other hardware.
+- Privacy class `reduced` shortens and pseudonymises for foreign nodes, but both are done by a model: shortening can lose something needed, and recognising names is not complete. Tested on hardware with two nodes on one computer (history with nine personal details, none reached the foreign node); not yet across sites with foreign nodes on other hardware.
 - Streaming shows the answer live only where no further review follows; with review, the draft streams into the thinking phase.
-- Images in requests are not supported. Audio only as a transcription (`/v1/audio/transcriptions`, only up to `trusted`); the gateway splits long recordings into overlapping pieces with `ffmpeg`. Tested on hardware: a 57-minute recording in a single request, seven pieces from the VM via a node with Nemotron-Transcribe in 143 s, without doubled or lost words at the seams. The pieces run in parallel, but the gain depends on how many providers are free; with only one model, they run one after another.
+- Images in requests only as embedded data URLs and only to models with `vision: true`; tested on hardware with a foreign node and Qwen3.8-Flash. Audio only as a transcription (`/v1/audio/transcriptions`, only up to `trusted`); the gateway splits long recordings into overlapping pieces with `ffmpeg`. Tested on hardware: a 57-minute recording in a single request, seven pieces from the VM via a node with Nemotron-Transcribe in 143 s, without doubled or lost words at the seams. The pieces run in parallel, but the gain depends on how many providers are free; with only one model, they run one after another.
 
 **Resources**
 

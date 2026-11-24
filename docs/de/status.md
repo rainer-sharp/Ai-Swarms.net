@@ -31,9 +31,9 @@ Runde 1 (80 Aufgaben aus HumanEval und GSM8K, [Bericht](../../bench/de/report-r1
 **Zusammenarbeit der Modelle**
 
 - Der Router ist eine Stichwort-Heuristik, kein Modell. Das Kompetenzprofil bewertet die Agenten, die Auswahl der Agenten nutzt es aber noch nicht; der Bandit (Opt-in) wählt nur das Muster.
-- Die Freigabeklasse `reduced` pseudonymisiert für fremde Knoten, die Erkennung von Namen durch ein Modell ist aber nicht vollständig, und die Minimierung (nur das nötige Bruchstück schicken) fehlt. Über Standorte hinweg mit fremden Knoten auf anderer Hardware noch nicht getestet.
+- Die Freigabeklasse `reduced` kürzt und pseudonymisiert für fremde Knoten, beides erledigt aber ein Modell: Beim Kürzen kann Nötiges verloren gehen, und die Erkennung von Namen ist nicht vollständig. Auf Hardware mit zwei Knoten auf einem Rechner getestet (Verlauf mit neun persönlichen Angaben, keine kam beim fremden Knoten an); über Standorte hinweg mit fremden Knoten auf anderer Hardware noch nicht.
 - Streaming zeigt die Antwort nur dort live, wo keine Prüfung mehr folgt; mit Prüfung läuft der Entwurf in die Denkphase.
-- Bilder in Anfragen werden nicht unterstützt. Audio nur als Transkription (`/v1/audio/transcriptions`, nur bis `trusted`); lange Aufnahmen teilt das Gateway mit `ffmpeg` in überlappende Stücke. Auf Hardware getestet: eine Aufnahme von 57 Minuten in einer einzigen Anfrage, sieben Stücke von der VM über einen Knoten mit Nemotron-Transcribe in 143 s, ohne doppelte oder fehlende Wörter an den Nahtstellen. Die Stücke laufen parallel, der Gewinn hängt aber davon ab, wie viele Anbieter frei sind; mit nur einem Modell laufen sie nacheinander.
+- Bilder in Anfragen nur als eingebettete data-URL und nur an Modelle mit `vision: true`; auf Hardware mit einem fremden Knoten und Qwen3.8-Flash getestet. Audio nur als Transkription (`/v1/audio/transcriptions`, nur bis `trusted`); lange Aufnahmen teilt das Gateway mit `ffmpeg` in überlappende Stücke. Auf Hardware getestet: eine Aufnahme von 57 Minuten in einer einzigen Anfrage, sieben Stücke von der VM über einen Knoten mit Nemotron-Transcribe in 143 s, ohne doppelte oder fehlende Wörter an den Nahtstellen. Die Stücke laufen parallel, der Gewinn hängt aber davon ab, wie viele Anbieter frei sind; mit nur einem Modell laufen sie nacheinander.
 
 **Ressourcen**
 

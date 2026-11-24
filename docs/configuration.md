@@ -7,7 +7,7 @@ The configuration lives in `~/.swarmainet/config.yaml` (create it with `swarmain
 | Section | Contents |
 |---|---|
 | `node` | Addresses, gateway, network, trust, reachability (table below) |
-| `backends` | Inference servers and their models: `family`, `skills`, `context`, `strength`, `tools`, `offer` |
+| `backends` | Inference servers and their models: `family`, `skills`, `context`, `strength`, `tools`, `vision` (understands images), `offer` |
 | `resources` | Resource manager: parallel tasks, GPU limits, temperature, RAM reserve, time windows, GPU minutes, energy (PV surplus, electricity price via Home Assistant) |
 | `tasks` | Default pattern, default privacy class, token limit, deadline, subtasks; `pseudonymize_terms`: own terms (names, projects, customers) that are always replaced for foreign nodes with `reduced` ([usage](usage.md#optional-headers)) |
 | `cooperation` | How the pattern is chosen when a request names none (table below) |

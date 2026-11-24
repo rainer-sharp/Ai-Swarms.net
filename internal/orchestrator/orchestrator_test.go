@@ -734,6 +734,7 @@ func TestNoAgentReason(t *testing.T) {
 		{"local ohne eigenes modell", stranger, protocol.PrivacyLocal, nil, "nur modelle dieses knotens"},
 		{"gar nichts bekannt", nil, protocol.PrivacyTrusted, nil, "keine modelle in der konfiguration"},
 		{"ausdrücklich beschränkt", stranger, protocol.PrivacyTrusted, []string{"gibt-es-nicht"}, ""},
+		{"beschränkt auf fremde", stranger, protocol.PrivacyTrusted, []string{"fremd"}, "freigabeklasse trusted"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			o := &Orchestrator{Dir: tc.dir, Exec: &fakeExec{}}
@@ -748,7 +749,7 @@ func TestNoAgentReason(t *testing.T) {
 				t.Fatalf("meldung: %v", err)
 			}
 			// 400 nur, wenn es an der Freigabeklasse liegt.
-			if byClass := tc.dir != nil && tc.limit == nil; errors.Is(err, ErrPrivacy) != byClass {
+			if byClass := tc.dir != nil && tc.want != ""; errors.Is(err, ErrPrivacy) != byClass {
 				t.Fatalf("ErrPrivacy %v, erwartet %v: %v", errors.Is(err, ErrPrivacy), byClass, err)
 			}
 		})

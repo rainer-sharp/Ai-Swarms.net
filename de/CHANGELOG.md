@@ -6,6 +6,16 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- **Bilder in Anfragen:** Chat-Nachrichten dürfen Bilder als `image_url`-Teile mit eingebetteter data-URL enthalten (PNG, JPEG, WebP, GIF, zusammen höchstens 2,75 MiB), so wie Open WebUI sie schickt. Sie gehen nur an Modelle mit der neuen Einstellung `vision: true`, auch als Prüfer oder Synthese; das Backend bekommt sie im OpenAI-Format. Bei `reduced` bleiben Anfragen mit Bildern im vertrauten Kreis, weil sich ein Bild nicht pseudonymisieren lässt. Neues optionales Protokollfeld `images` in den Nachrichten; Anbieter mit älteren Versionen melden nie die Modalität `image` und bekommen deshalb nie Bilder. ([Nutzung](../docs/de/usage.md#coding-agenten-und-werkzeuge), [Freigabeklassen](../spec/de/privacy-classes.md) Regel 10, [Protokoll](../spec/de/protocol-v0.1.md) § 4.2)
+- **Minimierung für `reduced`:** Enthält eine Anfrage einen Verlauf oder Systemanweisungen, schreibt ein eigenes oder vertrautes Modell zuerst die letzte Anfrage als in sich geschlossene Aufgabe, nur mit dem Nötigen; fremde Knoten, auch als Prüfer oder Synthese, bekommen diese Aufgabe pseudonymisiert statt des Gesprächs. Ohne sie geht nichts an Fremde. Mit Werkzeugen bleibt der Verlauf vollständig. ([Freigabeklassen](../spec/de/privacy-classes.md) Regel 9)
+- **Container-Image mit `ffmpeg`:** `docker build --target audio` baut eine Variante (Alpine, etwa 230 MB statt 50 MB) für ein Gateway, das lange Aufnahmen teilt. ([Installation](../docs/de/installation.md#dauerbetrieb))
+
+### Geändert
+
+- Beschränkt die Anfrage die Auswahl auf Agenten (`X-SwarmAiNet-Agents`), die die Freigabeklasse ausschließt, antwortet das Gateway jetzt mit 400 und dem Grund statt mit 502.
+
 ## [0.5.0] – 2026-11-23
 
 Fremde Knoten können jetzt auch bei persönlichen Anfragen helfen: Mit der Freigabeklasse `reduced` sehen sie nur Platzhalter statt Namen, Adressen und Kontonummern. Pause und Sofort-Stopp überstehen jetzt einen Neustart. Das Protokoll bleibt bei Version 0.1: Knoten mit 0.5.0 und 0.4.0 arbeiten zusammen. Bestehende Konfigurationen funktionieren ohne Änderung weiter.

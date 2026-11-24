@@ -10,6 +10,7 @@ import (
 	"context"
 	"crypto/rand"
 	_ "embed"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -18,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -173,39 +175,78 @@ type chatMessage struct {
 	Name       string              `json:"name,omitempty"`
 }
 
-// errImages: Bilder und andere Nicht-Text-Teile verarbeitet der Schwarm noch nicht.
-var errImages = errors.New("bilder und andere nicht-text-inhalte werden noch nicht unterstützt")
+// errParts: Außer Text und Bildern verarbeitet der Schwarm keine Teile.
+var errParts = errors.New("nur text und bilder (image_url) werden unterstützt")
 
-// text liefert den Inhalt als Text; Teile vom Typ "text" werden verbunden.
-func (m chatMessage) text() (string, error) {
+// maxChatBody: Text und Bilder (Base64) einer Chat-Anfrage.
+const maxChatBody = 8 << 20
+
+// content liefert den Inhalt als Text und die eingebetteten Bilder; Teile vom
+// Typ "text" werden verbunden.
+func (m chatMessage) content() (string, []protocol.Image, error) {
 	c := strings.TrimSpace(string(m.Content))
 	if c == "" || c == "null" {
-		return "", nil
+		return "", nil, nil
 	}
 	var s string
 	if json.Unmarshal(m.Content, &s) == nil {
-		return s, nil
+		return s, nil, nil
 	}
 	var parts []struct {
-		Type string `json:"type"`
-		Text string `json:"text"`
+		Type     string `json:"type"`
+		Text     string `json:"text"`
+		ImageURL struct {
+			URL string `json:"url"`
+		} `json:"image_url"`
 	}
 	if err := json.Unmarshal(m.Content, &parts); err != nil {
-		return "", fmt.Errorf("content: erwartet text oder eine liste von teilen")
+		return "", nil, fmt.Errorf("content: erwartet text oder eine liste von teilen")
 	}
 	var texts []string
+	var imgs []protocol.Image
 	for _, p := range parts {
-		if p.Type != "text" {
-			return "", errImages
+		switch p.Type {
+		case "text":
+			texts = append(texts, p.Text)
+		case "image_url":
+			img, err := dataImage(p.ImageURL.URL)
+			if err != nil {
+				return "", nil, err
+			}
+			imgs = append(imgs, img)
+		default:
+			return "", nil, errParts
 		}
-		texts = append(texts, p.Text)
 	}
-	return strings.Join(texts, "\n"), nil
+	return strings.Join(texts, "\n"), imgs, nil
+}
+
+// dataImage liest ein eingebettetes Bild (data:image/png;base64,…). Links
+// lädt das Gateway nicht nach: Es würde sonst für Fremde Adressen abrufen.
+func dataImage(url string) (protocol.Image, error) {
+	rest, ok := strings.CutPrefix(url, "data:")
+	meta, data, ok2 := strings.Cut(rest, ",")
+	mime, isB64 := strings.CutSuffix(meta, ";base64")
+	if !ok || !ok2 || !isB64 {
+		return protocol.Image{}, errors.New("bilder nur eingebettet als data-url (data:image/png;base64,…), keine links")
+	}
+	if !slices.Contains(protocol.ImageMIME, mime) {
+		return protocol.Image{}, fmt.Errorf("bildformat %q nicht unterstützt (png, jpeg, webp, gif)", mime)
+	}
+	b, err := base64.StdEncoding.DecodeString(data)
+	if err != nil || len(b) == 0 {
+		return protocol.Image{}, errors.New("bild: base64 ungültig oder leer")
+	}
+	return protocol.Image{MIME: mime, Data: b}, nil
 }
 
 func chat(b Backend, w http.ResponseWriter, r *http.Request) {
 	var req chatRequest
-	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 2<<20)).Decode(&req); err != nil {
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxChatBody)).Decode(&req); err != nil {
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			writeErr(w, http.StatusRequestEntityTooLarge, fmt.Errorf("anfrage größer als %d bytes", maxChatBody))
+			return
+		}
 		writeErr(w, http.StatusBadRequest, err)
 		return
 	}
@@ -215,12 +256,17 @@ func chat(b Backend, w http.ResponseWriter, r *http.Request) {
 	}
 	msgs := make([]protocol.ChatMessage, 0, len(req.Messages))
 	for _, m := range req.Messages {
-		text, err := m.text()
+		text, imgs, err := m.content()
 		if err != nil {
 			writeErr(w, http.StatusBadRequest, err)
 			return
 		}
-		msgs = append(msgs, protocol.ChatMessage{Role: m.Role, Content: text, ToolCalls: m.ToolCalls, ToolCallID: m.ToolCallID, Name: m.Name})
+		msgs = append(msgs, protocol.ChatMessage{Role: m.Role, Content: text, ToolCalls: m.ToolCalls, ToolCallID: m.ToolCallID, Name: m.Name, Images: imgs})
+	}
+	if n := protocol.ImageBytes(msgs); n > protocol.MaxImageBytes {
+		writeErr(w, http.StatusRequestEntityTooLarge, fmt.Errorf("bilder zusammen %d bytes, erlaubt sind %d; "+
+			"kleinere oder weniger bilder senden (auch frühere bilder im verlauf zählen)", n, protocol.MaxImageBytes))
+		return
 	}
 	pattern := ""
 	if rest, ok := strings.CutPrefix(req.Model, modelPrefix+"/"); ok {

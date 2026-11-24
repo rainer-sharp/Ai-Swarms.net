@@ -49,8 +49,12 @@ func NewLocal(backends []config.Backend, m *rem.Manager) *Local {
 			if len(skills) == 0 {
 				skills = []string{"general"}
 			}
+			modalities := []string{"text"}
+			if md.Vision {
+				modalities = append(modalities, "image")
+			}
 			l.agents[id] = &localAgent{
-				info:   protocol.AgentInfo{AgentID: id, ModelFamily: fam, Skills: skills, Modalities: []string{"text"}, ContextMax: md.Context, Strength: md.Strength, Tools: md.Tools},
+				info:   protocol.AgentInfo{AgentID: id, ModelFamily: fam, Skills: skills, Modalities: modalities, ContextMax: md.Context, Strength: md.Strength, Tools: md.Tools},
 				model:  md.Name,
 				client: c,
 				offer:  md.Offer,
@@ -81,7 +85,8 @@ func (l *Local) Agents() []orchestrator.Agent {
 	out := make([]orchestrator.Agent, 0, len(l.order))
 	for _, id := range l.order {
 		a := l.agents[id]
-		out = append(out, orchestrator.Agent{ID: id, Local: true, Trusted: true, Family: a.info.ModelFamily, Skills: a.info.Skills, ContextMax: a.info.ContextMax, Strength: a.info.Strength, Tools: a.info.Tools})
+		out = append(out, orchestrator.Agent{ID: id, Local: true, Trusted: true, Family: a.info.ModelFamily, Skills: a.info.Skills, ContextMax: a.info.ContextMax, Strength: a.info.Strength, Tools: a.info.Tools,
+			Vision: slices.Contains(a.info.Modalities, "image")})
 	}
 	return out
 }

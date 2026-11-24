@@ -39,6 +39,7 @@ type Agent struct {
 	ContextMax int      `json:"context_max"`
 	Strength   int      `json:"strength,omitempty"` // 1–10, 0 = unbekannt
 	Tools      bool     `json:"tools,omitempty"`    // beherrscht Werkzeug-Aufrufe
+	Vision     bool     `json:"vision,omitempty"`   // versteht Bilder (Modalität "image")
 	// ToolsRestricted: Dieser Agent sieht nur die Werkzeuge aus ToolsAllow und
 	// keinen Verlauf mit anderen Werkzeugen.
 	ToolsRestricted bool     `json:"tools_restricted,omitempty"`
@@ -320,11 +321,13 @@ type run struct {
 	ans    *Answer
 	n      int // verbrauchte Teilaufträge
 	mu     sync.Mutex
+	images bool // Anfrage mit Bildern: nur Agenten mit Vision
 
 	// Pseudonymisierung bei reduced, angelegt beim ersten fremden Agenten.
-	pzMu  sync.Mutex
-	pz    *pseudo.Mapping
-	pzErr error
+	pzMu   sync.Mutex
+	pz     *pseudo.Mapping
+	pzConv []protocol.ChatMessage // gekürztes Gespräch für fremde Agenten
+	pzErr  error
 
 	emitMu   sync.Mutex
 	reasoned bool // schon Text in der Denkphase
@@ -401,6 +404,17 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 			req.Privacy = protocol.PrivacyTrusted
 		}
 	}
+	imageTrusted := false
+	if hasImages(req.Messages) {
+		if n := protocol.ImageBytes(req.Messages); n > protocol.MaxImageBytes {
+			return nil, fmt.Errorf("bilder zusammen %d bytes, erlaubt sind %d", n, protocol.MaxImageBytes)
+		}
+		// Ein Bild lässt sich nicht pseudonymisieren: reduced bleibt bei
+		// Bildern im vertrauten Kreis.
+		if req.Privacy == protocol.PrivacyReduced {
+			req.Privacy, imageTrusted = protocol.PrivacyTrusted, true
+		}
+	}
 	if req.Skill == "" {
 		req.Skill = Route(req.Messages)
 	}
@@ -413,8 +427,11 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 	if hasTools(req) {
 		req.Pattern = PatternSingle // Prüfer und Synthese passen nicht in den Werkzeug-Kreislauf
 	}
-	r := &run{o: o, req: req, taskID: newID()}
+	r := &run{o: o, req: req, taskID: newID(), images: hasImages(req.Messages)}
 	r.ans = &Answer{TaskID: r.taskID, Pattern: req.Pattern, Skill: req.Skill, SelectedBy: "request"}
+	if imageTrusted {
+		r.limit("bilder lassen sich nicht pseudonymisieren: reduced gilt für diese anfrage wie trusted, nur eigene und vertraute knoten")
+	}
 	if req.Pattern == "" {
 		r.req.Pattern, r.ans.SelectedBy = cmp.Or(o.Default, PatternDraftVerify), "rules"
 		if o.Choose != nil {
@@ -446,6 +463,9 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 		err = ErrToolsNotAllowed
 	case errors.Is(err, ErrNoAgent):
 		err = noAgentReason(o.Dir.Agents(), req)
+		if imageTrusted && errors.Is(err, ErrPrivacy) {
+			err = privacyError{"bilder lassen sich nicht pseudonymisieren, deshalb gilt reduced hier wie trusted: " + err.Error()}
+		}
 	case errors.Is(err, ErrNotPseudonymized):
 		// Nur fremde Agenten, und für sie fehlt die Pseudonymisierung: die
 		// Ursache liegt in Anfrage und Einrichtung, nicht bei einem Peer.
@@ -477,7 +497,7 @@ func (r *run) verifierCandidates(exclude func(Agent) bool) []Agent {
 func (r *run) rank(skill string, preferLocal, balance bool, exclude func(Agent) bool) []Agent {
 	var out []Agent
 	for _, a := range r.o.Dir.Agents() {
-		if !allowed(a, r.req.Privacy) || (exclude != nil && exclude(a)) || !toolsUsable(a, r.req) ||
+		if !allowed(a, r.req.Privacy) || (exclude != nil && exclude(a)) || !toolsUsable(a, r.req) || (r.images && !a.Vision) ||
 			(len(r.req.Agents) > 0 && !slices.Contains(r.req.Agents, a.ID)) {
 			continue
 		}
@@ -534,15 +554,23 @@ func (r *run) rank(skill string, preferLocal, balance bool, exclude func(Agent) 
 // errors.Is(err, ErrNoAgent) bleibt erhalten.
 func noAgentReason(agents []Agent, req Request) error {
 	if len(req.Agents) > 0 {
-		return ErrNoAgent // ausdrücklich beschränkt, die Klasse ist nicht der Grund
+		// Ausdrücklich beschränkt: Die Klasse ist nur der Grund, wenn es die
+		// gewählten Agenten gibt.
+		agents = slices.DeleteFunc(slices.Clone(agents), func(a Agent) bool { return !slices.Contains(req.Agents, a.ID) })
+		if len(agents) == 0 {
+			return ErrNoAgent
+		}
 	}
 	if len(agents) == 0 {
 		return fmt.Errorf("%w: keine modelle in der konfiguration und keine anbieter im netz gefunden", ErrNoAgent)
 	}
-	for _, a := range agents {
-		if allowed(a, req.Privacy) {
-			return ErrNoAgent // es gäbe Agenten, sie passen aus anderen Gründen nicht
+	usable := slices.DeleteFunc(slices.Clone(agents), func(a Agent) bool { return !allowed(a, req.Privacy) })
+	if len(usable) > 0 {
+		if hasImages(req.Messages) && !slices.ContainsFunc(usable, func(a Agent) bool { return a.Vision }) {
+			return fmt.Errorf("%w: die anfrage enthält bilder, aber kein erreichbares modell versteht bilder "+
+				"(in der modellkonfiguration vision: true)", ErrNoAgent)
 		}
+		return ErrNoAgent // es gäbe Agenten, sie passen aus anderen Gründen nicht
 	}
 	if req.Privacy == protocol.PrivacyLocal {
 		return privacyError{fmt.Sprintf("%v: freigabeklasse local erlaubt nur modelle dieses knotens, hier ist keins eingerichtet "+
@@ -606,7 +634,7 @@ func skillScore(a Agent, skill string) float64 {
 // Kandidaten aus. Ein Peer-Ausfall blockiert den Auftrag nicht. Sind alle
 // Kandidaten nur ausgelastet, wartet exec und versucht es erneut, solange
 // Deadline und busyMaxWait es zulassen.
-func (r *run) exec(ctx context.Context, role protocol.Role, cands []Agent, msgs []protocol.ChatMessage, schema string, o out) (protocol.Result, Agent, error) {
+func (r *run) exec(ctx context.Context, role protocol.Role, cands []Agent, msgs prompt, schema string, o out) (protocol.Result, Agent, error) {
 	if len(cands) == 0 {
 		return protocol.Result{}, Agent{}, ErrNoAgent
 	}
@@ -634,7 +662,7 @@ func (r *run) exec(ctx context.Context, role protocol.Role, cands []Agent, msgs 
 // tryCandidates probiert die Kandidaten einmal der Reihe nach. Der Fehler
 // trägt ErrBusy, wenn alle nur ausgelastet waren; solche Absagen zählen
 // nicht gegen das Budget und erscheinen nicht als Schritt.
-func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Agent, msgs []protocol.ChatMessage, schema string, o out) (protocol.Result, Agent, error) {
+func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Agent, msgs prompt, schema string, o out) (protocol.Result, Agent, error) {
 	var lastErr error
 	allBusy := true
 	for _, a := range cands {
@@ -650,13 +678,15 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 		r.mu.Unlock()
 
 		tools, choice := toolsFor(a, r.req)
-		t := Task{TaskID: r.taskID, SubtaskID: newID(), Role: role, Skill: r.req.Skill, Messages: msgs, Limits: r.req.Limits, JSONSchema: schema,
+		t := Task{TaskID: r.taskID, SubtaskID: newID(), Role: role, Skill: r.req.Skill, Limits: r.req.Limits, JSONSchema: schema,
 			Tools: tools, ToolChoice: choice, Audio: r.req.Audio}
-		// reduced: für fremde Agenten erst die Pseudonymisierung (vor der
-		// Überschrift des Schritts, denn die Erkennung ist ein eigener Schritt).
+		// reduced: für fremde Agenten erst Minimierung und Pseudonymisierung
+		// (vor der Überschrift des Schritts, denn beides sind eigene Schritte).
+		// Sie bekommen den Teilauftrag aus dem gekürzten Gespräch.
+		conv := r.req.Messages
 		var pz *pseudo.Mapping
 		if r.needsPseudo(a) {
-			m, err := r.pseudonymizer(ctx)
+			m, min, err := r.pseudonymizer(ctx)
 			if err != nil {
 				r.mu.Lock()
 				r.n-- // keine Arbeit angefallen
@@ -664,8 +694,9 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 				lastErr, allBusy = err, false
 				continue
 			}
-			pz = m
+			pz, conv = m, min
 		}
+		t.Messages = msgs(conv)
 		streamed := false // schon Antworttext gestreamt
 		if r.streaming() {
 			if o.label != "" {
@@ -797,7 +828,7 @@ func short(id string) string {
 }
 
 func (r *run) single(ctx context.Context) error {
-	res, _, err := r.exec(ctx, protocol.RoleSpecialist, r.candidates(r.req.Skill, false, nil), r.req.Messages, "", out{to: toContent})
+	res, _, err := r.exec(ctx, protocol.RoleSpecialist, r.candidates(r.req.Skill, false, nil), asIs, "", out{to: toContent})
 	if err != nil {
 		return err
 	}
@@ -806,7 +837,7 @@ func (r *run) single(ctx context.Context) error {
 }
 
 func (r *run) draftVerify(ctx context.Context) error {
-	draft, drafter, err := r.exec(ctx, protocol.RoleSpecialist, r.candidates(r.req.Skill, false, nil), r.req.Messages, "", out{"Entwurf", toReasoning})
+	draft, drafter, err := r.exec(ctx, protocol.RoleSpecialist, r.candidates(r.req.Skill, false, nil), asIs, "", out{"Entwurf", toReasoning})
 	if err != nil {
 		return err
 	}
@@ -823,7 +854,10 @@ func (r *run) verifyAndRevise(ctx context.Context, author Agent) {
 	if !ok || v.Verdict == "ok" {
 		return
 	}
-	synth, _, err := r.exec(ctx, protocol.RoleSynthesizer, r.candidates("general", true, nil), synthPrompt(r.req.Messages, []string{r.ans.Content}, v.Issues), "", out{"Überarbeitung", toContent})
+	draft := r.ans.Content
+	synth, _, err := r.exec(ctx, protocol.RoleSynthesizer, r.candidates("general", true, nil), func(c []protocol.ChatMessage) []protocol.ChatMessage {
+		return withImages(synthPrompt(c, []string{draft}, v.Issues), c)
+	}, "", out{"Überarbeitung", toContent})
 	if err != nil {
 		r.limit("synthese fehlgeschlagen: antwort mit bekannten mängeln")
 		return
@@ -854,8 +888,11 @@ func (r *run) verify(ctx context.Context, author Agent) (verdict, bool) {
 	var v verdict
 	var judge Agent
 	valid, tried := false, 0
+	draft := r.ans.Content
 	for len(verifiers) > 0 && tried < maxVerifyTries && !valid {
-		review, used, err := r.exec(ctx, protocol.RoleVerifier, verifiers, verifyPrompt(r.req.Messages, r.ans.Content, r.req.Skill), schema, out{label: "Prüfung"})
+		review, used, err := r.exec(ctx, protocol.RoleVerifier, verifiers, func(c []protocol.ChatMessage) []protocol.ChatMessage {
+			return withImages(verifyPrompt(c, draft, r.req.Skill), c)
+		}, schema, out{label: "Prüfung"})
 		if err != nil {
 			break // alle verbleibenden Kandidaten fehlgeschlagen
 		}
@@ -978,7 +1015,7 @@ func (r *run) combine(ctx context.Context, synthTo target) (Agent, error) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			res, _, err := r.exec(ctx, protocol.RoleSpecialist, []Agent{a}, r.req.Messages, "", out{label: "Lösung"})
+			res, _, err := r.exec(ctx, protocol.RoleSpecialist, []Agent{a}, asIs, "", out{label: "Lösung"})
 			if err == nil {
 				answers[i] = res.Result.Content
 			}
@@ -1003,7 +1040,9 @@ func (r *run) combine(ctx context.Context, synthTo target) (Agent, error) {
 		r.limit("nur eine unabhängige lösung")
 		return first, nil
 	}
-	synth, synthesizer, err := r.exec(ctx, protocol.RoleSynthesizer, r.candidates("general", true, nil), synthPrompt(r.req.Messages, got, nil), "", out{"Synthese", synthTo})
+	synth, synthesizer, err := r.exec(ctx, protocol.RoleSynthesizer, r.candidates("general", true, nil), func(c []protocol.ChatMessage) []protocol.ChatMessage {
+		return withImages(synthPrompt(c, got, nil), c)
+	}, "", out{"Synthese", synthTo})
 	if err != nil {
 		r.ans.Content = got[0]
 		r.limit("synthese fehlgeschlagen: erste lösung ungeprüft")
@@ -1011,4 +1050,17 @@ func (r *run) combine(ctx context.Context, synthTo target) (Agent, error) {
 	}
 	r.ans.Content = synth.Result.Content
 	return synthesizer, nil
+}
+
+// prompt baut die Nachrichten eines Teilauftrags aus dem Gespräch. Fremde
+// Agenten bekommen bei reduced das minimierte Gespräch (pseudo.go), alle
+// anderen das Original.
+type prompt func(conv []protocol.ChatMessage) []protocol.ChatMessage
+
+// asIs: der Teilauftrag ist das Gespräch selbst.
+func asIs(conv []protocol.ChatMessage) []protocol.ChatMessage { return conv }
+
+// fixed: Nachrichten, die nicht vom Gespräch abhängen.
+func fixed(msgs []protocol.ChatMessage) prompt {
+	return func([]protocol.ChatMessage) []protocol.ChatMessage { return msgs }
 }

@@ -289,7 +289,7 @@ Transportverschlüsselung schützt den Weg, nicht den Inhalt vor dem ausführend
 |---|---|
 | Nur lokal (`local`) | ausschließlich auf eigenen Geräten |
 | Vertrauter Kreis (`trusted`) | im privaten Netz, bei zugelassenen Mitgliedern eines Gruppennetzes oder bei selbst freigegebenen Schlüsseln |
-| Reduziert (`reduced`) | nur minimierte, pseudonymisierte Fragmente: Fremde Knoten sehen Platzhalter statt Namen, Adressen und Kontodaten (Minimierung noch offen) |
+| Reduziert (`reduced`) | nur minimierte, pseudonymisierte Fragmente: Fremde Knoten sehen eine gekürzte Aufgabe mit Platzhaltern statt Namen, Adressen und Kontodaten |
 | Öffentlich (`public`) | nach expliziter Freigabe auf beliebigen Peers |
 
 Keine personenbezogenen Daten in öffentliche Aufträge. Confidential Computing (TEE) bleibt eine spätere Option, kein Versprechen. Einzelheiten: [Freigabeklassen](../../spec/de/privacy-classes.md).

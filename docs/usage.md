@@ -45,7 +45,7 @@ If a step fails after it has already streamed text, a separator follows ("Diese 
 
 Without the header, `tasks.privacy_class` from the configuration applies (default `trusted`): the request only goes to your own or trusted devices. Only what is marked `public` goes to foreign nodes in the open network. If the privacy class excludes all known agents, the gateway responds with 400 and states the reason, e.g. for `trusted` without your own model and without trusted nodes.
 
-With `reduced`, foreign nodes in the open network also come into question, but they only see placeholders: names, organisations, places, email addresses, phone numbers, IBANs and the like become `[PERSON_1]`, `[EMAIL_1]` etc., and the answer comes back with the originals. Names are recognised by your own or a trusted model; terms in `tasks.pseudonymize_terms` are always replaced. Own and trusted devices still see the original. In the thinking phase, the step "Pseudonymisierung" shows how many terms are replaced. Without a model for the recognition, nothing goes to foreign nodes. Details and limits: [privacy classes, rule 9](../spec/privacy-classes.md).
+With `reduced`, foreign nodes in the open network also come into question, but they only see a shortened task with placeholders. If the request contains a history or system instructions, your own or a trusted model first rewrites the last request as a self-contained task with only what is needed; foreign nodes get this task instead of the conversation. In it, names, organisations, places, email addresses, phone numbers, IBANs and the like become `[PERSON_1]`, `[EMAIL_1]` etc., and the answer comes back with the originals. Names are recognised by your own or a trusted model; terms in `tasks.pseudonymize_terms` are always replaced. Own and trusted devices still see the original. In the thinking phase, the steps "Minimierung" and "Pseudonymisierung" show how much was shortened and how many terms are replaced. Without a model for shortening and recognition, nothing goes to foreign nodes. Details and limits: [privacy classes, rule 9](../spec/privacy-classes.md).
 
 ## Open WebUI
 
@@ -71,7 +71,7 @@ The tools are executed by the **application itself**, i.e. Open WebUI or the age
 
 If no agent with the required permission is found, the gateway responds with 400. If a model calls a tool that was not shown to it, the response is discarded. Details: [privacy classes, rule 6](../spec/privacy-classes.md).
 
-Content given as a list of text parts is joined. Images in chat messages are not supported yet (400).
+Content given as a list of text parts is joined. Images come as parts of type `image_url` with an embedded data URL (`data:image/png;base64,…`; PNG, JPEG, WebP, GIF), together at most 2.75 MiB per request, including images earlier in the history; the gateway does not fetch links. They only go to models with `vision: true` ([configuration](configuration.md)), also as verifier; with `reduced`, they stay with your own and trusted devices, because an image cannot be pseudonymised ([privacy classes, rule 10](../spec/privacy-classes.md)). Open WebUI sends images this way.
 
 ## Transcription
 
@@ -81,7 +81,7 @@ Content given as a list of text parts is joined. Images in chat messages are not
 curl -s http://127.0.0.1:7711/v1/audio/transcriptions -F file=@aufnahme.wav -F language=de
 ```
 
-One subtask carries at most 2.75 MiB. The gateway splits longer recordings (up to 512 MiB) itself: into pieces of 10 minutes with 1 minute of overlap, as mono MP3 at 16 kHz. It sends up to four pieces through the swarm at the same time and joins the transcripts; within each overlap it looks for the longest common sequence of words and cuts in its middle, so no words are lost or doubled. If a provider stays busy, the piece waits and is sent again; if a piece fails, the whole request fails with the cause. Splitting needs `ffmpeg` and `ffprobe` on the node with the gateway (Debian/Ubuntu: `apt install ffmpeg`); without them, recordings over 2.75 MiB give 413. With `response_format=verbose_json`, the field `swarmainet` contains `duration_s`, `chunks` and the procedure of every piece in `parts[]`.
+One subtask carries at most 2.75 MiB. The gateway splits longer recordings (up to 512 MiB) itself: into pieces of 10 minutes with 1 minute of overlap, as mono MP3 at 16 kHz. It sends up to four pieces through the swarm at the same time and joins the transcripts; within each overlap it looks for the longest common sequence of words and cuts in its middle, so no words are lost or doubled. If a provider stays busy, the piece waits and is sent again; if a piece fails, the whole request fails with the cause. Splitting needs `ffmpeg` and `ffprobe` on the node with the gateway (Debian/Ubuntu: `apt install ffmpeg`; container: the image variant `docker build --target audio -t swarmainet:audio .`, about 230 MB instead of 50 MB); without them, recordings over 2.75 MiB give 413. With `response_format=verbose_json`, the field `swarmainet` contains `duration_s`, `chunks` and the procedure of every piece in `parts[]`.
 
 In Open WebUI: *Admin Settings → Audio → Speech-to-Text*, engine *OpenAI*, URL `http://127.0.0.1:7711/v1`, any key and model.
 

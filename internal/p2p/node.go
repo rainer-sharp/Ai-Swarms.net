@@ -727,7 +727,8 @@ func (n *Node) RemoteAgents() []orchestrator.Agent {
 			out = append(out, orchestrator.Agent{
 				ID: a.AgentID, PeerID: p.String(), Network: n.opts.NetworkID, Trusted: trusted,
 				Family: a.ModelFamily, Skills: a.Skills, ContextMax: a.ContextMax, Strength: a.Strength, Tools: a.Tools,
-				Busy: c.Availability.SlotsNow == 0, Slots: c.Availability.SlotsNow,
+				Vision: slices.Contains(a.Modalities, "image"),
+				Busy:   c.Availability.SlotsNow == 0, Slots: c.Availability.SlotsNow,
 				ToolsRestricted: n.toolsRestricted(trusted), ToolsAllow: n.opts.AllowedTools,
 			})
 		}

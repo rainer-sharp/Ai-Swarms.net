@@ -103,7 +103,7 @@ func (r *run) cascade(ctx context.Context) error {
 	if len(cands) == 0 {
 		return ErrNoAgent
 	}
-	draft, author, err := r.exec(ctx, protocol.RoleSpecialist, r.cheapFirst(cands), r.req.Messages, "", out{"Entwurf", toReasoning})
+	draft, author, err := r.exec(ctx, protocol.RoleSpecialist, r.cheapFirst(cands), asIs, "", out{"Entwurf", toReasoning})
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func (r *run) cascade(ctx context.Context) error {
 		r.limit("keine eskalation möglich: kein weiteres modell")
 		return nil
 	}
-	res, _, err := r.exec(ctx, protocol.RoleSpecialist, best, r.req.Messages, "", out{"Eskalation", toContent})
+	res, _, err := r.exec(ctx, protocol.RoleSpecialist, best, asIs, "", out{"Eskalation", toContent})
 	if err != nil {
 		r.limit("eskalation fehlgeschlagen: antwort mit bekannten mängeln")
 		return nil

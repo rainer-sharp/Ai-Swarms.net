@@ -73,7 +73,7 @@ The resource manager under `resources` limits how much a node computes for other
 ## Continuous operation
 
 - **Linux:** as a systemd user service, see [`deploy/linux/`](../deploy/linux/README.md).
-- **Docker:** for helper nodes without models, see [Network types – helper nodes with Docker](networks.md#helper-nodes-with-docker).
+- **Docker:** for helper nodes without models, see [Network types – helper nodes with Docker](networks.md#helper-nodes-with-docker). For a gateway that splits long recordings, the image variant with `ffmpeg`: `docker build --target audio -t swarmainet:audio .` ([transcription](usage.md#transcription)).
 - **Raspberry Pi** as a helper behind a port forwarding: [`deploy/raspberry-pi/`](../deploy/raspberry-pi/README.md).
 - **VPS** with start node and helper: [`deploy/vps/`](../deploy/vps/README.md).
 

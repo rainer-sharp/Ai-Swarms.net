@@ -169,6 +169,22 @@ func (n *Node) handleTask(s network.Stream) {
 			return
 		}
 	}
+	// Bilder: nur an Agenten, die Bilder verstehen; bei reduced nie von
+	// Fremden, weil sich ein Bild nicht pseudonymisieren lässt
+	// (spec/protocol-v0.1.md § 4.2).
+	if slices.ContainsFunc(p.Messages, func(m protocol.ChatMessage) bool { return len(m.Images) > 0 }) {
+		switch size := protocol.ImageBytes(p.Messages); {
+		case p.Limits.PrivacyClass == protocol.PrivacyReduced && !trusted:
+			reject("bilder bei reduced nur im vertrauten kreis")
+			return
+		case !slices.Contains(agent.Modalities, "image"):
+			reject("agent verarbeitet keine bilder")
+			return
+		case size > protocol.MaxImageBytes || !protocol.ValidImages(p.Messages):
+			reject("bilder zu groß oder in unbekanntem format")
+			return
+		}
+	}
 	slot, err := n.opts.Provider.Admit(!trusted)
 	if err != nil {
 		// Der genaue Grund (Energie, Last, Zeitfenster) bleibt lokal.
