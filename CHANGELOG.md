@@ -6,6 +6,10 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+## [0.7.0] – 2026-11-24
+
+A planner can now split multi-part tasks into a graph of subtasks that different models work on (pattern `decompose`), and reasoning models get more room: the default token limit rises from 2048 to 8192. The protocol stays at version 0.1 without new fields: nodes with 0.7.0 and 0.6.0 work together. Existing configurations keep working without changes.
+
 ### Added
 
 - **Task graph (cooperation stage 4):** new pattern `decompose` (model name `swarmainet/decompose`). A planner, preferably your own model, splits a multi-part task into subtasks with dependencies; independent ones run in parallel, each with its own pattern, and a synthesis merges the results. If a subtask fails, its successors are skipped and the gap is named. If there is nothing to split, or the plan is invalid, the task runs without decomposition. The answer lists the subtasks under `graph`. Only on request for now; the bandit does not choose it. ([cooperation](spec/cooperation.md) § 6, [usage](docs/usage.md#model-names-how-the-swarm-works))
@@ -14,6 +18,12 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 - The default for `tasks.max_tokens` is now 8192 instead of 2048: reasoning models with long histories (e.g. Open WebUI with tools) used up 2048 tokens by thinking alone. The provider lowers the limit so that input and answer fit into the model's `context`. ([configuration](docs/configuration.md))
 - If a model uses up `max_tokens` without an answer, the provider now reports `token-limit erreicht` (token limit reached) instead of `ausführung fehlgeschlagen` (execution failed), and the gateway adds how to fix it. ([protocol](spec/protocol-v0.1.md) § 4.2, [usage](docs/usage.md#diagnostics))
+
+### Upgrade notes
+
+- Without `tasks.max_tokens` in the configuration, the new default 8192 applies; a value set explicitly (e.g. the former example value 2048) stays and should be raised for reasoning models. Answers may now take longer and use more GPU time.
+- The reason `token-limit erreicht` comes from the provider: models on nodes with 0.6.0 or older still report only `ausführung fehlgeschlagen`.
+- `decompose` needs no configuration. It costs one subtask each for planner and synthesis plus the subtasks themselves; with the default `tasks.max_subtasks: 8`, the planner may use at most 3 subtasks, with 14 the maximum of 6.
 
 ## [0.6.0] – 2026-11-24
 
@@ -130,6 +140,7 @@ The protocol is unchanged (version 0.1): nodes with 0.2.0 and 0.1.0 work togethe
 
 First public version: local swarm (phase 1) and P2P layer with private networks and membership networks, tested on hardware across two sites.
 
+[0.7.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.3.0...v0.4.0
