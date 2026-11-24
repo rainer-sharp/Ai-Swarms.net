@@ -176,15 +176,75 @@ func (m *Mapping) Revert(text string) string {
 const Hint = "Der Text enthält Platzhalter wie [PERSON_1], [ORG_1] oder [EMAIL_1] für persönliche Daten. " +
 	"Übernimm sie unverändert, wo du dich auf sie beziehst, und versuche nicht, sie zu erraten."
 
+// View nummeriert die Platzhalter für einen Teilauftrag neu, in der
+// Reihenfolge ihres Auftretens: Ein fremder Agent sieht [PERSON_1], auch wenn
+// es in der ganzen Anfrage [PERSON_3] ist, und erfährt so nicht, wie viele
+// Angaben es außerhalb seines Teilauftrags gibt.
+type View struct {
+	m        *Mapping
+	mu       sync.Mutex
+	toGlobal map[string]string // lokaler → globaler Platzhalter
+	toLocal  map[string]string
+	count    map[string]int
+}
+
+func (m *Mapping) View() *View {
+	return &View{m: m, toGlobal: map[string]string{}, toLocal: map[string]string{}, count: map[string]int{}}
+}
+
+// Apply ersetzt wie Mapping.Apply und nummeriert die Platzhalter neu.
+func (v *View) Apply(text string) string {
+	text = v.m.Apply(text)
+	v.m.mu.Lock()
+	defer v.m.mu.Unlock()
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	return placeholderRe.ReplaceAllStringFunc(text, func(p string) string {
+		if _, known := v.m.reverse[p]; !known {
+			return p
+		}
+		if l, ok := v.toLocal[p]; ok {
+			return l
+		}
+		kind := placeholderRe.FindStringSubmatch(p)[1]
+		v.count[kind]++
+		l := fmt.Sprintf("[%s_%d]", kind, v.count[kind])
+		v.toLocal[p], v.toGlobal[l] = l, p
+		return l
+	})
+}
+
+// Revert tauscht die Platzhalter dieses Teilauftrags zurück; unbekannte
+// bleiben stehen.
+func (v *View) Revert(text string) string {
+	if !strings.Contains(text, "[") {
+		return text
+	}
+	v.m.mu.Lock()
+	defer v.m.mu.Unlock()
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	return placeholderRe.ReplaceAllStringFunc(text, func(p string) string {
+		if g, ok := v.toGlobal[p]; ok {
+			return v.m.reverse[g]
+		}
+		return p
+	})
+}
+
+// reverter: Mapping oder View.
+type reverter interface{ Revert(string) string }
+
 // Stream tauscht Platzhalter in einem Strom von Textstücken zurück. Ein
 // Platzhalter kann über zwei Stücke verteilt ankommen; deshalb hält Stream
 // ein angefangenes „[“ zurück, bis klar ist, ob ein Platzhalter folgt.
 type Stream struct {
-	m       *Mapping
+	m       reverter
 	pending string
 }
 
 func (m *Mapping) Stream() *Stream { return &Stream{m: m} }
+func (v *View) Stream() *Stream    { return &Stream{m: v} }
 
 // Write nimmt ein Stück an und liefert den Text, der sicher ausgegeben werden kann.
 func (s *Stream) Write(chunk string) string {

@@ -71,3 +71,32 @@ func TestStream(t *testing.T) {
 		t.Fatalf("%q", out.String())
 	}
 }
+
+// TestView: Ein Teilauftrag sieht nur die Nummern seiner eigenen Angaben,
+// ab 1; zurückgetauscht wird über die Zuordnung der ganzen Anfrage.
+func TestView(t *testing.T) {
+	m := New()
+	m.Add(Person, "Anna Berg")
+	m.Add(Person, "Jörg Brandt")
+	m.Add(Org, "Brandt Logistik")
+	_ = m.Apply("Anna Berg schreibt an Jörg Brandt von Brandt Logistik.")
+	v := m.View()
+	got := v.Apply("Mail an Jörg Brandt (Brandt Logistik), Kopie an jb@example.org.")
+	if got != "Mail an [PERSON_1] ([ORG_1]), Kopie an [EMAIL_1]." {
+		t.Fatalf("view: %q", got)
+	}
+	if again := v.Apply("Gruß an Jörg Brandt"); again != "Gruß an [PERSON_1]" {
+		t.Fatalf("gleiche angabe, andere nummer: %q", again)
+	}
+	if r := v.Revert("Hallo [PERSON_1] von [ORG_1], [EMAIL_1], [PERSON_2]"); r != "Hallo Jörg Brandt von Brandt Logistik, jb@example.org, [PERSON_2]" {
+		t.Fatalf("revert: %q", r)
+	}
+	s := v.Stream()
+	if out := s.Write("Hallo [PERS") + s.Write("ON_1]!") + s.Flush(); out != "Hallo Jörg Brandt!" {
+		t.Fatalf("stream: %q", out)
+	}
+	// Die globale Zuordnung bleibt unberührt.
+	if r := m.Revert("[PERSON_2]"); r != "Jörg Brandt" {
+		t.Fatalf("global: %q", r)
+	}
+}

@@ -134,6 +134,12 @@ u_k = u_0 + K_p·e_k + K_i·Σ e_j·Δt,   e_k = q* − q̄_k
 
 Targets and controller parameters per category are configurable (`cooperation.targets`). Their calibration is an open question (§ 12).
 
+**Implementation (stage 3):** two of the four loops, each per category, only with `cooperation.selection: bandit`, state in the competence profile (`controls` in `GET /api/profile`):
+
+- **Quality:** the actual value is the success rate of the final results from feedback (objective with full weight, user feedback with ¼), smoothed with α = 0.1. The manipulated variable is a **minimum effort** for the bandit, in levels 0 to 3 (`single` 0; `cascade` and `parallel` 1; `draft_verify_synthesize` 2; `parallel_verify` 3); at level 0 there is no constraint. Gains `K_p` = 2, `K_i` = 0.05, `u_0` = 0; the effort rises from 0.02 below the target and only falls from 0.05 above it, so that no limit cycle arises when no level hits the target exactly. Level changes need a hysteresis of 0.15 and a cool-down of 20 feedbacks. In addition, the controller remembers the success rate per level: it does not step down to a level that recently missed the target, and only probes it again after 1000 feedbacks.
+- **Cascade:** the actual value is the error rate of cascades that were not escalated (feedback on the final result), the target `cascade_error` (default 0.05), the manipulated variable `θ` between 0 and 0.95, starting at 0 (criterion 3 off). Gains `K_p` = 0.5, `K_i` = 0.05, dead band ±0.02.
+- **Not yet:** latency loop, AIMD and jitter against oscillations in the network. Simulations with artificial agents of known quality are in `internal/profile/control_test.go`: the quality loop settles at the cheapest level that reaches the target, the cascade loop holds the error rate at 5 % (without `θ`, 11 % in the simulation).
+
 ## 5. Pattern: cascade
 
 New pattern `cascade`: first a cheap model solves the task (lowest expected cost with a sufficient rating). If the result is uncertain, the coordinator escalates to the best available model. "Uncertain" means, in this order:
@@ -144,7 +150,7 @@ New pattern `cascade`: first a cheap model solves the task (lowest expected cost
 
 `θ` is set by the cascade controller (§ 4.1). According to the concept, the cascade is the future default for most requests, because it only uses effort where it is needed.
 
-**Implementation (stage 2):** available as the pattern `cascade` (model name `swarmainet/cascade`, or chosen by the bandit). Stage 1 is the candidate with the best matching skill, without a measured rating below 1650 (about 75 % success), with the lowest `strength` as an approximation of lower cost. If the verifier of another family reports flaws (in maths only with a deviating result), the best other model by measured rating, otherwise by `strength`, solves the task anew; the answer then carries `escalated: true`. Criterion 3 and the controller for `θ` follow in stage 3.
+**Implementation (stage 2):** available as the pattern `cascade` (model name `swarmainet/cascade`, or chosen by the bandit). Stage 1 is the candidate with the best matching skill, without a measured rating below 1650 (about 75 % success), with the lowest `strength` as an approximation of lower cost. If the verifier of another family reports flaws (in maths only with a deviating result), the best other model by measured rating, otherwise by `strength`, solves the task anew; the answer then carries `escalated: true`. **Stage 3** adds criterion 3: if the verifier reports `ok` with a `confidence` below `θ`, the coordinator escalates as well and says so in the thinking phase. The criterion uses the verifier's confidence, so it only applies in combination with the review; a missing confidence (0) does not count as uncertain.
 
 ## 6. Pattern: decompose and distribute (task graph)
 
@@ -212,9 +218,9 @@ Gateway:
 
 - `POST /v1/feedback` with `{ "task_id": …, "good": true|false, "objective": false, "step": <index> }`: feedback on a task of your own. Without `objective` it is user feedback (§ 2.2, rank 4, weight ¼), with `objective: true` a checked result (rank 1, full weight), as sent by `swarmainet bench run`. `step` refers to an entry in `steps[]` of the answer; without it, the final result counts. The task must be among the last 1024 of this node; each step accepts one feedback. Responses: 204, 404 (unknown task), 409 (already given), 400 (invalid step, e.g. a verifier). Implemented in stage 1.
 - With `cooperation.selection: bandit`, the model name `swarmainet` selects via the bandit (implemented in stage 2); `swarmainet/<pattern>` still forces a pattern.
-- `GET /api/profile`: competence profile and controller state per category (diagnostics, "control stability" in the measurement plan). Stage 1 shows the profile: rating per agent and skill (`r`, `rd`, `sigma`, `games`) and verifier statistics (`hit`, `false_alarm`, `correct_ok`, `miss`); stage 2 adds the bandit statistics per category and pattern (`recipes`: `alpha`, `beta`, `tasks`, `tokens`).
+- `GET /api/profile`: competence profile and controller state per category (diagnostics, "control stability" in the measurement plan). Stage 1 shows the profile: rating per agent and skill (`r`, `rd`, `sigma`, `games`) and verifier statistics (`hit`, `false_alarm`, `correct_ok`, `miss`); stage 2 adds the bandit statistics per category and pattern (`recipes`: `alpha`, `beta`, `tasks`, `tokens`); stage 3 the controllers (`controls`: per category `quality` with `level` and `levels`, `cascade` with `θ` in `output`).
 
-Configuration (draft; implemented so far: `selection`, `exploration`, `targets` as a quality value per category):
+Configuration (draft; implemented so far: `selection`, `exploration`, `targets` with `quality` and `cascade_error` per category):
 
 ```yaml
 cooperation:
@@ -223,7 +229,7 @@ cooperation:
   targets:                       # targets per category
     code:  { quality: 0.9, latency_p90_s: 60 }
     math:  { quality: 0.95 }
-    general: { quality: 0.85, latency_p90_s: 20 }
+    general: { quality: 0.85, latency_p90_s: 20, cascade_error: 0.05 }
   canary_share: 0.05
   coordinate_for_others: false   # offer coordination for trusted peers (§ 7)
 ```
@@ -252,7 +258,7 @@ Metrics in addition to the measurement plan: convergence of the bandit (how many
 
 1. ✅ **Competence profile and signals:** Glicko-2 per agent and skill, verifier rating, signals from benchmark, verifier verdict and `POST /v1/feedback`; display via `GET /api/profile`. Testable with artificial agents of known quality. Implemented in `internal/profile`; prior knowledge from `strength`, verifier verdicts per step (`steps[].verdict`). Not yet: pairwise comparisons from parallel patterns.
 2. ✅ **Bandit over recipes** with today's selection as prior knowledge, and the pattern **cascade**. Implemented with fixed rules for "uncertain" (§ 5); opt-in via `cooperation.selection: bandit`.
-3. **PI controller** for the review effort per category.
+3. ✅ **PI controller** for the review effort per category, and the controller for `θ` with criterion 3 of the cascade (§ 4.2, § 5). Not yet: latency loop.
 4. **Task graph:** planner, decompose and distribute, synthesis.
 5. **Asynchronous tasks and lease coordinator**, failure tests.
 6. **Canary tasks** and manipulation tests.

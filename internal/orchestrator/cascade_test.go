@@ -189,3 +189,47 @@ func TestAudioRequest(t *testing.T) {
 		t.Fatal("zu große aufnahme angenommen")
 	}
 }
+
+// TestCascadeTheta: Kriterium 3 (spec/cooperation.md § 5): Meldet der Prüfer
+// „ok“ mit einer Konfidenz unter θ, wird eskaliert; fehlt die Konfidenz oder
+// ist θ 0, nicht.
+func TestCascadeTheta(t *testing.T) {
+	for _, c := range []struct {
+		name     string
+		theta    float64
+		conf     string
+		escalate bool
+	}{
+		{"unter θ", 0.85, "0.6", true},
+		{"über θ", 0.85, "0.9", false},
+		{"ohne konfidenz", 0.85, "0", false},
+		{"θ aus", 0, "0.1", false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			judge := func(name string) func(Task) (string, error) {
+				return func(t Task) (string, error) {
+					if t.Role == protocol.RoleVerifier {
+						return `{"verdict":"ok","issues":[],"confidence":` + c.conf + `}`, nil
+					}
+					return "lösung von " + name, nil
+				}
+			}
+			ex := &fakeExec{fn: map[string]func(Task) (string, error){"small": judge("small"), "big": judge("big"), "judge": judge("judge")}}
+			ev := &events{}
+			o := &Orchestrator{Dir: cascadeAgents, Exec: ex, Theta: func(skill string) float64 { return c.theta }}
+			ans, err := o.Run(context.Background(), Request{
+				Messages: []protocol.ChatMessage{{Role: "user", Content: "Was ist ein Schwarm?"}},
+				Pattern:  PatternCascade, Privacy: protocol.PrivacyTrusted, Skill: "general", Stream: ev.add,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if ans.Escalated != c.escalate {
+				t.Fatalf("eskaliert %v, ablauf %v", ans.Escalated, ex.calls)
+			}
+			if c.escalate && (ans.Content == "lösung von small" || !strings.Contains(ev.reasoning.String(), "Prüfer unsicher (Konfidenz 0.60 unter der Schwelle 0.85)")) {
+				t.Fatalf("%q, denkphase %q", ans.Content, ev.reasoning.String())
+			}
+		})
+	}
+}

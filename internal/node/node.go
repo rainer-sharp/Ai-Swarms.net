@@ -149,8 +149,12 @@ func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
 	n.P2P = n.Nets[0]
 	n.Orch = &orchestrator.Orchestrator{Dir: n, Exec: n, Parallel: 3,
 		Default: orchestrator.Pattern(cfg.Tasks.Pattern), Rate: n.rate}
+	if n.Profile != nil {
+		n.Profile.SetSelection(n.selection())
+	}
 	if cfg.Cooperation.Selection == "bandit" {
-		n.Orch.Choose = n.choose
+		// Regler wirken nur mit dem Bandit (spec/cooperation.md § 4).
+		n.Orch.Choose, n.Orch.Theta = n.choose, n.Profile.Theta
 	}
 	return n, nil
 }

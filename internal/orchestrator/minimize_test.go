@@ -36,7 +36,8 @@ func minimizeOwn(t Task) (string, error) {
 
 // TestReducedMinimizesHistory: Ein fremder Agent bekommt nur die gekürzte
 // Aufgabe, pseudonymisiert; Verlauf und Systemanweisung bleiben beim eigenen
-// Knoten. Auch der Prüfer sieht als Aufgabe nur die gekürzte Fassung.
+// Knoten. Auch der Prüfer sieht als Aufgabe nur die gekürzte Fassung. Holm
+// heißt beim Fremden [PERSON_1], obwohl Anna Berg zuerst erkannt wurde.
 func TestReducedMinimizesHistory(t *testing.T) {
 	var mu sync.Mutex
 	seen := map[string]string{}
@@ -51,7 +52,7 @@ func TestReducedMinimizesHistory(t *testing.T) {
 			if t.Role == protocol.RoleVerifier {
 				return `{"verdict":"ok","issues":[],"confidence":0.9}`, nil
 			}
-			return "Sehr geehrte Frau [PERSON_2], die Heizung ist kalt.", nil
+			return "Sehr geehrte Frau [PERSON_1], die Heizung ist kalt.", nil
 		},
 	}
 	o := &Orchestrator{Dir: reducedDir, Exec: &fakeExec{fn: fn}}
@@ -72,7 +73,7 @@ func TestReducedMinimizesHistory(t *testing.T) {
 				t.Fatalf("%s: fremder sieht %q:\n%s", pattern, leak, all)
 			}
 		}
-		if !strings.Contains(seen[string(protocol.RoleSpecialist)], "user: Schreib einen kurzen, höflichen Brief an die Vermieterin Frau [PERSON_2]") {
+		if !strings.Contains(seen[string(protocol.RoleSpecialist)], "user: Schreib einen kurzen, höflichen Brief an die Vermieterin Frau [PERSON_1]") {
 			t.Fatalf("%s: fremder sieht:\n%s", pattern, all)
 		}
 	}

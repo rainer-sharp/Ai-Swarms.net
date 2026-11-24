@@ -54,6 +54,16 @@ func Category(skill string) string {
 type Selection struct {
 	Exploration float64            // Anteil zufälliger Wahl unter den besetzbaren Mustern
 	Targets     map[string]float64 // Sollwert je Kategorie; fehlt er, gilt DefaultTargets bzw. 0,85
+	// CascadeErrors: zulässige Fehlerquote der günstigen Stufe der Kaskade je
+	// Kategorie; fehlt sie, gilt DefaultCascadeError.
+	CascadeErrors map[string]float64
+}
+
+func (s Selection) cascadeError(cat string) float64 {
+	if v, ok := s.CascadeErrors[cat]; ok && v > 0 {
+		return v
+	}
+	return DefaultCascadeError
 }
 
 func (s Selection) target(cat string) float64 {
@@ -75,6 +85,9 @@ func (p *Profile) Choose(skill string, feasible []string, def string, sel Select
 	if rng == nil {
 		rng = rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
 	}
+	// Mindestaufwand des Qualitätsreglers (control.go) gilt auch für die
+	// Exploration.
+	feasible = withEffort(feasible, p.MinEffort(skill))
 	if rng.Float64() < sel.Exploration {
 		return feasible[rng.IntN(len(feasible))]
 	}

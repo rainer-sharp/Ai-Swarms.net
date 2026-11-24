@@ -134,6 +134,12 @@ u_k = u_0 + K_p·e_k + K_i·Σ e_j·Δt,   e_k = q* − q̄_k
 
 Sollwerte und Reglerparameter je Kategorie sind konfigurierbar (`cooperation.targets`). Ihre Kalibrierung ist eine offene Frage (§ 12).
 
+**Umsetzung (Stufe 3):** zwei der vier Regelkreise, je Kategorie, nur mit `cooperation.selection: bandit`, Zustand im Kompetenzprofil (`controls` in `GET /api/profile`):
+
+- **Qualität:** Ist ist die Erfolgsquote der Endergebnisse aus Rückmeldungen (objektiv mit vollem Gewicht, Nutzerfeedback mit ¼), geglättet mit α = 0,1. Stellgröße ist ein **Mindestaufwand** für den Bandit in Stufen 0 bis 3 (`single` 0; `cascade` und `parallel` 1; `draft_verify_synthesize` 2; `parallel_verify` 3); bei Stufe 0 gibt es keine Vorgabe. Verstärkungen `K_p` = 2, `K_i` = 0,05, `u_0` = 0; der Aufwand steigt ab 0,02 unter dem Sollwert und fällt erst ab 0,05 darüber, damit kein Grenzzyklus entsteht, wenn keine Stufe den Sollwert genau trifft. Stufenwechsel brauchen eine Hysterese von 0,15 und eine Abklingzeit von 20 Rückmeldungen. Zusätzlich merkt sich der Regler die Quote je Stufe: Auf eine Stufe, die den Sollwert vor kurzem verfehlt hat, geht er nicht zurück; er probiert sie erst nach 1000 Rückmeldungen wieder.
+- **Kaskade:** Ist ist die Fehlerquote nicht eskalierter Kaskaden (Rückmeldung zum Endergebnis), Sollwert `cascade_error` (Standard 0,05), Stellgröße `θ` zwischen 0 und 0,95, Start bei 0 (Kriterium 3 aus). Verstärkungen `K_p` = 0,5, `K_i` = 0,05, Totzone ±0,02.
+- **Noch nicht:** Latenz-Regler, AIMD und Zufallsversatz gegen Schwingungen im Netz. Simulationen mit künstlichen Agenten bekannter Qualität stehen in `internal/profile/control_test.go`: Der Qualitätsregler pendelt sich auf der günstigsten Stufe ein, die den Sollwert erreicht; der Kaskadenregler hält die Fehlerquote bei 5 % (ohne `θ` in der Simulation 11 %).
+
 ## 5. Muster: Kaskade
 
 Neues Muster `cascade`: Zuerst löst ein günstiges Modell (kleinste erwartete Kosten bei ausreichender Bewertung). Ist das Ergebnis unsicher, eskaliert der Koordinator an das beste verfügbare Modell. „Unsicher“ heißt in dieser Reihenfolge:
@@ -144,7 +150,7 @@ Neues Muster `cascade`: Zuerst löst ein günstiges Modell (kleinste erwartete K
 
 `θ` stellt der Kaskaden-Regler (§ 4.1). Die Kaskade ist laut Konzept der künftige Standard für den Großteil der Anfragen, weil sie Aufwand nur dort einsetzt, wo er nötig ist.
 
-**Umsetzung (Stufe 2):** verfügbar als Muster `cascade` (Modellname `swarmainet/cascade` oder vom Bandit gewählt). Stufe 1 ist der Kandidat mit der passendsten Fähigkeit, ohne gemessene Bewertung unter 1650 (etwa 75 % Erfolg), mit der kleinsten `strength` als Näherung für geringere Kosten. Meldet der Prüfer einer anderen Familie Mängel (bei Mathe nur mit abweichendem Ergebnis), löst das nach gemessener Bewertung, sonst nach `strength` beste andere Modell neu; die Antwort trägt dann `escalated: true`. Kriterium 3 und der Regler für `θ` folgen in Stufe 3.
+**Umsetzung (Stufe 2):** verfügbar als Muster `cascade` (Modellname `swarmainet/cascade` oder vom Bandit gewählt). Stufe 1 ist der Kandidat mit der passendsten Fähigkeit, ohne gemessene Bewertung unter 1650 (etwa 75 % Erfolg), mit der kleinsten `strength` als Näherung für geringere Kosten. Meldet der Prüfer einer anderen Familie Mängel (bei Mathe nur mit abweichendem Ergebnis), löst das nach gemessener Bewertung, sonst nach `strength` beste andere Modell neu; die Antwort trägt dann `escalated: true`. **Stufe 3** ergänzt Kriterium 3: Meldet der Prüfer `ok` mit einer `confidence` unter `θ`, eskaliert der Koordinator ebenfalls und sagt es in der Denkphase. Das Kriterium nutzt die Konfidenz des Prüfers und gilt damit nur im Verbund mit der Prüfung; eine fehlende Konfidenz (0) zählt nicht als unsicher.
 
 ## 6. Muster: Zerlegen und Verteilen (Task-Graph)
 
@@ -212,9 +218,9 @@ Gateway:
 
 - `POST /v1/feedback` mit `{ "task_id": …, "good": true|false, "objective": false, "step": <index> }`: Rückmeldung zu einem eigenen Auftrag. Ohne `objective` Nutzerfeedback (§ 2.2, Rang 4, Gewicht ¼), mit `objective: true` ein geprüftes Ergebnis (Rang 1, volles Gewicht), wie es `swarmainet bench run` sendet. `step` bezeichnet einen Eintrag in `steps[]` der Antwort; ohne Angabe zählt das Endergebnis. Der Auftrag muss zu den letzten 1024 dieses Knotens gehören; je Schritt gilt eine Rückmeldung. Antworten: 204, 404 (Auftrag unbekannt), 409 (schon gemeldet), 400 (ungültiger Schritt, etwa ein Prüfer). In Stufe 1 umgesetzt.
 - Mit `cooperation.selection: bandit` wählt der Modellname `swarmainet` über den Bandit (in Stufe 2 umgesetzt); `swarmainet/<muster>` erzwingt weiterhin ein Muster.
-- `GET /api/profile`: Kompetenzprofil und Reglerzustand je Kategorie (Diagnose, „Regelungsstabilität“ im Messplan). Stufe 1 zeigt das Profil: Bewertung je Agent und Fähigkeit (`r`, `rd`, `sigma`, `games`) und Prüferstatistik (`hit`, `false_alarm`, `correct_ok`, `miss`); Stufe 2 ergänzt die Statistik des Bandits je Kategorie und Muster (`recipes`: `alpha`, `beta`, `tasks`, `tokens`).
+- `GET /api/profile`: Kompetenzprofil und Reglerzustand je Kategorie (Diagnose, „Regelungsstabilität“ im Messplan). Stufe 1 zeigt das Profil: Bewertung je Agent und Fähigkeit (`r`, `rd`, `sigma`, `games`) und Prüferstatistik (`hit`, `false_alarm`, `correct_ok`, `miss`); Stufe 2 ergänzt die Statistik des Bandits je Kategorie und Muster (`recipes`: `alpha`, `beta`, `tasks`, `tokens`), Stufe 3 die Regler (`controls`: je Kategorie `quality` mit `level` und `levels`, `cascade` mit `θ` in `output`).
 
-Konfiguration (Entwurf; umgesetzt sind bisher `selection`, `exploration` und `targets` als Qualitätswert je Kategorie):
+Konfiguration (Entwurf; umgesetzt sind bisher `selection`, `exploration` und `targets` mit `quality` und `cascade_error` je Kategorie):
 
 ```yaml
 cooperation:
@@ -223,7 +229,7 @@ cooperation:
   targets:                       # Sollwerte je Kategorie
     code:  { quality: 0.9, latency_p90_s: 60 }
     math:  { quality: 0.95 }
-    general: { quality: 0.85, latency_p90_s: 20 }
+    general: { quality: 0.85, latency_p90_s: 20, cascade_error: 0.05 }
   canary_share: 0.05
   coordinate_for_others: false   # Koordination für vertraute Peers anbieten (§ 7)
 ```
@@ -252,7 +258,7 @@ Kennzahlen zusätzlich zum Messplan: Konvergenz des Bandits (wie viele Aufträge
 
 1. ✅ **Kompetenzprofil und Signale:** Glicko-2 je Agent und Fähigkeit, Prüferbewertung, Signale aus Benchmark, Prüferurteil und `POST /v1/feedback`; Anzeige über `GET /api/profile`. Prüfbar mit künstlichen Agenten bekannter Qualität. Umgesetzt in `internal/profile`; Vorwissen aus `strength`, Prüferurteile je Schritt (`steps[].verdict`). Noch nicht: Paarvergleiche aus parallelen Mustern.
 2. ✅ **Bandit über Rezepte** mit der heutigen Auswahl als Vorwissen, und Muster **Kaskade**. Umgesetzt mit festen Regeln für „unsicher“ (§ 5); Opt-in über `cooperation.selection: bandit`.
-3. **PI-Regler** für den Prüfaufwand je Kategorie.
+3. ✅ **PI-Regler** für den Prüfaufwand je Kategorie, dazu der Regler für `θ` mit Kriterium 3 der Kaskade (§ 4.2, § 5). Noch nicht: Latenz-Regler.
 4. **Task-Graph**: Planer, Zerlegen und Verteilen, Synthese.
 5. **Asynchrone Aufträge und Lease-Koordinator**, Ausfalltests.
 6. **Canary-Aufgaben** und Manipulationstests.

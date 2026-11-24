@@ -6,6 +6,7 @@ package orchestrator
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"slices"
 
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
@@ -95,9 +96,11 @@ func (r *run) bestFirst(cands []Agent, author Agent) []Agent {
 }
 
 // cascade: erst ein günstiges Modell, dann Prüfung durch eine andere Familie;
-// nur bei Mängeln löst das beste andere Modell die Aufgabe neu. „Unsicher“
-// heißt in Stufe 2: Mängelbefund des Prüfers (bei Mathe mit abweichendem
-// Ergebnis, siehe verify); die Konfidenzschwelle θ folgt mit dem Regler.
+// nur wenn das Ergebnis unsicher ist, löst das beste andere Modell die
+// Aufgabe neu. Unsicher heißt (spec/cooperation.md § 5): Mängelbefund des
+// Prüfers (bei Mathe mit abweichendem Ergebnis, siehe verify), oder der
+// Prüfer meldet „ok“ mit einer Konfidenz unter θ (Regler, nur im Verbund mit
+// der Prüfung). Eine fehlende Konfidenz (0) zählt nicht als unsicher.
 func (r *run) cascade(ctx context.Context) error {
 	cands := r.candidates(r.req.Skill, false, nil)
 	if len(cands) == 0 {
@@ -109,8 +112,18 @@ func (r *run) cascade(ctx context.Context) error {
 	}
 	r.ans.Content = draft.Result.Content
 	v, ok := r.verify(ctx, author)
-	if !ok || v.Verdict == "ok" {
+	if !ok {
 		return nil
+	}
+	if v.Verdict == "ok" {
+		theta := 0.0
+		if r.o.Theta != nil {
+			theta = r.o.Theta(r.req.Skill)
+		}
+		if theta <= 0 || v.Confidence <= 0 || v.Confidence >= theta {
+			return nil
+		}
+		r.note(fmt.Sprintf("Prüfer unsicher (Konfidenz %.2f unter der Schwelle %.2f): Eskalation.", v.Confidence, theta))
 	}
 	best := r.bestFirst(cands, author)
 	if len(best) == 0 {

@@ -6,15 +6,28 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 
 ## [Unveröffentlicht]
 
+## [0.6.0] – 2026-11-24
+
+Anfragen dürfen jetzt Bilder enthalten, und mit `reduced` bekommen fremde Knoten nur noch eine gekürzte Aufgabe statt des ganzen Gesprächs. Mit dem Bandit passen zwei Regler den Prüfaufwand an die Sollwerte an. Das Protokoll bleibt bei Version 0.1 und bekommt nur das optionale Feld `images`: Knoten mit 0.6.0 und 0.5.0 arbeiten zusammen. Bestehende Konfigurationen funktionieren ohne Änderung weiter.
+
 ### Hinzugefügt
 
 - **Bilder in Anfragen:** Chat-Nachrichten dürfen Bilder als `image_url`-Teile mit eingebetteter data-URL enthalten (PNG, JPEG, WebP, GIF, zusammen höchstens 2,75 MiB), so wie Open WebUI sie schickt. Sie gehen nur an Modelle mit der neuen Einstellung `vision: true`, auch als Prüfer oder Synthese; das Backend bekommt sie im OpenAI-Format. Bei `reduced` bleiben Anfragen mit Bildern im vertrauten Kreis, weil sich ein Bild nicht pseudonymisieren lässt. Neues optionales Protokollfeld `images` in den Nachrichten; Anbieter mit älteren Versionen melden nie die Modalität `image` und bekommen deshalb nie Bilder. ([Nutzung](../docs/de/usage.md#coding-agenten-und-werkzeuge), [Freigabeklassen](../spec/de/privacy-classes.md) Regel 10, [Protokoll](../spec/de/protocol-v0.1.md) § 4.2)
 - **Minimierung für `reduced`:** Enthält eine Anfrage einen Verlauf oder Systemanweisungen, schreibt ein eigenes oder vertrautes Modell zuerst die letzte Anfrage als in sich geschlossene Aufgabe, nur mit dem Nötigen; fremde Knoten, auch als Prüfer oder Synthese, bekommen diese Aufgabe pseudonymisiert statt des Gesprächs. Ohne sie geht nichts an Fremde. Mit Werkzeugen bleibt der Verlauf vollständig. ([Freigabeklassen](../spec/de/privacy-classes.md) Regel 9)
+- **Regler für den Aufwand (Kooperation Stufe 3):** Mit `cooperation.selection: bandit` hält ein PI-Regler je Aufgabenkategorie die Erfolgsquote beim Sollwert `quality`, indem er dem Bandit einen Mindestaufwand vorgibt, und ein zweiter die Fehlerquote der günstigen Stufe der Kaskade beim neuen Sollwert `cascade_error` (Standard 0,05) über eine Konfidenzschwelle `θ`: Meldet der Prüfer `ok` mit einer Konfidenz unter `θ`, eskaliert die Kaskade. Beide lernen aus Rückmeldungen zum Endergebnis; ihr Zustand steht in `GET /api/profile` unter `controls` und übersteht Neustarts. Mit Simulationen geprüft, noch nicht mit echten Modellen. ([Kooperation](../spec/de/cooperation.md) § 4.2, § 5)
 - **Container-Image mit `ffmpeg`:** `docker build --target audio` baut eine Variante (Alpine, etwa 230 MB statt 50 MB) für ein Gateway, das lange Aufnahmen teilt. ([Installation](../docs/de/installation.md#dauerbetrieb))
 
 ### Geändert
 
+- Bei `reduced` sind die Platzhalter je Teilauftrag ab 1 nummeriert: Ein fremder Agent erkennt an `[PERSON_2]` nicht mehr, dass die Anfrage noch eine weitere Person nennt.
 - Beschränkt die Anfrage die Auswahl auf Agenten (`X-SwarmAiNet-Agents`), die die Freigabeklasse ausschließt, antwortet das Gateway jetzt mit 400 und dem Grund statt mit 502.
+
+### Hinweise zum Aktualisieren
+
+- Bilder gehen nur an Modelle mit `vision: true`; für Modelle, die Bilder verstehen, in `backends[].models` ergänzen. Ein Modell auf einem anderen Knoten bekommt Bilder erst, wenn dieser Knoten 0.6.0 verwendet; auch der Knoten, dessen Gateway die Anfrage annimmt, braucht 0.6.0.
+- Mit `reduced` kosten Anfragen mit Verlauf oder Systemanweisungen jetzt einen weiteren Modellaufruf beim eigenen oder einem vertrauten Modell (Kürzen), aber nur, wenn ein fremder Agent beteiligt ist.
+- Die Regler wirken nur mit `cooperation.selection: bandit` und beginnen ohne Vorgaben (`θ` = 0, kein Mindestaufwand); sie brauchen Rückmeldungen über `POST /v1/feedback`, um zu lernen.
+- Für ein Gateway im Container, das lange Aufnahmen teilt, das Image mit `--target audio` bauen.
 
 ## [0.5.0] – 2026-11-23
 
@@ -108,6 +121,7 @@ Das Protokoll ist unverändert (Version 0.1): Knoten mit 0.2.0 und 0.1.0 arbeite
 
 Erste öffentliche Version: lokaler Schwarm (Phase 1) und P2P-Schicht mit privaten Netzen und Mitgliedsnetzen, auf Hardware über zwei Standorte getestet.
 
+[0.6.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.2.0...v0.3.0

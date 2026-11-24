@@ -222,8 +222,11 @@ func chunks(s string, n int) []string {
 }
 
 // pseudoTask ersetzt in einem Teilauftrag für einen fremden Agenten alle
-// erkannten Angaben und hängt den Hinweis zu den Platzhaltern an.
-func pseudoTask(m *pseudo.Mapping, t *Task) {
+// erkannten Angaben und hängt den Hinweis zu den Platzhaltern an. Die
+// Platzhalter sind je Teilauftrag ab 1 nummeriert (pseudo.View); mit der
+// zurückgegebenen Sicht wird die Antwort zurückgetauscht.
+func pseudoTask(pz *pseudo.Mapping, t *Task) *pseudo.View {
+	m := pz.View()
 	msgs := make([]protocol.ChatMessage, len(t.Messages))
 	for i, msg := range t.Messages {
 		msg.Content = m.Apply(msg.Content)
@@ -247,10 +250,11 @@ func pseudoTask(m *pseudo.Mapping, t *Task) {
 		t.OnDelta = func(c, rs string) { next(content.Write(c), reasoning.Write(rs)) }
 		t.flush = func() { next(content.Flush(), reasoning.Flush()) }
 	}
+	return m
 }
 
 // revertResult tauscht die Platzhalter in der Antwort eines fremden Agenten zurück.
-func revertResult(m *pseudo.Mapping, res *protocol.Result) {
+func revertResult(m *pseudo.View, res *protocol.Result) {
 	res.Result.Content = m.Revert(res.Result.Content)
 	res.Result.Summary = m.Revert(res.Result.Summary)
 	for i := range res.Result.ToolCalls {

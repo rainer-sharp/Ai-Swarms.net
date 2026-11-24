@@ -206,6 +206,9 @@ type Orchestrator struct {
 	// Rate liefert die gemessene Bewertung eines Agenten in einer Fähigkeit
 	// (Kompetenzprofil); ok=false, wenn noch keine vorliegt.
 	Rate func(a Agent, skill string) (r float64, ok bool)
+	// Theta liefert die Konfidenzschwelle der Kaskade (Regler, spec/
+	// cooperation.md § 4.1); nil oder 0: Kriterium 3 ist aus.
+	Theta func(skill string) float64
 
 	load loadTracker
 }
@@ -721,8 +724,9 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 				}
 			}
 		}
+		var view *pseudo.View
 		if pz != nil {
-			pseudoTask(pz, &t)
+			view = pseudoTask(pz, &t)
 		}
 		start := time.Now()
 		done := r.o.load.begin(a)
@@ -731,8 +735,8 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 		if t.flush != nil {
 			t.flush()
 		}
-		if err == nil && pz != nil {
-			revertResult(pz, &res)
+		if err == nil && view != nil {
+			revertResult(view, &res)
 		}
 		if err == nil && res.Result.Status == protocol.StatusFailed {
 			err = fmt.Errorf("agent meldet fehler: %s", res.Result.Summary)

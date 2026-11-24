@@ -45,8 +45,11 @@ type Cooperation struct {
 // Target: Sollwerte einer Aufgabenkategorie (spec/cooperation.md § 4.1).
 type Target struct {
 	Quality float64 `yaml:"quality"` // angestrebte Erfolgsquote, z. B. 0.9
-	// LatencyP90S: p90-Antwortzeit; erst mit dem Latenz-Regler (Stufe 3) wirksam.
+	// LatencyP90S: p90-Antwortzeit; erst mit dem Latenz-Regler wirksam.
 	LatencyP90S int `yaml:"latency_p90_s,omitempty"`
+	// CascadeError: zulässige Fehlerquote der günstigen Stufe der Kaskade
+	// (Regler für θ); 0: Standard 0,05.
+	CascadeError float64 `yaml:"cascade_error,omitempty"`
 }
 
 type Node struct {
@@ -576,6 +579,9 @@ func (c Config) Validate() error {
 		}
 		if tg.LatencyP90S < 0 {
 			return fmt.Errorf("cooperation.targets.%s.latency_p90_s: keine negativen Werte", cat)
+		}
+		if tg.CascadeError < 0 || tg.CascadeError >= 1 {
+			return fmt.Errorf("cooperation.targets.%s.cascade_error %v: erlaubt ist 0 bis unter 1", cat, tg.CascadeError)
 		}
 	}
 	return nil

@@ -92,6 +92,9 @@ type task struct {
 	pattern string
 	steps   []Step
 	given   map[int]bool // Schritte mit objektivem oder Nutzer-Feedback (-1: Endergebnis)
+	// escalated: Die Kaskade hat eskaliert; das Endergebnis stammt nicht
+	// von der günstigen Stufe.
+	escalated bool
 }
 
 // Profile ist sicher für gleichzeitige Nutzung.
@@ -102,13 +105,16 @@ type Profile struct {
 	mu      sync.Mutex
 	agents  map[string]*agentProfile
 	recipes map[string]map[string]*RecipeStats // Kategorie → Muster
+	ctl     map[string]*Controls               // Regler je Kategorie (control.go)
+	sel     Selection                          // Sollwerte für die Regler
 	tasks   []*task                            // Ringpuffer, älteste zuerst
 }
 
 type fileFormat struct {
-	Version int                                `json:"version"`
-	Agents  map[string]*agentProfile           `json:"agents"`
-	Recipes map[string]map[string]*RecipeStats `json:"recipes,omitempty"`
+	Version  int                                `json:"version"`
+	Agents   map[string]*agentProfile           `json:"agents"`
+	Recipes  map[string]map[string]*RecipeStats `json:"recipes,omitempty"`
+	Controls map[string]*Controls               `json:"controls,omitempty"`
 }
 
 // Open lädt das Profil aus path oder beginnt leer. Eine unlesbare Datei wird
@@ -131,7 +137,7 @@ func Open(path string) *Profile {
 	if f.Agents != nil {
 		p.agents = f.Agents
 	}
-	p.recipes = f.Recipes
+	p.recipes, p.ctl = f.Recipes, f.Controls
 	return p
 }
 
@@ -199,6 +205,8 @@ type TaskInfo struct {
 	Pattern string // Muster, nach dem er lief
 	Tokens  int    // Verbrauch aller Schritte
 	Steps   []Step
+	// Escalated: Die Kaskade hat eskaliert (Regler für θ, control.go).
+	Escalated bool
 }
 
 // Record merkt sich einen abgeschlossenen Auftrag, wertet die Urteile
@@ -233,7 +241,7 @@ func (p *Profile) Record(ti TaskInfo) {
 		}
 		p.play(steps[j], skill, score, WeightVerifier)
 	}
-	p.tasks = append(p.tasks, &task{id: taskID, skill: skill, pattern: ti.Pattern, steps: slices.Clone(steps), given: map[int]bool{}})
+	p.tasks = append(p.tasks, &task{id: taskID, skill: skill, pattern: ti.Pattern, steps: slices.Clone(steps), given: map[int]bool{}, escalated: ti.Escalated})
 	if len(p.tasks) > taskMemory {
 		p.tasks = p.tasks[len(p.tasks)-taskMemory:]
 	}
@@ -289,11 +297,12 @@ func (p *Profile) Feedback(fb Feedback) error {
 		weight = WeightObjective
 	}
 	p.play(t.steps[idx], t.skill, score, weight)
-	// Der Bandit lernt aus dem Endergebnis, nicht aus Zwischenschritten.
+	// Bandit und Regler lernen aus dem Endergebnis, nicht aus Zwischenschritten.
 	if idx == final(t.steps) && t.pattern != "" {
 		st := p.recipe(Category(t.skill), t.pattern)
 		st.Alpha += weight * score
 		st.Beta += weight * (1 - score)
+		p.controlFeedback(t, score, weight)
 	}
 	if fb.Objective {
 		for k, s := range t.steps {
@@ -368,7 +377,7 @@ func (p *Profile) saveLocked() {
 	if p.path == "" {
 		return
 	}
-	data, err := json.MarshalIndent(fileFormat{Version: 1, Agents: p.agents, Recipes: p.recipes}, "", " ")
+	data, err := json.MarshalIndent(fileFormat{Version: 1, Agents: p.agents, Recipes: p.recipes, Controls: p.ctl}, "", " ")
 	if err == nil {
 		err = writeAtomic(p.path, data)
 	}

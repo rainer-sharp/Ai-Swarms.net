@@ -20,7 +20,7 @@ Secrets do not belong in the file: the Home Assistant token comes from an enviro
 |---|---|---|
 | `selection` | `rules` | `rules`: `tasks.pattern` applies; `bandit`: the node chooses the pattern per task category from its competence profile ([cooperation](../spec/cooperation.md) § 3). A request with `swarmainet/<pattern>` always gets that pattern |
 | `exploration` | `0.05` | Share of random choice among the feasible patterns (0 to 0.5) |
-| `targets` | code 0.9, math 0.95, otherwise 0.85 | Targets per category, e.g. `code: { quality: 0.9 }`; `latency_p90_s` is reserved for stage 3 |
+| `targets` | code 0.9, math 0.95, otherwise 0.85 | Targets per category, e.g. `code: { quality: 0.9, cascade_error: 0.05 }`. With `bandit`, controllers keep the success rate at `quality` (by setting a minimum effort) and the error rate of the cheap stage of the cascade at `cascade_error` (default 0.05, by setting the threshold `θ`) ([cooperation](../spec/cooperation.md) § 4.2); `latency_p90_s` is reserved for the latency loop |
 
 ## Network keys (`node.…`)
 
