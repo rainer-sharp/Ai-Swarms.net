@@ -47,6 +47,19 @@ type Step struct {
 	OK       bool   // erfolgreich, mit Ergebnis
 	Verdict  string // nur Prüfer: "ok" oder "issues", leer ohne gültiges Urteil
 	Strength int    // Selbstauskunft für den Startwert
+	// Node und Skill: Teilaufgabe des Musters decompose und ihre Fähigkeit;
+	// leer: der Auftrag selbst. Ein Prüfer bewertet nur Schritte derselben
+	// Teilaufgabe, und gewertet wird in deren Fähigkeit.
+	Node  string
+	Skill string
+}
+
+// skillOf: Fähigkeit, in der ein Schritt gewertet wird.
+func skillOf(s Step, taskSkill string) string {
+	if s.Skill != "" {
+		return s.Skill
+	}
+	return taskSkill
 }
 
 // AgentKey: Peer-ID und Agent-ID; eigene Agenten heißen "local/<agent>".
@@ -181,6 +194,9 @@ func (p *Profile) verifierStats(key, skill string) *VerifierStats {
 // also des letzten erfolgreichen Erstellers davor; -1 ohne einen solchen.
 func reviewed(steps []Step, i int) int {
 	for j := i - 1; j >= 0; j-- {
+		if steps[j].Node != steps[i].Node {
+			return -1
+		}
 		if steps[j].OK && (steps[j].Role == RoleSpecialist || steps[j].Role == RoleSynthesizer) {
 			return j
 		}
@@ -232,14 +248,15 @@ func (p *Profile) Record(ti TaskInfo) {
 		if j < 0 || steps[j].Agent == s.Agent || steps[j].Family == s.Family {
 			continue // nie sich selbst, nie dieselbe Familie
 		}
-		if !p.verifierStats(s.Agent, skill).Trusted() {
+		sk := skillOf(s, skill)
+		if !p.verifierStats(s.Agent, sk).Trusted() {
 			continue
 		}
 		score := 0.0
 		if s.Verdict == "ok" {
 			score = 1
 		}
-		p.play(steps[j], skill, score, WeightVerifier)
+		p.play(steps[j], sk, score, WeightVerifier)
 	}
 	p.tasks = append(p.tasks, &task{id: taskID, skill: skill, pattern: ti.Pattern, steps: slices.Clone(steps), given: map[int]bool{}, escalated: ti.Escalated})
 	if len(p.tasks) > taskMemory {
@@ -296,7 +313,7 @@ func (p *Profile) Feedback(fb Feedback) error {
 	if fb.Objective {
 		weight = WeightObjective
 	}
-	p.play(t.steps[idx], t.skill, score, weight)
+	p.play(t.steps[idx], skillOf(t.steps[idx], t.skill), score, weight)
 	// Bandit und Regler lernen aus dem Endergebnis, nicht aus Zwischenschritten.
 	if idx == final(t.steps) && t.pattern != "" {
 		st := p.recipe(Category(t.skill), t.pattern)
@@ -309,7 +326,7 @@ func (p *Profile) Feedback(fb Feedback) error {
 			if s.Role != RoleVerifier || s.Verdict == "" || reviewed(t.steps, k) != idx {
 				continue
 			}
-			v := p.verifierStats(s.Agent, t.skill)
+			v := p.verifierStats(s.Agent, skillOf(s, t.skill))
 			switch {
 			case s.Verdict == "issues" && !fb.Good:
 				v.Hit++

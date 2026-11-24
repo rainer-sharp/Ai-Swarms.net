@@ -26,7 +26,7 @@ func (n *Node) recordProfile(ans *orchestrator.Answer) {
 		key := profile.AgentKey(s.PeerID, s.AgentID)
 		steps = append(steps, profile.Step{
 			Role: string(s.Role), Agent: key, Family: s.Family,
-			OK: s.Status != protocol.StatusFailed, Verdict: s.Verdict, Strength: strength[key],
+			OK: s.Status != protocol.StatusFailed, Verdict: s.Verdict, Strength: strength[key], Node: s.Node, Skill: s.Skill,
 		})
 	}
 	n.Profile.Record(profile.TaskInfo{ID: ans.TaskID, Skill: ans.Skill, Pattern: string(ans.Pattern), Tokens: tokens, Steps: steps,

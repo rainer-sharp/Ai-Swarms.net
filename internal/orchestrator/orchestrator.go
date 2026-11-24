@@ -93,9 +93,15 @@ const (
 	// PatternCascade: erst ein günstiges Modell, Prüfung durch eine andere
 	// Familie, nur bei Mängeln löst das beste Modell neu (spec/cooperation.md § 5).
 	PatternCascade Pattern = "cascade"
+	// PatternDecompose: Ein Planer zerlegt den Auftrag in einen Graphen aus
+	// Teilaufgaben, jede mit eigenem Muster; eine Synthese führt die
+	// Ergebnisse zusammen (spec/cooperation.md § 6, decompose.go).
+	PatternDecompose Pattern = "decompose"
 )
 
-// Patterns: alle Muster, die Run kennt.
+// Patterns: die Muster, zwischen denen der Bandit wählt. decompose gehört
+// (noch) nicht dazu: Es lohnt sich nur bei mehrteiligen Aufträgen, und ob es
+// das tut, ist ungemessen. Es läuft nur auf ausdrücklichen Wunsch.
 var Patterns = []Pattern{PatternSingle, PatternParallel, PatternDraftVerify, PatternParallelVerify, PatternCascade}
 
 // Choice beschreibt, zwischen welchen Mustern ein Auftrag wählen kann.
@@ -175,6 +181,10 @@ type Step struct {
 	Verdict string `json:"verdict,omitempty"`
 	// Output: Text des Schritts, nur bei Request.Trace und Erfolg.
 	Output string `json:"output,omitempty"`
+	// Node und Skill: Teilaufgabe des Musters decompose, zu der der Schritt
+	// gehört, und ihre Fähigkeit (sonst leer: die des Auftrags).
+	Node  string `json:"node,omitempty"`
+	Skill string `json:"skill,omitempty"`
 }
 
 // Answer trägt Herkunft, Prüfurteil und Einschränkungen.
@@ -192,6 +202,8 @@ type Answer struct {
 	Issues      []string `json:"issues,omitempty"`
 	Limitations []string `json:"limitations,omitempty"`
 	Steps       []Step   `json:"steps"`
+	// Graph: Teilaufgaben des Musters decompose, ohne ihre Texte.
+	Graph []GraphNode `json:"graph,omitempty"`
 }
 
 type Orchestrator struct {
@@ -322,7 +334,7 @@ type run struct {
 	req    Request
 	taskID string
 	ans    *Answer
-	n      int // verbrauchte Teilaufträge
+	budget *budget // verbrauchte Teilaufträge, bei decompose mit den Teilaufgaben geteilt
 	mu     sync.Mutex
 	images bool // Anfrage mit Bildern: nur Agenten mit Vision
 
@@ -335,6 +347,30 @@ type run struct {
 	emitMu   sync.Mutex
 	reasoned bool // schon Text in der Denkphase
 	blank    bool // Denkphase endet mit einer Leerzeile
+}
+
+// budget zählt die Teilaufträge eines Auftrags gegen limits.max_subtasks.
+type budget struct {
+	mu sync.Mutex
+	n  int
+}
+
+// take belegt einen Teilauftrag; false, wenn das Budget erschöpft ist.
+func (b *budget) take(lim int) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if lim > 0 && b.n >= lim {
+		return false
+	}
+	b.n++
+	return true
+}
+
+// give gibt einen Teilauftrag zurück, bei dem keine Arbeit anfiel.
+func (b *budget) give() {
+	b.mu.Lock()
+	b.n--
+	b.mu.Unlock()
 }
 
 // target: wohin der Text eines Schritts beim Streaming geht.
@@ -430,7 +466,7 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 	if hasTools(req) {
 		req.Pattern = PatternSingle // Prüfer und Synthese passen nicht in den Werkzeug-Kreislauf
 	}
-	r := &run{o: o, req: req, taskID: newID(), images: hasImages(req.Messages)}
+	r := &run{o: o, req: req, taskID: newID(), images: hasImages(req.Messages), budget: &budget{}}
 	r.ans = &Answer{TaskID: r.taskID, Pattern: req.Pattern, Skill: req.Skill, SelectedBy: "request"}
 	if imageTrusted {
 		r.limit("bilder lassen sich nicht pseudonymisieren: reduced gilt für diese anfrage wie trusted, nur eigene und vertraute knoten")
@@ -446,21 +482,7 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 	}
 	req = r.req
 
-	var err error
-	switch req.Pattern {
-	case PatternSingle:
-		err = r.single(ctx)
-	case PatternParallel:
-		err = r.parallel(ctx)
-	case PatternParallelVerify:
-		err = r.parallelVerify(ctx)
-	case PatternDraftVerify:
-		err = r.draftVerify(ctx)
-	case PatternCascade:
-		err = r.cascade(ctx)
-	default:
-		err = fmt.Errorf("pattern %q unbekannt", req.Pattern)
-	}
+	err := r.runPattern(ctx)
 	switch {
 	case hasTools(req) && errors.Is(err, ErrNoAgent):
 		err = ErrToolsNotAllowed
@@ -482,6 +504,25 @@ func (o *Orchestrator) Run(ctx context.Context, req Request) (*Answer, error) {
 	return r.ans, nil
 }
 
+// runPattern führt den Auftrag nach r.req.Pattern aus.
+func (r *run) runPattern(ctx context.Context) error {
+	switch r.req.Pattern {
+	case PatternSingle:
+		return r.single(ctx)
+	case PatternParallel:
+		return r.parallel(ctx)
+	case PatternParallelVerify:
+		return r.parallelVerify(ctx)
+	case PatternDraftVerify:
+		return r.draftVerify(ctx)
+	case PatternCascade:
+		return r.cascade(ctx)
+	case PatternDecompose:
+		return r.decompose(ctx)
+	}
+	return fmt.Errorf("pattern %q unbekannt", r.req.Pattern)
+}
+
 // candidates filtert hart (Freigabeklasse) und sortiert nach Eignung.
 func (r *run) candidates(skill string, preferLocal bool, exclude func(Agent) bool) []Agent {
 	return r.rank(skill, preferLocal, true, exclude)
@@ -500,11 +541,9 @@ func (r *run) verifierCandidates(exclude func(Agent) bool) []Agent {
 func (r *run) rank(skill string, preferLocal, balance bool, exclude func(Agent) bool) []Agent {
 	var out []Agent
 	for _, a := range r.o.Dir.Agents() {
-		if !allowed(a, r.req.Privacy) || (exclude != nil && exclude(a)) || !toolsUsable(a, r.req) || (r.images && !a.Vision) ||
-			(len(r.req.Agents) > 0 && !slices.Contains(r.req.Agents, a.ID)) {
-			continue
+		if r.admits(a) && (exclude == nil || !exclude(a)) {
+			out = append(out, a)
 		}
-		out = append(out, a)
 	}
 	out = fitting(out, skill)
 	loads := make(map[string]agentLoad, len(out))
@@ -550,6 +589,12 @@ func (r *run) rank(skill string, preferLocal, balance bool, exclude func(Agent) 
 		return out[i].ContextMax > out[j].ContextMax
 	})
 	return out
+}
+
+// admits: Der Agent kommt für diesen Auftrag überhaupt in Frage.
+func (r *run) admits(a Agent) bool {
+	return allowed(a, r.req.Privacy) && toolsUsable(a, r.req) && (!r.images || a.Vision) &&
+		(len(r.req.Agents) == 0 || slices.Contains(r.req.Agents, a.ID))
 }
 
 // noAgentReason erklärt ErrNoAgent, wenn es an der Freigabeklasse liegt
@@ -672,13 +717,9 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 		if ctx.Err() != nil {
 			return protocol.Result{}, Agent{}, ctx.Err()
 		}
-		r.mu.Lock()
-		if lim := r.req.Limits.MaxSubtasks; lim > 0 && r.n >= lim {
-			r.mu.Unlock()
+		if lim := r.req.Limits.MaxSubtasks; !r.budget.take(lim) {
 			return protocol.Result{}, Agent{}, fmt.Errorf("budget: maximal %d teilaufträge", lim)
 		}
-		r.n++
-		r.mu.Unlock()
 
 		tools, choice := toolsFor(a, r.req)
 		t := Task{TaskID: r.taskID, SubtaskID: newID(), Role: role, Skill: r.req.Skill, Limits: r.req.Limits, JSONSchema: schema,
@@ -691,9 +732,7 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 		if r.needsPseudo(a) {
 			m, min, err := r.pseudonymizer(ctx)
 			if err != nil {
-				r.mu.Lock()
-				r.n-- // keine Arbeit angefallen
-				r.mu.Unlock()
+				r.budget.give() // keine Arbeit angefallen
 				lastErr, allBusy = err, false
 				continue
 			}
@@ -757,9 +796,7 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 			r.note("*nicht verwendet: " + shortErr(err) + "*")
 		}
 		if errors.Is(err, ErrBusy) {
-			r.mu.Lock()
-			r.n-- // keine Arbeit angefallen
-			r.mu.Unlock()
+			r.budget.give() // keine Arbeit angefallen
 			slog.Info("anbieter ausgelastet", "role", role, "agent", a.ID, "peer", short(a.PeerID))
 			lastErr = err
 			continue

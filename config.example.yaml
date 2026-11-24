@@ -102,7 +102,7 @@ resources:
     reading_max_age_s: 120
 
 tasks:
-  pattern: draft_verify_synthesize  # single | parallel | draft_verify_synthesize | parallel_verify | cascade
+  pattern: draft_verify_synthesize  # single | parallel | draft_verify_synthesize | parallel_verify | cascade | decompose
   privacy_class: trusted            # local | trusted | reduced | public
   max_tokens: 8192                  # Reasoning-Modelle denken zuerst; der Anbieter begrenzt auf den Kontext des Modells
   deadline_s: 300

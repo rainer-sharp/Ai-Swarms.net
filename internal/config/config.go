@@ -561,7 +561,7 @@ func (c Config) Validate() error {
 		return fmt.Errorf("energy: stop_below_w muss ≤ start_above_w sein (hysterese)")
 	}
 	switch c.Tasks.Pattern {
-	case "single", "parallel", "draft_verify_synthesize", "parallel_verify", "cascade":
+	case "single", "parallel", "draft_verify_synthesize", "parallel_verify", "cascade", "decompose":
 	default:
 		return fmt.Errorf("tasks.pattern %q unbekannt", c.Tasks.Pattern)
 	}

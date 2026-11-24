@@ -179,3 +179,23 @@ func TestPersistence(t *testing.T) {
 		t.Fatal("kaputte datei nicht beiseitegelegt")
 	}
 }
+
+// TestReviewedWithinNode: Ein Prüfer bewertet nur Schritte seiner eigenen
+// Teilaufgabe (Muster decompose), nicht den letzten Schritt davor.
+func TestReviewedWithinNode(t *testing.T) {
+	steps := []Step{
+		{Role: RoleSpecialist, Agent: "x", OK: true, Node: "a"},
+		{Role: RoleVerifier, Agent: "y", Verdict: "ok", Node: "b"},
+		{Role: RoleSpecialist, Agent: "z", OK: true, Node: "b"},
+		{Role: RoleVerifier, Agent: "y", Verdict: "ok", Node: "b"},
+	}
+	if j := reviewed(steps, 1); j != -1 {
+		t.Fatalf("prüfer von b bewertet schritt %d", j)
+	}
+	if j := reviewed(steps, 3); j != 2 {
+		t.Fatalf("prüfer von b bewertet schritt %d, erwartet 2", j)
+	}
+	if skillOf(Step{Skill: "code.python"}, "general") != "code.python" || skillOf(Step{}, "general") != "general" {
+		t.Fatal("skillOf")
+	}
+}

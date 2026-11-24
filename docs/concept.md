@@ -113,7 +113,7 @@ Roles are dynamic: the same node can be a specialist for one task and a verifier
 | Draft + verifier + synthesis (`draft_verify_synthesize`) | Create, review independently, revise only if flaws are found | code, analyses; today's default | implemented |
 | Parallel diversity (`parallel`, `parallel_verify`) | Several models solve independently, synthesis, optionally reviewed | fact questions, difficult problems | implemented |
 | Cascade (`cascade`) | Cheap model first, escalate when uncertain | future default for most requests | implemented (phase 3, stage 2) |
-| Decompose & distribute | Task graph, subtasks in parallel | multi-part tasks, mixed modalities | phase 3 |
+| Decompose & distribute (`decompose`) | Task graph, subtasks in parallel | multi-part tasks, mixed modalities | implemented (phase 3, stage 4), on request |
 | Mixture-of-agents | Improve answers layer by layer | maximum quality, time not critical | idea |
 | Debate | Opposing positions, verdict by a third party | trade-offs, decisions | idea |
 | Human in the loop | A human approves critical steps | file changes, external actions | today via the application (tool approval) |

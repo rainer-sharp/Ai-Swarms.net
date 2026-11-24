@@ -6,6 +6,10 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **Task graph (cooperation stage 4):** new pattern `decompose` (model name `swarmainet/decompose`). A planner, preferably your own model, splits a multi-part task into subtasks with dependencies; independent ones run in parallel, each with its own pattern, and a synthesis merges the results. If a subtask fails, its successors are skipped and the gap is named. If there is nothing to split, or the plan is invalid, the task runs without decomposition. The answer lists the subtasks under `graph`. Only on request for now; the bandit does not choose it. ([cooperation](spec/cooperation.md) § 6, [usage](docs/usage.md#model-names-how-the-swarm-works))
+
 ### Changed
 
 - The default for `tasks.max_tokens` is now 8192 instead of 2048: reasoning models with long histories (e.g. Open WebUI with tools) used up 2048 tokens by thinking alone. The provider lowers the limit so that input and answer fit into the model's `context`. ([configuration](docs/configuration.md))

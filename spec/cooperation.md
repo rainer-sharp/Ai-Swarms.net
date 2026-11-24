@@ -179,6 +179,16 @@ For multi-part tasks, a **planner** (preferably local, because it sees the whole
 
 If a subtask fails after the usual fallback attempts, its successors are not executed. The synthesiser receives what is available and names the gap under `limitations`.
 
+**Implementation (stage 4):** pattern `decompose`, only on explicit request (model name `swarmainet/decompose` or `tasks.pattern: decompose`). The bandit does not choose it yet, because its benefit is unmeasured.
+
+- **Planner:** chosen like the synthesiser (own models first, skill `general`), not by the best specialist skill, because it sees the whole conversation. It receives the skills of the admitted agents. If decomposing does not pay off, it returns exactly one subtask, and the task runs without decomposition with the pattern from `tasks.pattern` (`draft_verify_synthesize` if that is `decompose` itself).
+- **Checks:** unique ids, known predecessors, no cycles, prompts up to 8 KiB; unknown skills become `general`, because small models invent skills. At most 6 subtasks and at most (`max_subtasks` − 2) / 2: planner and synthesis cost one subtask each, a subtask with review about two. An invalid plan or a failed planner leads to the answer without decomposition, with a note under `limitations`.
+- **Execution:** in waves, all subtasks whose predecessors are done run in parallel. Each runs as a sub-task with its own pattern (bandit for the skill of the subtask, otherwise the rule pattern); all share budget, deadline and privacy class. A subtask receives its prompt and the results of its predecessors in `<ergebnis>` delimiters as a single user message. With `reduced`, it is pseudonymised for foreign agents on its own; no shortening is needed, because the prompt is already self-contained.
+- **Not decomposed:** requests with images or tools.
+- **Answer:** `graph` lists the subtasks (`id`, `skill`, `deps`, `pattern`, `status` `ok`, `failed` or `skipped`; without texts). Steps carry `node` and `skill`, so that the competence profile rates them in the skill of the subtask and a verifier only judges steps of its own subtask.
+
+Tested on hardware with one model (Qwen3.8 via vLLM): the planner split a three-part request into code, review of the code and an explanation, and left a simple question undivided. Not yet: selection by the bandit, nested decomposition, mixed modalities.
+
 ## 7. Lease coordinator
 
 ### 7.1 Purpose
@@ -259,7 +269,7 @@ Metrics in addition to the measurement plan: convergence of the bandit (how many
 1. ✅ **Competence profile and signals:** Glicko-2 per agent and skill, verifier rating, signals from benchmark, verifier verdict and `POST /v1/feedback`; display via `GET /api/profile`. Testable with artificial agents of known quality. Implemented in `internal/profile`; prior knowledge from `strength`, verifier verdicts per step (`steps[].verdict`). Not yet: pairwise comparisons from parallel patterns.
 2. ✅ **Bandit over recipes** with today's selection as prior knowledge, and the pattern **cascade**. Implemented with fixed rules for "uncertain" (§ 5); opt-in via `cooperation.selection: bandit`.
 3. ✅ **PI controller** for the review effort per category, and the controller for `θ` with criterion 3 of the cascade (§ 4.2, § 5). Not yet: latency loop.
-4. **Task graph:** planner, decompose and distribute, synthesis.
+4. ✅ **Task graph:** planner, decompose and distribute, synthesis. Pattern `decompose`, only on request (§ 6). Not yet: selection by the bandit, nested decomposition.
 5. **Asynchronous tasks and lease coordinator**, failure tests.
 6. **Canary tasks** and manipulation tests.
 

@@ -179,6 +179,16 @@ Für mehrteilige Aufgaben erstellt ein **Planer** (bevorzugt lokal, weil er das 
 
 Scheitert eine Teilaufgabe nach den üblichen Ausweichversuchen, werden ihre Nachfolger nicht ausgeführt. Der Synthesizer erhält, was vorliegt, und nennt die Lücke unter `limitations`.
 
+**Umsetzung (Stufe 4):** Muster `decompose`, nur auf ausdrücklichen Wunsch (Modellname `swarmainet/decompose` oder `tasks.pattern: decompose`). Der Bandit wählt es noch nicht, weil sein Nutzen ungemessen ist.
+
+- **Planer:** gewählt wie der Synthesizer (eigene Modelle zuerst, Fähigkeit `general`), nicht nach der besten Fachfähigkeit, denn er sieht das ganze Gespräch. Er bekommt die Fähigkeiten der zugelassenen Agenten. Lohnt keine Zerlegung, liefert er genau eine Teilaufgabe, und der Auftrag läuft ohne Zerlegung mit dem Muster aus `tasks.pattern` (`draft_verify_synthesize`, wenn das selbst `decompose` ist).
+- **Prüfung:** eindeutige ids, bekannte Vorgänger, keine Kreise, Prompts bis 8 KiB; unbekannte Fähigkeiten werden zu `general`, weil kleine Modelle gern welche erfinden. Höchstens 6 Teilaufgaben und höchstens (`max_subtasks` − 2) / 2: Planer und Synthese kosten je einen Teilauftrag, eine Teilaufgabe mit Prüfung etwa zwei. Ein ungültiger Plan oder ein gescheiterter Planer führt zur Antwort ohne Zerlegung, mit Hinweis unter `limitations`.
+- **Ausführung:** in Wellen, alle Teilaufgaben, deren Vorgänger fertig sind, laufen parallel. Jede läuft als Unterauftrag mit eigenem Muster (Bandit für die Fähigkeit der Teilaufgabe, sonst das Muster nach Regel); alle teilen sich Budget, Frist und Freigabeklasse. Eine Teilaufgabe bekommt ihren Prompt und die Ergebnisse ihrer Vorgänger in `<ergebnis>`-Begrenzern als eine einzige Nutzer-Nachricht. Bei `reduced` wird sie für fremde Agenten eigens pseudonymisiert; eine Kürzung ist nicht nötig, weil der Prompt schon in sich geschlossen ist.
+- **Nicht zerlegt:** Anfragen mit Bildern oder Werkzeugen.
+- **Antwort:** `graph` nennt die Teilaufgaben (`id`, `skill`, `deps`, `pattern`, `status` `ok`, `failed` oder `skipped`; ohne Texte). Schritte tragen `node` und `skill`, damit das Kompetenzprofil sie in der Fähigkeit der Teilaufgabe wertet und ein Prüfer nur Schritte seiner eigenen Teilaufgabe beurteilt.
+
+Auf Hardware mit einem Modell geprüft (Qwen3.8 über vLLM): Der Planer zerlegte eine dreiteilige Anfrage in Code, Prüfung des Codes und eine Erklärung und ließ eine einfache Frage unzerlegt. Noch nicht: Wahl durch den Bandit, verschachtelte Zerlegung, gemischte Modalitäten.
+
 ## 7. Lease-Koordinator
 
 ### 7.1 Zweck
@@ -259,7 +269,7 @@ Kennzahlen zusätzlich zum Messplan: Konvergenz des Bandits (wie viele Aufträge
 1. ✅ **Kompetenzprofil und Signale:** Glicko-2 je Agent und Fähigkeit, Prüferbewertung, Signale aus Benchmark, Prüferurteil und `POST /v1/feedback`; Anzeige über `GET /api/profile`. Prüfbar mit künstlichen Agenten bekannter Qualität. Umgesetzt in `internal/profile`; Vorwissen aus `strength`, Prüferurteile je Schritt (`steps[].verdict`). Noch nicht: Paarvergleiche aus parallelen Mustern.
 2. ✅ **Bandit über Rezepte** mit der heutigen Auswahl als Vorwissen, und Muster **Kaskade**. Umgesetzt mit festen Regeln für „unsicher“ (§ 5); Opt-in über `cooperation.selection: bandit`.
 3. ✅ **PI-Regler** für den Prüfaufwand je Kategorie, dazu der Regler für `θ` mit Kriterium 3 der Kaskade (§ 4.2, § 5). Noch nicht: Latenz-Regler.
-4. **Task-Graph**: Planer, Zerlegen und Verteilen, Synthese.
+4. ✅ **Task-Graph**: Planer, Zerlegen und Verteilen, Synthese. Muster `decompose`, nur auf Wunsch (§ 6). Noch nicht: Wahl durch den Bandit, verschachtelte Zerlegung.
 5. **Asynchrone Aufträge und Lease-Koordinator**, Ausfalltests.
 6. **Canary-Aufgaben** und Manipulationstests.
 

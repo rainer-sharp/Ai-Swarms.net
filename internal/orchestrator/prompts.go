@@ -188,7 +188,7 @@ func parseVerdict(s string) (verdict, error) {
 	return v, nil
 }
 
-var injectionRe = regexp.MustCompile(`(?i)(ignore (all )?(previous|prior|above) instructions|ignoriere (alle )?(vorherigen|bisherigen|obigen) (anweisungen|instruktionen)|disregard (the )?system prompt|you are now|du bist jetzt|</?(aufgabe|entwurf|loesung|pruefbefund)>)`)
+var injectionRe = regexp.MustCompile(`(?i)(ignore (all )?(previous|prior|above) instructions|ignoriere (alle )?(vorherigen|bisherigen|obigen) (anweisungen|instruktionen)|disregard (the )?system prompt|you are now|du bist jetzt|</?(aufgabe|entwurf|loesung|pruefbefund|ergebnis|plan)>)`)
 
 // looksLikeInjection erkennt typische Anweisungsmuster in Ergebnissen anderer Peers.
 func looksLikeInjection(s string) bool { return injectionRe.MatchString(s) }

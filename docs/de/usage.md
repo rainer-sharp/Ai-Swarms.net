@@ -16,6 +16,7 @@ Der Modellname wählt das Muster, nach dem die Modelle zusammenarbeiten:
 | `swarmainet/draft_verify_synthesize` | Entwurf, Prüfung durch eine andere Familie, Synthese nur bei Mängeln |
 | `swarmainet/parallel_verify` | wie `parallel`, danach Prüfung der Synthese durch eine andere Familie, Überarbeitung nur bei Mängeln |
 | `swarmainet/cascade` | erst ein günstiges Modell, Prüfung durch eine andere Familie; nur bei Mängeln löst das beste andere Modell neu |
+| `swarmainet/decompose` | ein Planer (bevorzugt das eigene Modell) zerlegt eine mehrteilige Aufgabe in Teilaufgaben mit Abhängigkeiten; jede läuft mit eigenem Muster, unabhängige parallel, und eine Synthese führt die Ergebnisse zusammen. Gibt es nichts zu zerlegen, läuft der Auftrag wie mit `tasks.pattern` |
 
 Mit `cooperation.selection: bandit` wählt der Knoten beim Modellnamen `swarmainet` ohne Zusatz das Muster je Aufgabenkategorie nach seinem [Kompetenzprofil](#rückmeldungen-und-kompetenzprofil), statt `tasks.pattern` zu nehmen.
 
@@ -26,7 +27,7 @@ curl -s http://127.0.0.1:7711/v1/chat/completions \
   -d '{"model":"swarmainet","messages":[{"role":"user","content":"Schreibe eine Python-Funktion für Primzahlen"}]}'
 ```
 
-Die Antwort enthält zusätzlich das Feld `swarmainet` mit Ablauf, Prüfurteil, gefundenen Mängeln und Einschränkungen. In `steps[]` stehen je Schritt Agent, Peer, Dauer und Tokens. `selected_by` nennt, wer das Muster gewählt hat (`request`, `rules` oder `bandit`), `escalated: true`, dass die Kaskade eskaliert hat.
+Die Antwort enthält zusätzlich das Feld `swarmainet` mit Ablauf, Prüfurteil, gefundenen Mängeln und Einschränkungen. In `steps[]` stehen je Schritt Agent, Peer, Dauer und Tokens. `selected_by` nennt, wer das Muster gewählt hat (`request`, `rules` oder `bandit`), `escalated: true`, dass die Kaskade eskaliert hat, `graph[]` die Teilaufgaben von `decompose` mit Fähigkeit, Abhängigkeiten, Muster und Status.
 
 ## Streaming
 

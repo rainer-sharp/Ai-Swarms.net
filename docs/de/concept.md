@@ -113,7 +113,7 @@ Rollen sind dynamisch: Derselbe Knoten kann bei einer Aufgabe Spezialist sein un
 | Entwurf + Prüfer + Synthese (`draft_verify_synthesize`) | Erzeugen, unabhängig prüfen, nur bei Mängeln überarbeiten | Code, Analysen; heutiger Standard | umgesetzt |
 | Parallele Vielfalt (`parallel`, `parallel_verify`) | Mehrere Modelle lösen unabhängig, Synthese, optional geprüft | Faktenfragen, schwierige Probleme | umgesetzt |
 | Kaskade (`cascade`) | Erst günstiges Modell, bei Unsicherheit eskalieren | künftiger Standard für den Großteil der Anfragen | umgesetzt (Phase 3, Stufe 2) |
-| Zerlegen & Verteilen | Task-Graph, Teilaufgaben parallel | mehrteilige Aufgaben, gemischte Modalitäten | Phase 3 |
+| Zerlegen & Verteilen (`decompose`) | Task-Graph, Teilaufgaben parallel | mehrteilige Aufgaben, gemischte Modalitäten | umgesetzt (Phase 3, Stufe 4), auf Wunsch |
 | Mixture-of-Agents | Antworten schichtweise verbessern | maximale Qualität, Zeit unkritisch | Idee |
 | Debatte | Gegenpositionen, Urteil durch Dritte | Abwägungen, Entscheidungen | Idee |
 | Mensch im Kreislauf | Mensch gibt kritische Schritte frei | Dateiänderungen, externe Aktionen | heute über die Anwendung (Werkzeugfreigabe) |

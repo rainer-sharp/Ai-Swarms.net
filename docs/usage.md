@@ -16,6 +16,7 @@ The model name selects the pattern by which the models work together:
 | `swarmainet/draft_verify_synthesize` | Draft, review by a different family, synthesis only if flaws are found |
 | `swarmainet/parallel_verify` | Like `parallel`, then the synthesis is reviewed by a different family, revision only if flaws are found |
 | `swarmainet/cascade` | A cheap model first, review by a different family; only if flaws are found does the best other model solve the task anew |
+| `swarmainet/decompose` | A planner (preferably your own model) splits a multi-part task into subtasks with dependencies; each runs with its own pattern, independent ones in parallel, and a synthesis merges the results. If there is nothing to split, the task runs as with `tasks.pattern` |
 
 With `cooperation.selection: bandit`, the plain model name `swarmainet` lets the node choose the pattern per task category from its [competence profile](#feedback-and-competence-profile) instead of using `tasks.pattern`.
 
@@ -26,7 +27,7 @@ curl -s http://127.0.0.1:7711/v1/chat/completions \
   -d '{"model":"swarmainet","messages":[{"role":"user","content":"Write a Python function for prime numbers"}]}'
 ```
 
-The response additionally contains the field `swarmainet` with the procedure, the review verdict, the flaws found and limitations. `steps[]` lists agent, peer, duration and tokens for each step. `selected_by` says who chose the pattern (`request`, `rules` or `bandit`), `escalated: true` that the cascade escalated.
+The response additionally contains the field `swarmainet` with the procedure, the review verdict, the flaws found and limitations. `steps[]` lists agent, peer, duration and tokens for each step. `selected_by` says who chose the pattern (`request`, `rules` or `bandit`), `escalated: true` that the cascade escalated, `graph[]` the subtasks of `decompose` with skill, dependencies, pattern and status.
 
 ## Streaming
 

@@ -58,7 +58,7 @@ func Handler(b Backend) http.Handler {
 	})
 	mux.HandleFunc("GET /v1/models", func(w http.ResponseWriter, _ *http.Request) {
 		var data []map[string]any
-		for _, id := range []string{modelPrefix, modelPrefix + "/single", modelPrefix + "/parallel", modelPrefix + "/draft_verify_synthesize", modelPrefix + "/parallel_verify", modelPrefix + "/cascade"} {
+		for _, id := range []string{modelPrefix, modelPrefix + "/single", modelPrefix + "/parallel", modelPrefix + "/draft_verify_synthesize", modelPrefix + "/parallel_verify", modelPrefix + "/cascade", modelPrefix + "/decompose"} {
 			data = append(data, map[string]any{"id": id, "object": "model", "owned_by": "swarmainet"})
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"object": "list", "data": data})
