@@ -5,6 +5,7 @@ package orchestrator
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"slices"
 	"strings"
@@ -277,5 +278,50 @@ func TestDecomposeReservesSynthesis(t *testing.T) {
 	}
 	if !strings.HasPrefix(ans.Content, "gesamt:") {
 		t.Fatalf("keine synthese: %q %v", ans.Content, ans.Limitations)
+	}
+}
+
+func TestPlanSchemaEnum(t *testing.T) {
+	var s struct {
+		Properties struct {
+			Nodes struct {
+				MaxItems int `json:"maxItems"`
+				Items    struct {
+					Properties struct {
+						Skill struct {
+							Enum []string `json:"enum"`
+						} `json:"skill"`
+					} `json:"properties"`
+				} `json:"items"`
+			} `json:"nodes"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal([]byte(planSchema(3, []string{"code.python", "general"})), &s); err != nil {
+		t.Fatal(err)
+	}
+	if s.Properties.Nodes.MaxItems != 3 || !slices.Equal(s.Properties.Nodes.Items.Properties.Skill.Enum, []string{"code.python", "general"}) {
+		t.Fatalf("%+v", s)
+	}
+}
+
+// TestKeepCode: Lässt die Synthese Code aus einer Teilaufgabe weg, wird er
+// unverändert angehängt; übernommener Code wird nicht verdoppelt.
+func TestKeepCode(t *testing.T) {
+	p := plan{Nodes: []planNode{{ID: "a"}, {ID: "b"}, {ID: "c"}}}
+	results := map[string]string{
+		"a": "Here:\n```python\nimport math\n\ndef is_prime(n: int) -> bool:\n    return n > 1\n```",
+		"b": "```python\n# Hilfe\ndef twice(x):\n    return 2 * x\n```",
+		"c": "Antwort: 391",
+	}
+	synth := "Answer 2: 391\n\n```python\ndef twice(x):\n    return 2 * x\n```\nThe function is_prime has been provided."
+	got, added := keepCode(synth, p, results)
+	if added != 1 || !strings.HasSuffix(strings.TrimSpace(got), "    return n > 1\n```") || strings.Count(got, "def twice") != 1 {
+		t.Fatalf("%d\n%s", added, got)
+	}
+	if got, added := keepCode(got, p, results); added != 0 || strings.Count(got, "def is_prime") != 1 {
+		t.Fatalf("doppelt angehängt: %d", added)
+	}
+	if codeMarker("\n  # nur kommentar\n\n") != "" || codeMarker("x = 1\ndef f(): pass") != "def f(): pass" {
+		t.Fatal("codeMarker")
 	}
 }

@@ -14,6 +14,8 @@ Alle nennenswerten Änderungen an AI-Swarms.net. Das Format folgt [Keep a Change
 ### Geändert
 
 - **Lizenz:** AI-Swarms.net ist ein Community-Projekt. Der Code steht jetzt unter der GNU AGPL-3.0-**or-later** (bisher AGPL-3.0-only); die kommerzielle Lizenz entfällt. Statt der Beitragsvereinbarung (CLA) bestätigen Beiträge das [Developer Certificate of Origin](../DCO) mit einer Zeile `Signed-off-by`. Die Dokumentation bleibt unter CC BY 4.0. ([LICENSING.md](LICENSING.md))
+- Wo ein Modell in JSON antworten soll (Plan, Urteil, Kürzung, Namenserkennung), schickt der Knoten das Schema jetzt zusätzlich als `response_format`; Ollama, vLLM und llama.cpp erzwingen dann gültiges JSON, an dem kleine Modelle oft scheiterten. Backends, die das ablehnen, bekommen die Anfrage ohne erneut. ([Kooperation](../spec/de/cooperation.md) § 6)
+- `decompose`: Die Synthese soll Code aus den Teilaufgaben unverändert übernehmen; lässt sie trotzdem einen Code-Block aus, hängt der Knoten ihn unverändert an.
 
 ### Behoben
 

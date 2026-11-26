@@ -173,7 +173,7 @@ func (l *Local) RunLocal(ctx context.Context, id string, t orchestrator.Task) (p
 	}
 	msgs := withSchema(t.Messages, t.JSONSchema)
 	creq := backend.ChatRequest{Model: a.model, Messages: msgs, MaxTokens: fitTokens(t.Limits.MaxTokens, a.info.ContextMax, msgs, len(t.Tools)),
-		Tools: t.Tools, ToolChoice: t.ToolChoice}
+		Tools: t.Tools, ToolChoice: t.ToolChoice, ResponseFormat: backend.SchemaFormat(t.JSONSchema)}
 	var resp backend.ChatResponse
 	var err error
 	if t.OnDelta != nil {

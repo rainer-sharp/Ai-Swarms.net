@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/protocol"
@@ -28,6 +29,8 @@ type Client struct {
 	BaseURL string
 	APIKey  string
 	HTTP    *http.Client
+	// noFormat: Das Backend hat response_format abgelehnt; nicht mehr senden.
+	noFormat atomic.Bool
 }
 
 func New(baseURL, apiKey string) *Client {
@@ -48,6 +51,35 @@ type ChatRequest struct {
 	ToolChoice  json.RawMessage        `json:"tool_choice,omitempty"`
 	// StreamOptions nur beim Streaming (Verbrauch in der letzten Nachricht).
 	StreamOptions map[string]bool `json:"stream_options,omitempty"`
+	// ResponseFormat erzwingt eine strukturierte Antwort (JSON-Schema, siehe
+	// SchemaFormat); Backends ohne Unterstützung bekommen es nicht (Chat).
+	ResponseFormat json.RawMessage `json:"response_format,omitempty"`
+}
+
+// SchemaFormat: response_format im OpenAI-Format für ein JSON-Schema; nil,
+// wenn schema leer oder kein gültiges JSON ist. Ollama, vLLM und llama.cpp
+// erzwingen damit gültiges JSON, was vor allem kleinen Modellen hilft.
+func SchemaFormat(schema string) json.RawMessage {
+	if schema == "" || !json.Valid([]byte(schema)) {
+		return nil
+	}
+	b, _ := json.Marshal(map[string]any{"type": "json_schema",
+		"json_schema": map[string]any{"name": "antwort", "schema": json.RawMessage(schema)}})
+	return b
+}
+
+// statusError: Das Backend antwortete mit einem Fehlerstatus.
+type statusError struct {
+	code int
+	msg  string
+}
+
+func (e *statusError) Error() string { return e.msg }
+
+// rejected: 400 oder 422, das Backend lehnt die Anfrage selbst ab.
+func rejected(err error) bool {
+	se, ok := errors.AsType[*statusError](err)
+	return ok && (se.code == http.StatusBadRequest || se.code == http.StatusUnprocessableEntity)
 }
 
 // MarshalJSON schreibt Nachrichten mit Bildern im OpenAI-Format: content als
@@ -116,15 +148,26 @@ func (c *Client) do(ctx context.Context, method, path string, body any, out any)
 	defer resp.Body.Close()
 	if resp.StatusCode/100 != 2 {
 		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
-		return fmt.Errorf("backend %s%s: %s: %s", c.BaseURL, path, resp.Status, strings.TrimSpace(string(msg)))
+		return &statusError{resp.StatusCode, fmt.Sprintf("backend %s%s: %s: %s", c.BaseURL, path, resp.Status, strings.TrimSpace(string(msg)))}
 	}
 	return json.NewDecoder(resp.Body).Decode(out)
 }
 
 func (c *Client) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
 	req.Stream = false
+	if c.noFormat.Load() {
+		req.ResponseFormat = nil
+	}
 	var raw json.RawMessage
-	if err := c.do(ctx, http.MethodPost, "/chat/completions", req, &raw); err != nil {
+	err := c.do(ctx, http.MethodPost, "/chat/completions", req, &raw)
+	if err != nil && len(req.ResponseFormat) > 0 && rejected(err) {
+		// Backend ohne response_format (oder mit diesem Schema überfordert):
+		// ohne wiederholen und künftig weglassen; der Hinweis im Prompt bleibt.
+		c.noFormat.Store(true)
+		req.ResponseFormat = nil
+		err = c.do(ctx, http.MethodPost, "/chat/completions", req, &raw)
+	}
+	if err != nil {
 		return ChatResponse{}, err
 	}
 	return c.decodeChat(req, bytes.NewReader(raw))
@@ -189,6 +232,9 @@ func emptyAnswer(req ChatRequest, finish string, tokens int) error {
 // sie werden zusammengesetzt und erst mit der ganzen Antwort zurückgegeben,
 // nie über onDelta.
 func (c *Client) ChatStream(ctx context.Context, req ChatRequest, onDelta func(content, reasoning string)) (ChatResponse, error) {
+	if c.noFormat.Load() {
+		req.ResponseFormat = nil
+	}
 	body := req
 	body.Stream, body.StreamOptions = true, map[string]bool{"include_usage": true}
 	b, err := json.Marshal(body)

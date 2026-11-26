@@ -260,3 +260,50 @@ func TestChatStreamToolCalls(t *testing.T) {
 		t.Fatalf("%+v %v", resp, err)
 	}
 }
+
+// TestResponseFormat: Das JSON-Schema geht als response_format mit. Lehnt
+// ein Backend das ab (400), wiederholt Chat ohne und lässt es danach weg.
+func TestResponseFormat(t *testing.T) {
+	schema := `{"type":"object","required":["verdict"],"properties":{"verdict":{"enum":["ok","issues"]}}}`
+	if SchemaFormat("") != nil || SchemaFormat("{kaputt") != nil {
+		t.Fatal("ungültiges schema angenommen")
+	}
+	for _, strict := range []bool{false, true} {
+		var calls, withFormat int
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var req struct {
+				ResponseFormat *struct {
+					Type       string `json:"type"`
+					JSONSchema struct {
+						Schema json.RawMessage `json:"schema"`
+					} `json:"json_schema"`
+				} `json:"response_format"`
+			}
+			_ = json.NewDecoder(r.Body).Decode(&req)
+			calls++
+			if req.ResponseFormat != nil {
+				withFormat++
+				if req.ResponseFormat.Type != "json_schema" || string(req.ResponseFormat.JSONSchema.Schema) != schema {
+					t.Errorf("response_format: %+v", req.ResponseFormat)
+				}
+				if strict { // Backend ohne response_format
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+			}
+			_, _ = w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"{\"verdict\":\"ok\"}"}}]}`))
+		}))
+		c := New(srv.URL, "")
+		for range 2 {
+			r, err := c.Chat(context.Background(), ChatRequest{Model: "m", ResponseFormat: SchemaFormat(schema)})
+			if err != nil || r.Content != `{"verdict":"ok"}` {
+				t.Fatalf("strict=%v: %v %q", strict, err, r.Content)
+			}
+		}
+		srv.Close()
+		// Unterstützt: beide Anfragen mit Format. Abgelehnt: einmal mit, dann ohne.
+		if want := map[bool][2]int{false: {2, 2}, true: {3, 1}}[strict]; [2]int{calls, withFormat} != want {
+			t.Errorf("strict=%v: %d aufrufe, %d mit format, erwartet %v", strict, calls, withFormat, want)
+		}
+	}
+}
