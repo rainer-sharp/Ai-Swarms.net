@@ -23,12 +23,12 @@ Als Dokumentation gelten:
 - alles unter `docs/`, einschließlich des Gesamtkonzepts (`docs/concept.md`, `docs/de/concept.md`, Grafiken) und seiner archivierten ersten Fassung (`docs/archive/concept-2026-10-14-de.pdf`),
 - alles unter `spec/`,
 - die Anleitungen `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSING.md`, `deploy/*/README.md`, `bench/README.md` und `bench/report-r1.md` sowie ihre deutschen Fassungen in den Unterordnern `de/` (z. B. `de/README.md`, `deploy/vps/de/README.md`),
-- die Grafiken `deploy/raspberry-pi/*.svg`,
+- die Grafiken `deploy/raspberry-pi/*.svg` und die Logos unter `logos/` (SVG, PNG, Favicons, [`logos/de/README.md`](../logos/de/README.md)),
 - die Testvektoren der Mitgliedschaft unter `internal/membership/testdata/`, damit andere Umsetzungen sie frei verwenden können.
 
 Namensnennung zum Beispiel: „AI-Swarms.net-Dokumentation, © 2026 Rainer Sestig und Mitwirkende, CC BY 4.0, github.com/rainer-sharp/Ai-Swarms.net“.
 
-Nicht dazu gehören der Programmcode, Konfigurationsvorlagen, Skripte und die übrigen Testdaten (AGPL-3.0-or-later) sowie die Rechtstexte `LICENSE`, `LICENSE-DOCS` und `DCO`.
+Nicht dazu gehören der Programmcode, Konfigurationsvorlagen, Skripte (auch `logos/scripts/`) und die übrigen Testdaten (AGPL-3.0-or-later) sowie die Rechtstexte `LICENSE`, `LICENSE-DOCS` und `DCO`.
 
 ## Bestandteile mit eigener Lizenz
 

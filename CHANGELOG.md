@@ -6,6 +6,10 @@ All notable changes to AI-Swarms.net. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added
+
+- **Logos:** wordmark and emblem in light and dark variants as SVG and PNG, favicons and the generator scripts, under CC BY 4.0. ([logos](logos/README.md))
+
 ### Changed
 
 - **License:** AI-Swarms.net is a community project. The code is now licensed under the GNU AGPL-3.0-**or-later** (previously AGPL-3.0-only); the commercial license is dropped. Instead of the contributor agreement (CLA), contributions confirm the [Developer Certificate of Origin](DCO) with a `Signed-off-by` line. The documentation stays under CC BY 4.0. ([LICENSING.md](LICENSING.md))

@@ -23,12 +23,12 @@ Documentation means:
 - everything under `docs/`, including the overall concept (`docs/concept.md`, `docs/de/concept.md`, graphics) and its archived first version (`docs/archive/concept-2026-10-14-de.pdf`),
 - everything under `spec/`,
 - the guides `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `LICENSING.md`, `deploy/*/README.md`, `bench/README.md` and `bench/report-r1.md` and their German versions in the `de/` subfolders (e.g. `de/README.md`, `deploy/vps/de/README.md`),
-- the graphics `deploy/raspberry-pi/*.svg`,
+- the graphics `deploy/raspberry-pi/*.svg` and the logos under `logos/` (SVG, PNG, favicons, [`logos/README.md`](logos/README.md)),
 - the membership test vectors under `internal/membership/testdata/`, so that other implementations can use them freely.
 
 Attribution for example: "AI-Swarms.net documentation, © 2026 Rainer Sestig and contributors, CC BY 4.0, github.com/rainer-sharp/Ai-Swarms.net".
 
-Not included are the program code, configuration templates, scripts and the remaining test data (AGPL-3.0-or-later) as well as the legal texts `LICENSE`, `LICENSE-DOCS` and `DCO`.
+Not included are the program code, configuration templates, scripts (also `logos/scripts/`) and the remaining test data (AGPL-3.0-or-later) as well as the legal texts `LICENSE`, `LICENSE-DOCS` and `DCO`.
 
 ## Components with their own licence
 

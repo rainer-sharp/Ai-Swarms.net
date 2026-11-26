@@ -1,4 +1,9 @@
-# AI-Swarms.net
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="../logos/png/ai-swarms-net-dark.png">
+    <img src="../logos/png/ai-swarms-net-light.png" width="620" alt="AI-Swarms.net">
+  </picture>
+</h1>
 
 [English](../README.md) · **Deutsch**
 
