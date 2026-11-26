@@ -258,3 +258,24 @@ func TestDecomposeResume(t *testing.T) {
 		t.Fatalf("aufrufe: %v", ex.calls)
 	}
 }
+
+// TestDecomposeReservesSynthesis: Auch wenn die Teilaufgaben das Budget
+// ausschöpfen, bleibt ein Teilauftrag für die Synthese.
+func TestDecomposeReservesSynthesis(t *testing.T) {
+	ex := graphExec(testPlan, nil)
+	// Nach Regel mit Prüfung: Jede Teilaufgabe kostet Entwurf und Prüfung.
+	o := &Orchestrator{Dir: agents, Exec: ex, Default: PatternDraftVerify}
+	ans, err := o.Run(context.Background(), Request{
+		Messages: []protocol.ChatMessage{{Role: "user", Content: "drei dinge"}},
+		Pattern:  PatternDecompose, Privacy: protocol.PrivacyTrusted, Limits: protocol.Limits{MaxSubtasks: 8},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if last := ex.calls[len(ex.calls)-1]; last != "synthesizer:local" || len(ex.calls) > 8 {
+		t.Fatalf("ablauf: %v", ex.calls)
+	}
+	if !strings.HasPrefix(ans.Content, "gesamt:") {
+		t.Fatalf("keine synthese: %q %v", ans.Content, ans.Limitations)
+	}
+}

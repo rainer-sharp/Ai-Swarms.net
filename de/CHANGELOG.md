@@ -15,6 +15,11 @@ Alle nennenswerten Änderungen an AI-Swarms.net. Das Format folgt [Keep a Change
 
 - **Lizenz:** AI-Swarms.net ist ein Community-Projekt. Der Code steht jetzt unter der GNU AGPL-3.0-**or-later** (bisher AGPL-3.0-only); die kommerzielle Lizenz entfällt. Statt der Beitragsvereinbarung (CLA) bestätigen Beiträge das [Developer Certificate of Origin](../DCO) mit einer Zeile `Signed-off-by`. Die Dokumentation bleibt unter CC BY 4.0. ([LICENSING.md](LICENSING.md))
 
+### Behoben
+
+- `decompose`: Die Teilaufgaben konnten das ganze Budget (`max_subtasks`, Standard 8) verbrauchen, sodass für die Synthese kein Teilauftrag blieb und die Ergebnisse unverbunden zurückkamen; der letzte Teilauftrag ist jetzt der Synthese vorbehalten.
+- Ein Ollama-Modell, das ohne Tag eingetragen ist (etwa `phi4-mini`), gilt jetzt als verfügbar; Ollama führt es als `phi4-mini:latest`.
+
 ## [0.8.0] – 2026-11-26
 
 Lange Aufträge können jetzt im Hintergrund laufen: Ein Auftrag wird abgegeben und das Ergebnis später abgeholt, auch von einem vertrauten Knoten, der koordiniert, während das eigene Gerät offline ist, und ein Ersatzkoordinator übernimmt, wenn der Koordinator ausfällt. Damit sind die Stufen 1 bis 5 von Phase 3 umgesetzt. Das Protokoll bleibt bei Version 0.1; es gibt zwei neue Protokolle und ein optionales Feld in Teilaufträgen, Knoten mit 0.8.0 und 0.7.0 arbeiten also zusammen. Bestehende Konfigurationen funktionieren ohne Änderung weiter.

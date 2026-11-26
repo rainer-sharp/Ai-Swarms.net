@@ -68,16 +68,20 @@ func numberCorrect(p Part, value string) bool {
 	return math.Abs(got-want) <= tol
 }
 
-// multiCode: alle Python-Blöcke der Antwort hintereinander; ohne Block die
-// ganze Antwort.
+// answerLineInCodeRe: Zeilen „Answer <n>: …“, die kleine Modelle oft in den
+// Code-Block schreiben; sie sind kein Python und gehören nicht zum Code.
+var answerLineInCodeRe = regexp.MustCompile(`(?im)^[ \t#>*_\-]*(?:answer|antwort)[ \t]+\d+[ \t]*\**[ \t]*:.*$`)
+
+// multiCode: alle Python-Blöcke der Antwort hintereinander, ohne Zeilen
+// „Answer <n>: …“; ohne Block die ganze Antwort.
 func multiCode(answer string) string {
 	m := codeBlockRe.FindAllStringSubmatch(answer, -1)
 	if len(m) == 0 {
-		return answer
+		return answerLineInCodeRe.ReplaceAllString(answer, "")
 	}
 	blocks := make([]string, len(m))
 	for i, b := range m {
-		blocks[i] = b[1]
+		blocks[i] = answerLineInCodeRe.ReplaceAllString(b[1], "")
 	}
 	return strings.Join(blocks, "\n\n")
 }

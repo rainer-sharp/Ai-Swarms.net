@@ -211,7 +211,7 @@ func (l *Local) Probe(ctx context.Context) map[string]error {
 		}
 		found := false
 		for _, m := range models {
-			found = found || m == a.model
+			found = found || sameModel(m, a.model)
 		}
 		if !found {
 			out[id] = fmt.Errorf("modell %q nicht im backend gefunden", a.model)
@@ -220,4 +220,11 @@ func (l *Local) Probe(ctx context.Context) map[string]error {
 		}
 	}
 	return out
+}
+
+// sameModel: Ollama ergänzt einen Modellnamen ohne Tag um „:latest“
+// („phi4-mini“ ist „phi4-mini:latest“), nimmt beide Schreibweisen an und
+// listet die mit Tag.
+func sameModel(listed, configured string) bool {
+	return listed == configured || (!strings.Contains(configured, ":") && listed == configured+":latest")
 }

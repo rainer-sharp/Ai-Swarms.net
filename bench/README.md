@@ -11,7 +11,7 @@ Tasks and run plans for the benchmark from [`spec/benchmark.md`](../spec/benchma
 | `results-r1.jsonl` | Results, one line per run and task (created during the run) |
 | `report-r1.md` | Report and assessment of round 1 (17 Oct 2026) |
 | `tasks-mix-draft.jsonl` | Draft for hypothesis 2 (team of small specialists): 10 mixed tasks with 3 parts each ([format](../spec/benchmark.md#mixed-task-set-hypothesis-2)) |
-| `plan-mix.yaml` | Setups A (team with `decompose`), B (large generalists) and C (each specialist alone) for hypothesis 2; models marked "neu" still have to be installed |
+| `plan-mix.yaml` | Setups A (team with `decompose`), B (large generalists) and C (each specialist alone) for hypothesis 2 |
 
 ## Procedure
 

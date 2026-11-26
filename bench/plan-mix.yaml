@@ -6,7 +6,6 @@
 #                   Ollama     Spezialisten; alle gleichzeitig geladen lassen
 #                              (OLLAMA_MAX_LOADED_MODELS=6, OLLAMA_KEEP_ALIVE=-1),
 #                              sonst misst der Lauf Modellwechsel
-# Mit (neu) markierte Modelle sind auf .95 noch nicht vorhanden (ollama pull …).
 # Die Agent-IDs unter agents hängen vom Backend-Namen in der Konfiguration des
 # Knotens auf .95 ab (hier: ollama).
 # Start:      ./swarmainet bench run bench/plan-mix.yaml
@@ -40,11 +39,11 @@ runs:
   - name: allein-phi
     mode: direct
     url: http://192.168.101.95:11434/v1
-    model: phi4-mini            # (neu) Mathe und Reasoning, Familie phi
+    model: phi4-mini:latest     # Mathe und Reasoning, Familie phi
   - name: allein-gemma
     mode: direct
     url: http://192.168.101.95:11434/v1
-    model: gemma3:4b            # (neu) Generalist mit Bildern, Familie gemma
+    model: gemma3:4b            # Generalist mit Bildern, Familie gemma
   - name: allein-qwen-vl
     mode: direct
     url: http://192.168.101.95:11434/v1
@@ -55,7 +54,7 @@ runs:
     mode: swarm
     gateway: http://127.0.0.1:7711
     pattern: decompose
-    agents: &team ["ollama/qwen2.5-coder:7b", "ollama/llama3.1:8b", "ollama/phi4-mini", "ollama/gemma3:4b", "ollama/qwen3-vl:8b"]
+    agents: &team ["ollama/qwen2.5-coder:7b", "ollama/llama3.1:8b", "ollama/phi4-mini:latest", "ollama/gemma3:4b", "ollama/qwen3-vl:8b"]
   # A ohne Zerlegung, zum Vergleich: das Team mit Prüfung, aber ohne Spezialisierung je Teil
   - name: team-draft-verify
     mode: swarm

@@ -11,7 +11,7 @@ Aufgaben und Lauf-Pläne für den Benchmark aus [`spec/de/benchmark.md`](../../s
 | `results-r1.jsonl` | Ergebnisse, eine Zeile je Lauf und Aufgabe (entsteht beim Lauf) |
 | `report-r1.md` | Bericht und Bewertung der Runde 1 (17.10.2026) |
 | `tasks-mix-draft.jsonl` | Entwurf für Hypothese 2 (Team kleiner Spezialisten): 10 gemischte Aufgaben mit je 3 Teilen ([Format](../../spec/de/benchmark.md#gemischter-aufgabensatz-hypothese-2)) |
-| `plan-mix.yaml` | Aufbauten A (Team mit `decompose`), B (große Generalisten) und C (jeder Spezialist allein) für Hypothese 2; mit „neu“ markierte Modelle sind noch zu installieren |
+| `plan-mix.yaml` | Aufbauten A (Team mit `decompose`), B (große Generalisten) und C (jeder Spezialist allein) für Hypothese 2 |
 
 ## Ablauf
 

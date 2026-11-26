@@ -31,3 +31,20 @@ func TestWithSchemaKeepsSingleSystemMessage(t *testing.T) {
 		t.Fatal("ohne schema verändert")
 	}
 }
+
+func TestSameModel(t *testing.T) {
+	for _, c := range []struct {
+		listed, configured string
+		want               bool
+	}{
+		{"phi4-mini:latest", "phi4-mini", true},
+		{"phi4-mini:latest", "phi4-mini:latest", true},
+		{"llama3.1:8b", "llama3.1", false},
+		{"llama3.1:8b", "llama3.1:8b", true},
+		{"nvidia/Qwen3.8-Flash-Next-FP4-Local", "nvidia/Qwen3.8-Flash-Next-FP4-Local", true},
+	} {
+		if got := sameModel(c.listed, c.configured); got != c.want {
+			t.Errorf("%s / %s: %v", c.listed, c.configured, got)
+		}
+	}
+}

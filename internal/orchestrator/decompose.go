@@ -416,6 +416,10 @@ func (r *run) runNode(ctx context.Context, n planNode, deps map[string]string) (
 	req := r.req
 	req.Messages, req.Skill, req.Stream, req.Pattern = nodeMessages(n, deps), n.Skill, nil, ""
 	req.Resume, req.OnCheckpoint = nil, nil
+	if req.Limits.MaxSubtasks > 0 {
+		// Der letzte Teilauftrag des gemeinsamen Budgets bleibt der Synthese.
+		req.Limits.MaxSubtasks--
+	}
 	c := &run{o: r.o, req: req, taskID: r.taskID, budget: r.budget}
 	c.ans = &Answer{TaskID: r.taskID, Skill: n.Skill}
 	p := c.fallbackPattern()

@@ -111,3 +111,17 @@ func TestPartAnalysis(t *testing.T) {
 		t.Fatalf("coder: %+v", coder)
 	}
 }
+
+// TestAnswerLinesInCode: Zeilen „Answer <n>:“ im Code-Block (so schreiben es
+// kleine Modelle oft) machen den Code nicht ungültig; Python-Namen wie
+// answer1 bleiben.
+func TestAnswerLinesInCode(t *testing.T) {
+	answer := "```python\ndef f():\n    answer1 = 5\n    return answer1\n\n# Output\nAnswer 1: [('a', 3)]\n**Answer 2:** 960\n```"
+	code := multiCode(answer)
+	if strings.Contains(code, "Answer 1") || strings.Contains(code, "960") || !strings.Contains(code, "answer1 = 5") {
+		t.Fatalf("code:\n%s", code)
+	}
+	if v, ok := partValue(answer, 2); !ok || v != "960" {
+		t.Fatalf("wert aus dem block: %q %v", v, ok)
+	}
+}
