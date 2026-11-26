@@ -34,6 +34,9 @@ const (
 	// ProtoJob: asynchrone Aufträge an einen koordinierenden Peer
 	// (spec/cooperation.md § 7).
 	ProtoJob = "/swarmainet/job/0.1"
+	// ProtoLease: Prüfpunkte und Lease eines Auftrags beim Ersatzkoordinator
+	// (spec/cooperation.md § 7).
+	ProtoLease = "/swarmainet/lease/0.1"
 
 	sigDomain = "swarmainet/sig/v0.1\n"
 )
@@ -60,6 +63,13 @@ const (
 	JobStatus MsgType = "JOB_STATUS"
 	JobResult MsgType = "JOB_RESULT"
 	JobCancel MsgType = "JOB_CANCEL"
+
+	// Lease (ProtoLease): Koordinator → Ersatzkoordinator LEASE_CHECKPOINT,
+	// LEASE_RENEW und LEASE_RESULT; der Ersatz antwortet mit LEASE_ACK.
+	LeaseCheckpoint MsgType = "LEASE_CHECKPOINT"
+	LeaseRenew      MsgType = "LEASE_RENEW"
+	LeaseResult     MsgType = "LEASE_RESULT"
+	LeaseAck        MsgType = "LEASE_ACK"
 )
 
 // Envelope umschließt jede Nachricht. Signiert werden die Kopffelder und der

@@ -11,7 +11,7 @@ SwarmAiNet is a **research prototype**. The network layer is more advanced than 
 | 0 · Specification | Protocol, privacy classes, threat model, measurement plan | Draft v0.1 in [`spec/`](../spec/README.md) |
 | 1 · Local swarm | mDNS, static peers, OpenAI backends, resource manager, patterns, load balancing, model strength, receipts | **completed**, tested on real hardware: 3 devices, 3 model families, Ollama, llama.cpp and vLLM |
 | 2 · P2P layer | DHT, entry sources, AutoNAT, hole punching, relay; private, membership and open networks, also simultaneously | **private network, membership network and open network confirmed on hardware across two sites** |
-| 3 · Self-organised cooperation | Competence profile, bandit, PI controller, task graph, lease coordinator | Specification draft: [`spec/cooperation.md`](../spec/cooperation.md); **stages 1 to 4 implemented** (competence profile, bandit over patterns as opt-in, cascade, PI controllers for effort and `θ`, tested with simulations; task graph `decompose` on request; stage 5 in part: asynchronous jobs, also coordinated by a trusted peer) |
+| 3 · Self-organised cooperation | Competence profile, bandit, PI controller, task graph, lease coordinator | Specification draft: [`spec/cooperation.md`](../spec/cooperation.md); **stages 1 to 5 implemented** (competence profile, bandit over patterns as opt-in, cascade, PI controllers for effort and `θ`, tested with simulations; task graph `decompose` on request; stage 5: asynchronous jobs, also coordinated by a trusted peer, with a substitute coordinator that takes over after a failure) |
 | 4 · Open test network | One-click client, credit, sandbox, benchmark pool | open |
 
 ## Testing on hardware

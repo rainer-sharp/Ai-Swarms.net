@@ -136,6 +136,10 @@ func (n *Node) handleTask(s network.Stream) {
 	case p.Limits.MaxDepth > 0 && p.Limits.Depth > p.Limits.MaxDepth:
 		reject("maximale delegationstiefe erreicht")
 		return
+	case p.Job != nil && !n.epochs.see(p.Job.ID, p.Job.Epoch, time.Now()):
+		// Ein Ersatzkoordinator hat den Auftrag übernommen (spec/cooperation.md § 7.3).
+		reject(rejectStaleEpoch)
+		return
 	}
 	var agent *protocol.AgentInfo
 	for _, a := range n.opts.Provider.Offer() {
@@ -337,6 +341,7 @@ var ErrRejected = errors.New("teilauftrag abgelehnt")
 const (
 	rejectNoCapacity = "keine kapazität" // Ressourcenmanager
 	rejectBusy       = "busy"            // Ratenlimit (spec/p2p-layer.md § 8)
+	rejectStaleEpoch = "veraltete lease-epoche"
 )
 
 // newTaskStream öffnet einen Auftrags-Stream. Trifft er auf eine Wählsperre
@@ -394,7 +399,7 @@ func (n *Node) Execute(ctx context.Context, a orchestrator.Agent, t orchestrator
 	if err := send(protocol.TaskPropose, protocol.ProposePayload{
 		SubtaskID: t.SubtaskID, Role: t.Role, Skill: t.Skill, AgentID: a.ID,
 		Messages: t.Messages, Limits: limits, JSONSchema: t.JSONSchema,
-		Tools: t.Tools, ToolChoice: t.ToolChoice, Audio: t.Audio, Stream: t.OnDelta != nil,
+		Tools: t.Tools, ToolChoice: t.ToolChoice, Audio: t.Audio, Stream: t.OnDelta != nil, Job: t.Job,
 	}); err != nil {
 		return protocol.Result{}, err
 	}

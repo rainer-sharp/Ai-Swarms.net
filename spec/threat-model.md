@@ -31,7 +31,7 @@
 | Identity forgery | sender = remote end of the connection, signature with the peer ID key | implemented |
 | Provider overload | REM: slots, time windows, GPU minutes, mean utilisation, temperature, RAM reserve; max. 4 streams per peer; 4 MiB per message | implemented |
 | Own use displaced | own use aborts foreign jobs | implemented |
-| Coordinator reads or misuses handed-over jobs | only to peers trusted on both sides, coordination opt-in (`coordinate_for_others`), `local` never; at most 4 jobs for others, 2 per peer; each requester only sees its own jobs. The coordinator sees the job in plain text and applies the privacy class with its own trust list | implemented |
+| Coordinator reads or misuses handed-over jobs | only to peers trusted on both sides, coordination opt-in (`coordinate_for_others`), `local` never; at most 4 jobs for others, 2 per peer; each requester only sees its own jobs. The coordinator sees the job in plain text and applies the privacy class with its own trust list. A substitute coordinator (which also sees the task) only on request per job, only if it trusts the requester; checkpoints only in memory. Double execution after a takeover: providers refuse older lease epochs | implemented |
 | Access to the gateway from outside | bound to localhost only, check of sender and Host header | implemented |
 | Free riders | credit limits, tit-for-tat, limited optimistic unchoking | receipts from phase 1, credit from phase 4 |
 | Sybil | proof of useful work, earned trust, guarantees | phase 1: trusted circle only |

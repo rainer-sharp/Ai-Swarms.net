@@ -18,6 +18,7 @@ The keywords MUST, SHOULD and MAY are normative.
 | `/swarmainet/task/0.1` | One subtask per stream: offer, acceptance, result, receipt |
 | `/swarmainet/pex/0.1` | Peer exchange (phase 2, see [P2P layer](p2p-layer.md) § 2.4) |
 | `/swarmainet/job/0.1` | Asynchronous tasks at a coordinating peer (phase 3, see [cooperation](cooperation.md) § 7.4) |
+| `/swarmainet/lease/0.1` | Checkpoints and lease at a substitute coordinator (phase 3, see [cooperation](cooperation.md) § 7.4) |
 
 - Framing: exactly one JSON message (envelope) per line, terminated with `\n`, at most 4 MiB.
 - mDNS service name: `swarmainet-<network_id>`. Private swarms additionally use a libp2p PSK (then TCP only).
@@ -118,6 +119,8 @@ The announcement contains no prompts, internal IPs, hardware or energy data and 
 `images` (optional, in an element of `messages[]`) carries embedded images: `[{ "mime": "image/png", "data": <base64> }, …]`, formats `image/png`, `image/jpeg`, `image/webp` and `image/gif`, together at most 2.75 MiB per subtask (`MaxImageBytes`). Agents that understand images announce the modality `image`. A coordinator sends images only to such agents and never as `reduced` to strangers, because an image cannot be pseudonymised ([privacy classes](privacy-classes.md), rule 10). A provider MUST refuse images to an agent without `image` (`agent verarbeitet keine bilder`, "agent does not process images"), with `reduced` from strangers (`bilder bei reduced nur im vertrauten kreis`, "images with reduced only within the trusted circle") and in unknown formats or above the limit (`bilder zu groß oder in unbekanntem format`). It passes them to its backend's chat in the OpenAI format as `image_url` with a data URL. Providers with older versions do not know the field; they never announce `image` and therefore never receive images.
 
 `stream` (optional, missing = false) asks for intermediate results. The provider then sends `TASK_PROGRESS` with `{ "subtask_id", "status": "delta", "delta", "reasoning" }` while the model is working: `delta` is new text of the answer, `reasoning` new text of the model's thinking phase, both since the previous progress message. It SHOULD bundle them (the reference implementation sends at most one message every 100 ms or 16 KiB). The concatenated `delta` texts are a preview: what counts is the `TASK_RESULT`, its digest and the receipt. Providers that do not know `stream` send no progress, and the coordinator waits for the result as before. Tasks with `audio` are not streamed. With `tools`, only text is streamed: tool calls MUST NOT appear in `TASK_PROGRESS`, they only come in the result, so that the requester can check them before passing them on (rule 6 of the [privacy classes](privacy-classes.md)).
+
+`job` (optional) `{ "id", "epoch" }` names the asynchronous job and its lease epoch ([cooperation](cooperation.md) § 7.4). A provider MUST refuse a subtask whose epoch is lower than the highest it has seen for this job (reason `veraltete lease-epoche`, "stale lease epoch"); it remembers epochs for at least 6 hours.
 
 `depth` counts the delegations so far (1 at the first receiver). A provider MUST refuse if `depth > max_depth`. Further delegations inherit equal or stricter limits and consume the same budget.
 

@@ -116,7 +116,7 @@ tasks:
 cooperation:
   selection: rules                  # rules: tasks.pattern | bandit: nach Kompetenzprofil (Opt-in)
   exploration: 0.05                 # Anteil zufälliger Wahl
-  coordinate_for_others: false      # asynchrone Aufträge vertrauter Peers koordinieren (sieht sie im Klartext)
+  coordinate_for_others: false      # asynchrone Aufträge vertrauter Peers koordinieren und als Ersatz übernehmen (sieht sie im Klartext)
   # targets:                        # Sollwerte je Aufgabenkategorie; mit bandit halten Regler sie ein
   #   code: { quality: 0.9, cascade_error: 0.05 }   # cascade_error: Fehlerquote der günstigen Kaskadenstufe
   #   math: { quality: 0.95 }

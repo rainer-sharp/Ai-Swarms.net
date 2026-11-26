@@ -220,3 +220,41 @@ func TestDecomposeReduced(t *testing.T) {
 		t.Fatalf("ablauf: %v", ex.calls)
 	}
 }
+
+// TestDecomposeResume: Ein Ersatzkoordinator setzt am Prüfpunkt fort: ohne
+// Planer, fertige Teilaufgaben laufen nicht erneut. Prüfpunkte kommen nach
+// dem Plan und nach jeder fertigen Teilaufgabe.
+func TestDecomposeResume(t *testing.T) {
+	ex := graphExec(testPlan, nil)
+	o := &Orchestrator{Dir: agents, Exec: ex, Default: PatternSingle}
+	var cps []Checkpoint
+	var mu sync.Mutex
+	ans, err := o.Run(context.Background(), Request{
+		Messages: []protocol.ChatMessage{{Role: "user", Content: "drei dinge"}},
+		Pattern:  PatternDecompose, Privacy: protocol.PrivacyTrusted,
+		OnCheckpoint: func(cp Checkpoint) { mu.Lock(); cps = append(cps, cp); mu.Unlock() },
+	})
+	if err != nil || len(cps) != 4 || len(cps[0].Results) != 0 || len(cps[3].Results) != 3 {
+		t.Fatalf("%v, %d prüfpunkte", err, len(cps))
+	}
+
+	// Fortsetzen mit a fertig: Planer und a laufen nicht, b bekommt a's Ergebnis.
+	resume := Checkpoint{Plan: cps[0].Plan, Results: map[string]string{"a": "def f(): pass"}}
+	ex = graphExec("darf nicht gefragt werden", nil)
+	o.Exec = ex
+	ans, err = o.Run(context.Background(), Request{
+		Messages: []protocol.ChatMessage{{Role: "user", Content: "drei dinge"}},
+		Pattern:  PatternDecompose, Privacy: protocol.PrivacyTrusted, Resume: &resume,
+	})
+	if err != nil || !strings.Contains(ans.Content, "f ist in Ordnung") || len(ans.Graph) != 3 {
+		t.Fatalf("%v %+v", err, ans)
+	}
+	for _, c := range ex.calls {
+		if strings.HasPrefix(c, "planner:") {
+			t.Fatal("planer trotz prüfpunkt")
+		}
+	}
+	if n := len(ex.calls); n != 3 { // b, c, synthese
+		t.Fatalf("aufrufe: %v", ex.calls)
+	}
+}

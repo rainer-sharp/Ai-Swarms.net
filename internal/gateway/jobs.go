@@ -21,8 +21,9 @@ import (
 // JobBackend: optional; ohne gibt es keine /v1/jobs.
 type JobBackend interface {
 	// SubmitJob: coordinator ist die Peer-ID eines vertrauten Peers, der den
-	// Auftrag koordiniert; leer: dieser Knoten.
-	SubmitJob(req orchestrator.Request, model, coordinator string) (jobs.Job, error)
+	// Auftrag koordiniert; leer: dieser Knoten. substitute: Ersatzkoordinator
+	// (Peer-ID oder auto), der bei einem Ausfall übernimmt; leer: keiner.
+	SubmitJob(req orchestrator.Request, model, coordinator, substitute string) (jobs.Job, error)
 	// Job: Ist der Koordinator nicht erreichbar, kommt der letzte bekannte
 	// Stand mit einem Fehler.
 	Job(ctx context.Context, id string) (jobs.Job, error)
@@ -49,6 +50,9 @@ func jobJSON(j jobs.Job, withResult bool, coordErr error) map[string]any {
 	if j.Coordinator != "" {
 		m["coordinator"] = j.Coordinator
 	}
+	if j.Substitute != "" {
+		m["substitute"] = j.Substitute
+	}
 	if !j.Finished.IsZero() {
 		m["finished"] = j.Finished.Unix()
 	}
@@ -74,7 +78,7 @@ func handleJobs(mux *http.ServeMux, b JobBackend) {
 		if !ok {
 			return
 		}
-		j, err := b.SubmitJob(oreq, req.Model, r.Header.Get("X-SwarmAiNet-Coordinator"))
+		j, err := b.SubmitJob(oreq, req.Model, r.Header.Get("X-SwarmAiNet-Coordinator"), r.Header.Get("X-SwarmAiNet-Substitute"))
 		if err != nil {
 			writeErr(w, jobStatusCode(err), err)
 			return

@@ -44,6 +44,7 @@ If a step fails after it has already streamed text, a separator follows ("Diese 
 | `X-SwarmAiNet-Agents` | Comma-separated agent IDs to which the selection is restricted (for measurements) |
 | `X-SwarmAiNet-Trace: 1` | Texts of the intermediate steps in `steps[].output` |
 | `X-SwarmAiNet-Coordinator` | Only for `/v1/jobs`: peer ID of a trusted node that coordinates the job ([below](#asynchronous-jobs)) |
+| `X-SwarmAiNet-Substitute` | Only for `/v1/jobs`: peer ID of a trusted node, or `auto`, that holds checkpoints and takes over if the coordinator fails |
 
 Without the header, `tasks.privacy_class` from the configuration applies (default `trusted`): the request only goes to your own or trusted devices. Only what is marked `public` goes to foreign nodes in the open network. If the privacy class excludes all known agents, the gateway responds with 400 and states the reason, e.g. for `trusted` without your own model and without trusted nodes.
 
@@ -114,7 +115,9 @@ curl -s http://127.0.0.1:7711/v1/jobs/job-…
 | `GET /v1/jobs` | Your own jobs, newest first |
 | `DELETE /v1/jobs/{id}` | Cancel a running job (200) or delete a finished one (204) |
 
-With the header `X-SwarmAiNet-Coordinator: <peer-id>`, a trusted node coordinates the job instead of your own, e.g. a computer with models that runs around the clock while the notebook is switched off. That node needs `cooperation.coordinate_for_others: true` ([configuration](configuration.md)). It sees the job in plain text and applies the privacy class from its own view; `local` never leaves your node. If the coordinator is not reachable, `GET` returns the last known status with `coordinator_error`. Finished jobs stay retrievable for 24 hours, also after a restart; a job that was running on a node when it stopped is lost and counts as failed. Details: [cooperation](../spec/cooperation.md) § 7.4.
+With the header `X-SwarmAiNet-Coordinator: <peer-id>`, a trusted node coordinates the job instead of your own, e.g. a computer with models that runs around the clock while the notebook is switched off. That node needs `cooperation.coordinate_for_others: true` ([configuration](configuration.md)). It sees the job in plain text and applies the privacy class from its own view; `local` never leaves your node. If the coordinator is not reachable, `GET` returns the last known status with `coordinator_error`. Finished jobs stay retrievable for 24 hours, also after a restart.
+
+Without further measures, a job is lost if its coordinator fails (it then counts as failed). With `X-SwarmAiNet-Substitute: <peer-id>` or `auto`, a second trusted node holds checkpoints: the task and, with `decompose`, the finished subtasks. If the coordinator stops renewing its lease for 60 seconds, the substitute takes over and continues from the last checkpoint; `GET` then fetches the result there by itself. The substitute also needs `coordinate_for_others: true`, sees the task in plain text and must trust your node. Details: [cooperation](../spec/cooperation.md) § 7.4.
 
 ## Feedback and competence profile
 

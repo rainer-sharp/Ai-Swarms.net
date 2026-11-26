@@ -181,6 +181,16 @@ type ProposePayload struct {
 	// Stream: Der Koordinator möchte Zwischenstände als TASK_PROGRESS mit
 	// delta/reasoning. Maßgeblich bleibt das Ergebnis (spec/protocol-v0.1.md § 4.2).
 	Stream bool `json:"stream,omitempty"`
+	// Job: asynchroner Auftrag mit Lease, zu dem der Teilauftrag gehört.
+	// Anbieter lehnen Teilaufträge einer älteren Epoche ab, sobald sie eine
+	// neuere gesehen haben (spec/cooperation.md § 7.3).
+	Job *JobRef `json:"job,omitempty"`
+}
+
+// JobRef: Kennung und Lease-Epoche eines asynchronen Auftrags.
+type JobRef struct {
+	ID    string `json:"id"`
+	Epoch int    `json:"epoch"`
 }
 
 // MaxAudioBytes begrenzt eine Aufnahme so, dass die Nachricht mit Base64 unter

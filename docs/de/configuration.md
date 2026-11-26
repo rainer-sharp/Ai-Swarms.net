@@ -19,7 +19,7 @@ Geheimnisse gehören nicht in die Datei: Der Home-Assistant-Token kommt aus eine
 | Schlüssel | Standard | Bedeutung |
 |---|---|---|
 | `selection` | `rules` | `rules`: es gilt `tasks.pattern`; `bandit`: der Knoten wählt das Muster je Aufgabenkategorie nach seinem Kompetenzprofil ([Kooperation](../../spec/de/cooperation.md) § 3). Eine Anfrage mit `swarmainet/<muster>` bekommt immer dieses Muster |
-| `coordinate_for_others` | `false` | [asynchrone Aufträge](usage.md#asynchrone-aufträge) vertrauter Peers koordinieren; dieser Knoten sieht deren Aufträge dann im Klartext |
+| `coordinate_for_others` | `false` | [asynchrone Aufträge](usage.md#asynchrone-aufträge) vertrauter Peers koordinieren und ihre Prüfpunkte als Ersatzkoordinator halten; dieser Knoten sieht deren Aufträge dann im Klartext |
 | `exploration` | `0.05` | Anteil zufälliger Wahl unter den besetzbaren Mustern (0 bis 0,5) |
 | `targets` | code 0,9, math 0,95, sonst 0,85 | Sollwerte je Kategorie, z. B. `code: { quality: 0.9, cascade_error: 0.05 }`. Mit `bandit` halten Regler die Erfolgsquote bei `quality` (über einen Mindestaufwand) und die Fehlerquote der günstigen Stufe der Kaskade bei `cascade_error` (Standard 0,05, über die Schwelle `θ`) ([Kooperation](../../spec/de/cooperation.md) § 4.2); `latency_p90_s` ist für den Latenz-Regler vorgesehen |
 

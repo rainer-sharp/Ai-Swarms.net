@@ -49,13 +49,17 @@ type Job struct {
 	Owner string `json:"owner,omitempty"`
 	// Coordinator: Peer-ID des koordinierenden Peers; leer, wenn dieser
 	// Knoten selbst koordiniert. Network: das Netz, über das er erreichbar ist.
-	Coordinator string    `json:"coordinator,omitempty"`
-	Network     string    `json:"network,omitempty"`
-	Model       string    `json:"model,omitempty"`
-	Status      string    `json:"status"` // protocol.JobRunning, JobDone …
-	Created     time.Time `json:"created"`
-	Finished    time.Time `json:"finished,omitzero"`
-	Error       string    `json:"error,omitempty"`
+	Coordinator string `json:"coordinator,omitempty"`
+	Network     string `json:"network,omitempty"`
+	// Substitute: Ersatzkoordinator, der Prüfpunkte hält; Epoch: Lease-Epoche
+	// (spec/cooperation.md § 7).
+	Substitute string    `json:"substitute,omitempty"`
+	Epoch      int       `json:"epoch,omitempty"`
+	Model      string    `json:"model,omitempty"`
+	Status     string    `json:"status"` // protocol.JobRunning, JobDone …
+	Created    time.Time `json:"created"`
+	Finished   time.Time `json:"finished,omitzero"`
+	Error      string    `json:"error,omitempty"`
 	// Antwort bei done: Text, Werkzeug-Aufrufe und Metadaten.
 	Content   string               `json:"content,omitempty"`
 	ToolCalls []protocol.ToolCall  `json:"tool_calls,omitempty"`
@@ -83,7 +87,10 @@ func key(owner, id string) string { return owner + "/" + id }
 
 // Open lädt die Aufträge aus path (leer: nur im Speicher). Aufträge, die
 // dieser Knoten selbst koordinierte und die beim Beenden noch liefen, sind
-// verloren und gelten als gescheitert.
+// hier verloren: Hatten sie einen Ersatzkoordinator, macht er weiter – ein
+// eigener Auftrag wird dann dort abgefragt, einer für andere fällt weg (der
+// Auftraggeber fragt selbst beim Ersatz nach); sonst gelten sie als
+// gescheitert.
 func Open(path string) *Store {
 	s := &Store{path: path, jobs: map[string]*Job{}, cancels: map[string]context.CancelFunc{}, now: time.Now}
 	if path == "" {
@@ -103,7 +110,14 @@ func Open(path string) *Store {
 	}
 	for _, j := range list {
 		if j.Status == protocol.JobRunning && j.Coordinator == "" {
-			j.Status, j.Error, j.Finished = protocol.JobFailed, "abgebrochen: der koordinierende knoten wurde beendet", s.now()
+			switch {
+			case j.Substitute != "" && j.Owner != "":
+				continue
+			case j.Substitute != "":
+				j.Coordinator, j.Substitute = j.Substitute, ""
+			default:
+				j.Status, j.Error, j.Finished = protocol.JobFailed, "abgebrochen: der koordinierende knoten wurde beendet", s.now()
+			}
 		}
 		s.jobs[key(j.Owner, j.ID)] = j
 	}
@@ -206,7 +220,7 @@ func (s *Store) RunningFor(owner string) int {
 	defer s.mu.Unlock()
 	n := 0
 	for _, j := range s.jobs {
-		if j.Owner != "" && j.Status == protocol.JobRunning && (owner == "" || j.Owner == owner) {
+		if j.Owner != "" && j.Coordinator == "" && j.Status == protocol.JobRunning && (owner == "" || j.Owner == owner) {
 			n++
 		}
 	}
@@ -219,6 +233,11 @@ func (s *Store) saveLocked() {
 	var finished []*Job
 	for k, j := range s.jobs {
 		if !protocol.JobFinal(j.Status) {
+			// Verweis auf einen Ersatzkoordinator (Auftrag eines anderen,
+			// den jetzt der Ersatz koordiniert): fällt nach Retention weg.
+			if j.Owner != "" && j.Coordinator != "" && now.Sub(j.Created) > Retention {
+				delete(s.jobs, k)
+			}
 			continue
 		}
 		if now.Sub(j.Finished) > Retention {

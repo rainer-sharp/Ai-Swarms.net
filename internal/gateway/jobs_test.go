@@ -26,7 +26,7 @@ type fakeJobs struct {
 	coordinator string
 }
 
-func (f *fakeJobs) SubmitJob(req orchestrator.Request, model, coordinator string) (jobs.Job, error) {
+func (f *fakeJobs) SubmitJob(req orchestrator.Request, model, coordinator, _ string) (jobs.Job, error) {
 	switch coordinator {
 	case "", "peer-ok":
 	case "kaputt":

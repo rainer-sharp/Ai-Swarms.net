@@ -65,6 +65,8 @@ type Task struct {
 	ToolChoice json.RawMessage
 	// Audio: Aufnahme für eine Transkription.
 	Audio *protocol.Audio
+	// Job: asynchroner Auftrag mit Lease, zu dem der Teilauftrag gehört.
+	Job *protocol.JobRef
 	// OnDelta: nicht nil, wenn der Schritt gestreamt wird. Der Executor meldet
 	// neuen Antworttext (content) und Text der Denkphase des Modells
 	// (reasoning); maßgeblich bleibt das Ergebnis.
@@ -135,6 +137,14 @@ type Request struct {
 	// PseudonymizeTerms: eigene Begriffe, die bei reduced für fremde Knoten
 	// immer ersetzt werden (tasks.pseudonymize_terms).
 	PseudonymizeTerms []string
+	// Job: asynchroner Auftrag mit Lease; geht mit jedem Teilauftrag an die
+	// Anbieter (Epoche gegen doppelte Ausführung, spec/cooperation.md § 7.3).
+	Job *protocol.JobRef
+	// Resume: Prüfpunkt, ab dem ein Ersatzkoordinator fortsetzt;
+	// OnCheckpoint meldet neue Prüfpunkte. Beides nutzt bisher nur decompose:
+	// Plan und fertige Teilergebnisse. Andere Muster beginnen neu.
+	Resume       *Checkpoint
+	OnCheckpoint func(Checkpoint)
 	// Stream: nicht nil, wenn die Antwort gestreamt wird. Run ruft es aus
 	// mehreren Goroutinen auf, nie gleichzeitig. Audio wird nicht gestreamt,
 	// Werkzeug-Aufrufe nicht als Zwischenstand (nur der Text).
@@ -723,7 +733,7 @@ func (r *run) tryCandidates(ctx context.Context, role protocol.Role, cands []Age
 
 		tools, choice := toolsFor(a, r.req)
 		t := Task{TaskID: r.taskID, SubtaskID: newID(), Role: role, Skill: r.req.Skill, Limits: r.req.Limits, JSONSchema: schema,
-			Tools: tools, ToolChoice: choice, Audio: r.req.Audio}
+			Tools: tools, ToolChoice: choice, Audio: r.req.Audio, Job: r.req.Job}
 		// reduced: für fremde Agenten erst Minimierung und Pseudonymisierung
 		// (vor der Überschrift des Schritts, denn beides sind eigene Schritte).
 		// Sie bekommen den Teilauftrag aus dem gekürzten Gespräch.

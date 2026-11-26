@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/libp2p/go-libp2p/core/network"
@@ -93,41 +94,44 @@ func (n *Node) handleJob(s network.Stream) {
 // seine Antwort. typ: JOB_SUBMIT (payload JobSubmitPayload), JOB_STATUS oder
 // JOB_CANCEL (payload JobQueryPayload).
 func (n *Node) JobCall(ctx context.Context, p peer.ID, typ protocol.MsgType, jobID string, payload any) (protocol.JobStatusPayload, error) {
+	var out protocol.JobStatusPayload
+	err := n.call(ctx, p, protocol.ProtoJob, typ, jobID, payload, &out, protocol.JobStatus, protocol.JobResult)
+	if err == nil && out.JobID != jobID {
+		err = errors.New("antwort zu einem anderen auftrag")
+	}
+	return out, err
+}
+
+// call schickt eine Nachricht an einen vertrauten Peer und liest seine
+// Antwort (einer der Typen in replies) nach out.
+func (n *Node) call(ctx context.Context, p peer.ID, proto string, typ protocol.MsgType, jobID string, payload, out any, replies ...protocol.MsgType) error {
 	if !n.Trusted(p) {
-		return protocol.JobStatusPayload{}, ErrNotTrusted
+		return ErrNotTrusted
 	}
 	ctx, cancel := context.WithTimeout(ctx, jobTimeout)
 	defer cancel()
-	s, err := n.host.NewStream(allowLimited(ctx), p, lp2pproto.ID(protocol.ProtoJob))
+	s, err := n.host.NewStream(allowLimited(ctx), p, lp2pproto.ID(proto))
 	if err != nil {
-		return protocol.JobStatusPayload{}, fmt.Errorf("koordinator nicht erreichbar: %w", err)
+		return fmt.Errorf("nicht erreichbar: %w", err)
 	}
 	defer s.Close()
 	_ = s.SetDeadline(time.Now().Add(jobTimeout))
 	env, err := protocol.Seal(n.id, typ, jobID, defaultTaskTTL, payload)
 	if err != nil {
-		return protocol.JobStatusPayload{}, err
+		return err
 	}
 	if err := writeMsg(s, env); err != nil {
 		_ = s.Reset()
-		return protocol.JobStatusPayload{}, err
+		return err
 	}
 	renv, err := readMsg(bufio.NewReader(s))
 	if err != nil {
-		return protocol.JobStatusPayload{}, fmt.Errorf("keine antwort des koordinators (koordiniert er für andere? cooperation.coordinate_for_others): %w", err)
+		return fmt.Errorf("keine antwort (koordiniert der peer für andere? cooperation.coordinate_for_others): %w", err)
 	}
-	if err := renv.Verify(time.Now(), n.replay); err != nil || renv.Sender != p.String() ||
-		(renv.Type != protocol.JobStatus && renv.Type != protocol.JobResult) {
-		return protocol.JobStatusPayload{}, fmt.Errorf("ungültige antwort des koordinators: %v", err)
+	if err := renv.Verify(time.Now(), n.replay); err != nil || renv.Sender != p.String() || !slices.Contains(replies, renv.Type) {
+		return fmt.Errorf("ungültige antwort: %v", err)
 	}
-	var out protocol.JobStatusPayload
-	if err := renv.Decode(&out); err != nil {
-		return out, err
-	}
-	if out.JobID != jobID {
-		return out, errors.New("antwort zu einem anderen auftrag")
-	}
-	return out, nil
+	return renv.Decode(out)
 }
 
 // Connected: Mit dem Peer besteht eine Verbindung in diesem Netz.

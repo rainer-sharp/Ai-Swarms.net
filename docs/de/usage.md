@@ -44,6 +44,7 @@ Scheitert ein Schritt, nachdem er schon Text gestreamt hat, folgt ein Trenner (�
 | `X-SwarmAiNet-Agents` | kommagetrennte Agent-IDs, auf die die Auswahl beschränkt wird (für Messungen) |
 | `X-SwarmAiNet-Trace: 1` | Texte der Zwischenschritte in `steps[].output` |
 | `X-SwarmAiNet-Coordinator` | nur für `/v1/jobs`: Peer-ID eines vertrauten Knotens, der den Auftrag koordiniert ([unten](#asynchrone-aufträge)) |
+| `X-SwarmAiNet-Substitute` | nur für `/v1/jobs`: Peer-ID eines vertrauten Knotens oder `auto`, der Prüfpunkte hält und übernimmt, wenn der Koordinator ausfällt |
 
 Ohne Header gilt `tasks.privacy_class` aus der Konfiguration (Standard `trusted`): Die Anfrage geht nur an eigene oder vertraute Geräte. An fremde Knoten im offenen Netz geht nur, was als `public` markiert ist. Lässt die Freigabeklasse keinen der bekannten Agenten zu, antwortet das Gateway mit 400 und nennt den Grund, etwa bei `trusted` ohne eigenes Modell und ohne vertraute Knoten.
 
@@ -114,7 +115,9 @@ curl -s http://127.0.0.1:7711/v1/jobs/job-…
 | `GET /v1/jobs` | eigene Aufträge, die neuesten zuerst |
 | `DELETE /v1/jobs/{id}` | laufenden Auftrag abbrechen (200) oder abgeschlossenen löschen (204) |
 
-Mit dem Header `X-SwarmAiNet-Coordinator: <peer-id>` koordiniert ein vertrauter Knoten den Auftrag statt des eigenen, etwa ein Rechner mit Modellen, der rund um die Uhr läuft, während das Notebook ausgeschaltet ist. Dieser Knoten braucht `cooperation.coordinate_for_others: true` ([Konfiguration](configuration.md)). Er sieht den Auftrag im Klartext und wendet die Freigabeklasse aus seiner Sicht an; `local` verlässt den eigenen Knoten nie. Ist der Koordinator nicht erreichbar, liefert `GET` den letzten bekannten Stand mit `coordinator_error`. Abgeschlossene Aufträge bleiben 24 Stunden abrufbar, auch nach einem Neustart; ein Auftrag, der auf einem Knoten lief, als er beendet wurde, ist verloren und gilt als gescheitert. Details: [Kooperation](../../spec/de/cooperation.md) § 7.4.
+Mit dem Header `X-SwarmAiNet-Coordinator: <peer-id>` koordiniert ein vertrauter Knoten den Auftrag statt des eigenen, etwa ein Rechner mit Modellen, der rund um die Uhr läuft, während das Notebook ausgeschaltet ist. Dieser Knoten braucht `cooperation.coordinate_for_others: true` ([Konfiguration](configuration.md)). Er sieht den Auftrag im Klartext und wendet die Freigabeklasse aus seiner Sicht an; `local` verlässt den eigenen Knoten nie. Ist der Koordinator nicht erreichbar, liefert `GET` den letzten bekannten Stand mit `coordinator_error`. Abgeschlossene Aufträge bleiben 24 Stunden abrufbar, auch nach einem Neustart.
+
+Ohne Weiteres ist ein Auftrag verloren, wenn sein Koordinator ausfällt (er gilt dann als gescheitert). Mit `X-SwarmAiNet-Substitute: <peer-id>` oder `auto` hält ein zweiter vertrauter Knoten Prüfpunkte: den Auftrag und bei `decompose` die fertigen Teilaufgaben. Verlängert der Koordinator seinen Lease 60 Sekunden lang nicht, übernimmt der Ersatz und setzt am letzten Prüfpunkt fort; `GET` holt das Ergebnis dann von selbst dort ab. Auch der Ersatz braucht `coordinate_for_others: true`, sieht den Auftrag im Klartext und muss dem eigenen Knoten vertrauen. Details: [Kooperation](../../spec/de/cooperation.md) § 7.4.
 
 ## Rückmeldungen und Kompetenzprofil
 

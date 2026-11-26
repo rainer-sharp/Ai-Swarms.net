@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"regexp"
 	"slices"
 	"strings"
@@ -43,6 +44,47 @@ type planNode struct {
 type plan struct {
 	Nodes     []planNode `json:"nodes"`
 	Synthesis string     `json:"synthesis"`
+}
+
+// Checkpoint: Stand eines Auftrags, ab dem ein Ersatzkoordinator fortsetzen
+// kann (spec/cooperation.md § 7): bei decompose der Plan und die Ergebnisse
+// fertiger Teilaufgaben.
+type Checkpoint struct {
+	Plan    json.RawMessage   `json:"plan,omitempty"`
+	Results map[string]string `json:"results,omitempty"`
+}
+
+// checkpoint meldet einen neuen Prüfpunkt, wenn jemand zuhört.
+func (r *run) checkpoint(p plan, results map[string]string) {
+	if r.req.OnCheckpoint == nil {
+		return
+	}
+	raw, err := json.Marshal(p)
+	if err != nil {
+		return
+	}
+	r.req.OnCheckpoint(Checkpoint{Plan: raw, Results: maps.Clone(results)})
+}
+
+// resumed: Plan und fertige Teilergebnisse aus einem Prüfpunkt; ok=false,
+// wenn keiner vorliegt oder er nicht passt (dann neu planen).
+func (r *run) resumed() (plan, map[string]string, bool) {
+	cp := r.req.Resume
+	if cp == nil || len(cp.Plan) == 0 {
+		return plan{}, nil, false
+	}
+	p, err := parsePlan(string(cp.Plan), maxGraphNodes, r.knownSkills())
+	if err != nil {
+		r.note("Prüfpunkt unbrauchbar (" + err.Error() + "), neuer Plan.")
+		return plan{}, nil, false
+	}
+	results := map[string]string{}
+	for _, n := range p.Nodes {
+		if s, ok := cp.Results[n.ID]; ok {
+			results[n.ID] = s
+		}
+	}
+	return p, results, true
 }
 
 // GraphNode beschreibt eine Teilaufgabe in der Antwort, ohne ihren Text.
@@ -215,6 +257,14 @@ func (r *run) decompose(ctx context.Context) error {
 		return r.undivided(ctx, "Zerlegung mit Bildern nicht vorgesehen.")
 	}
 	n := r.graphNodes()
+	if p, done, ok := r.resumed(); ok {
+		r.note(fmt.Sprintf("Fortgesetzt ab Prüfpunkt: Plan mit %d Teilaufgaben, %d davon fertig.", len(p.Nodes), len(done)))
+		results, err := r.runGraph(ctx, p, done)
+		if err != nil {
+			return err
+		}
+		return r.synthesizeGraph(ctx, p, results)
+	}
 	if n < 2 {
 		return r.undivided(ctx, "Budget reicht nicht für eine Zerlegung.")
 	}
@@ -244,7 +294,8 @@ func (r *run) decompose(ctx context.Context) error {
 		return r.undivided(ctx, "Der Planer sieht keine Teilaufgaben.")
 	}
 	r.notePlan(p)
-	results, err := r.runGraph(ctx, p)
+	r.checkpoint(p, nil)
+	results, err := r.runGraph(ctx, p, nil)
 	if err != nil {
 		return err
 	}
@@ -271,13 +322,19 @@ func (r *run) notePlan(p plan) {
 // runGraph führt die Teilaufgaben wellenweise aus, jede Welle parallel. Eine
 // Teilaufgabe, deren Vorgänger gescheitert ist, entfällt. Zurück kommen die
 // Ergebnisse je id; scheitern alle, ein Fehler.
-func (r *run) runGraph(ctx context.Context, p plan) (map[string]string, error) {
+func (r *run) runGraph(ctx context.Context, p plan, done map[string]string) (map[string]string, error) {
 	waves, _ := order(p.Nodes) // in parsePlan geprüft
-	results := map[string]string{}
+	results := maps.Clone(done)
+	if results == nil {
+		results = map[string]string{}
+	}
 	failed := map[string]bool{}
 	graph := map[string]*GraphNode{}
 	for _, n := range p.Nodes {
 		graph[n.ID] = &GraphNode{ID: n.ID, Skill: n.Skill, Deps: n.Deps}
+		if _, ok := results[n.ID]; ok {
+			graph[n.ID].Status = protocol.StatusOK // aus dem Prüfpunkt
+		}
 	}
 	var mu sync.Mutex
 	var lastErr error
@@ -285,6 +342,9 @@ func (r *run) runGraph(ctx context.Context, p plan) (map[string]string, error) {
 		var wg sync.WaitGroup
 		for _, n := range wave {
 			g := graph[n.ID]
+			if g.Status != "" {
+				continue // schon fertig (Prüfpunkt)
+			}
 			if bad := slices.IndexFunc(n.Deps, func(d string) bool { return failed[d] }); bad >= 0 {
 				g.Status = "skipped"
 				failed[n.ID] = true
@@ -311,6 +371,7 @@ func (r *run) runGraph(ctx context.Context, p plan) (map[string]string, error) {
 				}
 				g.Status, results[n.ID] = protocol.StatusOK, content
 				r.note(fmt.Sprintf("Teilaufgabe %s: fertig (%s)", n.ID, pat))
+				r.checkpoint(p, results)
 			}()
 		}
 		wg.Wait()
@@ -354,6 +415,7 @@ func nodeMessages(n planNode, deps map[string]string) []protocol.ChatMessage {
 func (r *run) runNode(ctx context.Context, n planNode, deps map[string]string) (string, Pattern, error) {
 	req := r.req
 	req.Messages, req.Skill, req.Stream, req.Pattern = nodeMessages(n, deps), n.Skill, nil, ""
+	req.Resume, req.OnCheckpoint = nil, nil
 	c := &run{o: r.o, req: req, taskID: r.taskID, budget: r.budget}
 	c.ans = &Answer{TaskID: r.taskID, Skill: n.Skill}
 	p := c.fallbackPattern()

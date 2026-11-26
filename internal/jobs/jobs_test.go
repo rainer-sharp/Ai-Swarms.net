@@ -56,6 +56,18 @@ func TestStore(t *testing.T) {
 		t.Errorf("fremder auftrag nach neustart: %+v", j)
 	}
 
+	// Mit Ersatzkoordinator: Ein eigener Auftrag wird nach dem Neustart dort
+	// abgefragt, einer für andere fällt weg (der Auftraggeber fragt selbst).
+	r.Add(Job{ID: "mit-ersatz", Substitute: "ersatz", Status: protocol.JobRunning, Created: now}, nil)
+	r.Add(Job{ID: "fremd-mit-ersatz", Owner: "peer-b", Substitute: "ersatz", Status: protocol.JobRunning, Created: now}, nil)
+	r2 := Open(path)
+	if j, _ := r2.Get("", "mit-ersatz"); j.Status != protocol.JobRunning || j.Coordinator != "ersatz" || j.Substitute != "" {
+		t.Errorf("eigener mit ersatz: %+v", j)
+	}
+	if _, ok := r2.Get("peer-b", "fremd-mit-ersatz"); ok {
+		t.Error("fremder mit ersatz nach neustart noch da")
+	}
+
 	// Nach Retention fallen abgeschlossene weg.
 	r.now = func() time.Time { return now.Add(Retention + time.Hour) }
 	r.Remove("", "entfernt")

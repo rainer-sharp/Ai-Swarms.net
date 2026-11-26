@@ -8,7 +8,8 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 ### Added
 
-- **Asynchronous jobs (cooperation stage 5, first part):** `POST /v1/jobs` accepts a chat request and responds immediately with a job ID; `GET /v1/jobs/{id}` returns status and, when done, the answer, `DELETE` cancels or deletes. With the header `X-SwarmAiNet-Coordinator`, a trusted node with `cooperation.coordinate_for_others: true` coordinates the job, so the requester may go offline in the meantime (new protocol `/swarmainet/job/0.1`). Finished jobs stay retrievable for 24 hours, also after a restart. Not yet: lease and substitute coordinator, so a job is still lost if its coordinator fails. ([usage](docs/usage.md#asynchronous-jobs), [cooperation](spec/cooperation.md) § 7.4)
+- **Asynchronous jobs (cooperation stage 5):** `POST /v1/jobs` accepts a chat request and responds immediately with a job ID; `GET /v1/jobs/{id}` returns status and, when done, the answer, `DELETE` cancels or deletes. With the header `X-SwarmAiNet-Coordinator`, a trusted node with `cooperation.coordinate_for_others: true` coordinates the job, so the requester may go offline in the meantime (new protocol `/swarmainet/job/0.1`). Finished jobs stay retrievable for 24 hours, also after a restart. ([usage](docs/usage.md#asynchronous-jobs), [cooperation](spec/cooperation.md) § 7.4)
+- **Substitute coordinator (lease):** with `X-SwarmAiNet-Substitute: <peer-id>` or `auto`, a second trusted node holds checkpoints of a job (the task, with `decompose` also finished subtasks) and takes over when the coordinator stops renewing its lease for 60 seconds; the requester then fetches the result there. Providers refuse subtasks of an older lease epoch, so that a coordinator that returns does not work twice. New protocol `/swarmainet/lease/0.1` and optional field `job` in subtasks. ([cooperation](spec/cooperation.md) § 7.4, [protocol](spec/protocol-v0.1.md) § 4.2)
 
 ## [0.7.0] – 2026-11-24
 

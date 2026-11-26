@@ -101,10 +101,13 @@ type Options struct {
 	// Coordinator: nimmt asynchrone Aufträge vertrauter Peers an
 	// (cooperation.coordinate_for_others); nil: keine.
 	Coordinator Coordinator
+	// Leases: hält Prüfpunkte als Ersatzkoordinator; nil: keine.
+	Leases LeaseHolder
 }
 
 type Node struct {
 	opts    Options
+	epochs  epochs // Lease-Epochen gesehener Aufträge (lease.go)
 	host    host.Host
 	id      *identity.Identity
 	replay  *protocol.ReplayCache
@@ -285,6 +288,9 @@ func New(ctx context.Context, o Options) (*Node, error) {
 	}
 	if o.Coordinator != nil {
 		n.handle(protocol.ProtoJob, canTask, n.handleJob)
+	}
+	if o.Leases != nil {
+		n.handle(protocol.ProtoLease, canTask, n.handleLease)
 	}
 	if n.member != nil {
 		h.SetStreamHandler(lp2pproto.ID(protocol.ProtoMember), n.handleAdmission)

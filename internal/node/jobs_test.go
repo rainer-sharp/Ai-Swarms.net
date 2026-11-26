@@ -58,7 +58,7 @@ func TestJobs(t *testing.T) {
 		Pattern: orchestrator.PatternSingle, Privacy: protocol.PrivacyTrusted}
 
 	// Auf diesem Knoten: mit dem eigenen Modell.
-	j, err := a.SubmitJob(question, "swarmainet/single", "")
+	j, err := a.SubmitJob(question, "swarmainet/single", "", "")
 	if err != nil || j.Status != protocol.JobRunning || j.Coordinator != "" {
 		t.Fatalf("%v %+v", err, j)
 	}
@@ -68,7 +68,7 @@ func TestJobs(t *testing.T) {
 
 	// Beim Koordinator: Er bearbeitet den Auftrag (sein Modell ist das einzige,
 	// das er kennt; a bietet seins nicht an).
-	j, err = a.SubmitJob(question, "swarmainet/single", idB.ID.String())
+	j, err = a.SubmitJob(question, "swarmainet/single", idB.ID.String(), "")
 	if err != nil || j.Coordinator != idB.ID.String() {
 		t.Fatalf("%v %+v", err, j)
 	}
@@ -81,7 +81,7 @@ func TestJobs(t *testing.T) {
 	}
 
 	// Kennt der Koordinator den Auftrag nicht mehr (Neustart), ist er gescheitert.
-	j2, err := a.SubmitJob(question, "", idB.ID.String())
+	j2, err := a.SubmitJob(question, "", idB.ID.String(), "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,19 +100,19 @@ func TestJobs(t *testing.T) {
 	}
 
 	// Ablehnungen.
-	if _, err := a.SubmitJob(question, "", idC.ID.String()); !errors.Is(err, jobs.ErrCoordinator) || !strings.Contains(err.Error(), "coordinate_for_others") {
+	if _, err := a.SubmitJob(question, "", idC.ID.String(), ""); !errors.Is(err, jobs.ErrCoordinator) || !strings.Contains(err.Error(), "coordinate_for_others") {
 		t.Fatalf("ohne coordinate_for_others: %v", err)
 	}
 	local := question
 	local.Privacy = protocol.PrivacyLocal
-	if _, err := a.SubmitJob(local, "", idB.ID.String()); !errors.Is(err, orchestrator.ErrPrivacy) {
+	if _, err := a.SubmitJob(local, "", idB.ID.String(), ""); !errors.Is(err, orchestrator.ErrPrivacy) {
 		t.Fatalf("local: %v", err)
 	}
-	if _, err := a.SubmitJob(question, "", "kein-peer"); !errors.Is(err, jobs.ErrInvalid) {
+	if _, err := a.SubmitJob(question, "", "kein-peer", ""); !errors.Is(err, jobs.ErrInvalid) {
 		t.Fatalf("ungültige peer-id: %v", err)
 	}
 	other, _ := identity.New()
-	if _, err := a.SubmitJob(question, "", other.ID.String()); !errors.Is(err, jobs.ErrCoordinator) {
+	if _, err := a.SubmitJob(question, "", other.ID.String(), ""); !errors.Is(err, jobs.ErrCoordinator) {
 		t.Fatalf("unbekannter koordinator: %v", err)
 	}
 	// Nur der Auftraggeber sieht seinen Auftrag beim Koordinator.
@@ -148,7 +148,7 @@ func TestJobCancel(t *testing.T) {
 	}
 	question := orchestrator.Request{Messages: []protocol.ChatMessage{{Role: "user", Content: "Hallo"}},
 		Pattern: orchestrator.PatternSingle, Privacy: protocol.PrivacyTrusted}
-	j, err := a.SubmitJob(question, "", idB.ID.String())
+	j, err := a.SubmitJob(question, "", idB.ID.String(), "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -211,15 +211,20 @@ Phase 3 therefore introduces **asynchronous tasks** and a **lease**.
 - Subtasks are idempotent over `(task_id, subtask_id)`; partial results already acknowledged are not requested again (receipts are already idempotent, protocol § 4.4).
 - A coordinator that returns after an interruption and sees a newer epoch aborts (`TASK_CANCEL` to its open subtasks).
 
-### 7.4 Implementation (stage 5, first part)
+### 7.4 Implementation (stage 5)
 
-Implemented are steps 1 and 5 of § 7.2: asynchronous tasks, coordinated by your own node or by a trusted peer. Not yet: lease, checkpoints, substitute coordinator and epoch (steps 2 to 4, § 7.3). If the coordinator fails, the task is still lost; the requester then sees it as failed instead of waiting.
+Implemented: asynchronous tasks, coordinated by your own node or by a trusted peer, with an optional substitute coordinator that takes over after a failure (steps 1 to 5 of § 7.2, epoch from § 7.3).
 
 - **Gateway:** `POST /v1/jobs` accepts a request in the format of the chat API and responds immediately with 202 and the job ID. `GET /v1/jobs/{id}` returns status (`running`, `done`, `failed`, `canceled`) and, when done, the answer in the format of the chat API under `result`; `GET /v1/jobs` lists the own jobs. `DELETE /v1/jobs/{id}` cancels a running job, also at the coordinator, and deletes a finished one. The header `X-SwarmAiNet-Coordinator: <peer-id>` names the coordinating peer; without it, your own node coordinates.
 - **Protocol `/swarmainet/job/0.1`:** one message per stream and one answer. `JOB_SUBMIT` (`job_id`, `request`: messages, pattern, privacy class, skill, agents, tools, `max_tokens`, `max_subtasks`, `deadline`, `pseudonymize_terms`, `trace`), `JOB_STATUS` (query with `job_id`) and `JOB_CANCEL`; the coordinator answers with `JOB_STATUS` while the job runs and with `JOB_RESULT` (`status`, `error`, `content`, `tool_calls`, `answer`: the metadata of the answer) once it is finished. A refusal comes as `JOB_STATUS` with `status: rejected` and the reason.
 - **Who coordinates for whom:** only for peers it trusts, and only with `cooperation.coordinate_for_others: true`; the requester only sends to peers it trusts. The coordinator sees the task in plain text and applies the privacy class from **its own** view: `trusted` then means its trusted circle. In a private network both are the same; with `trusted_peers` they can differ, so only choose coordinators whose trusted circle you accept. `local` never leaves the node. Each requester only sees its own jobs.
 - **Limits:** at most 4 jobs for others at the same time, 2 per peer. Deadline `tasks.job_deadline_s` (default one hour); the coordinator also caps the requester's deadline to its own.
-- **Storage:** `jobs.json` in the data directory (permissions 0600, contains answers). Finished jobs stay retrievable for 24 hours, at most 200. A job that the node itself was coordinating when it stopped counts as failed after the restart; a coordinator that no longer knows a job reports it as unknown, and the requester marks it as failed.
+- **Storage:** `jobs.json` in the data directory (permissions 0600, contains answers). Finished jobs stay retrievable for 24 hours, at most 200. A job without substitute that the node itself was coordinating when it stopped counts as failed after the restart; a coordinator that no longer knows a job reports it as unknown, and the requester marks it as failed.
+- **Substitute coordinator, opt-in per job:** the header `X-SwarmAiNet-Substitute` names a peer or `auto` (the coordinator chooses among the peers it trusts, not the requester). Without it, there is no substitute, because a checkpoint contains the task in plain text. The substitute needs `coordinate_for_others` and MUST trust the requester, otherwise it refuses (the requester could not fetch the result there). It holds at most 8 checkpoints; `local` never gets one.
+- **Protocol `/swarmainet/lease/0.1`:** `LEASE_CHECKPOINT` (job ID, requester, epoch, expiry, the task as in `JOB_SUBMIT`, for `decompose` plan and results of finished subtasks), `LEASE_RENEW` (new expiry) and `LEASE_RESULT` (the final status; the substitute then drops task and partial results, keeps the result for 24 hours and no longer takes over); the substitute answers with `LEASE_ACK` (`ok`, `taken_over`, `epoch`). The lease lasts 60 s, the coordinator renews it every 20 s and sends a new checkpoint instead when there is one; the substitute checks every 5 s. If the substitute is not reachable, the coordinator tries another one (with `auto`) or the same one again.
+- **Takeover:** if the lease expires, the substitute increments the epoch and runs the task itself, for `decompose` from the plan of the checkpoint without the finished subtasks; other patterns start anew. Every subtask of a job with a substitute carries `job: {id, epoch}`; a provider refuses subtasks of an older epoch once it has seen a newer one (`veraltete lease-epoche`, "stale lease epoch"). A coordinator that is still running learns of the takeover at its next renewal, aborts and from then on refers requests to the substitute. Until then, both may work in parallel; the epoch only stops subtasks at providers that have already seen the new one, the coordinator's own models are not affected. After a takeover there is no further substitute.
+- **Requester:** it learns the substitute from the coordinator's answers (`substitute`) and asks there when the coordinator does not answer or no longer knows the job. A node that is shut down does not report a result to the substitute, so that it takes over; after the restart, its own jobs refer to the substitute.
+- **Not implemented:** idempotence over `(task_id, subtask_id)` (§ 7.3); unfinished subtasks run again at the substitute. Finer checkpoints than per subtask of `decompose`.
 
 ## 8. Protocol and interfaces
 
@@ -230,8 +235,8 @@ New messages and fields (versioning as before: new optional payload fields are c
 | `TASK_BID` (so far "from phase 3") | optional bid before acceptance: free capacity, expected runtime; the coordinator can ask several providers and take the cheapest |
 | `VERIFY_REQUEST` (so far "from phase 3") | separate message for reviews instead of `TASK_PROPOSE` with `role: verifier` |
 | Protocol `/swarmainet/job/0.1` | asynchronous tasks: `JOB_SUBMIT`, `JOB_STATUS`, `JOB_RESULT`, `JOB_CANCEL` (implemented, § 7.4) |
-| Protocol `/swarmainet/lease/0.1` | `LEASE_CHECKPOINT` (coordinator → substitute), `LEASE_RENEW`, `LEASE_TAKEOVER` |
-| `ProposePayload.lease_epoch` | the coordinator's epoch (§ 7.3) |
+| Protocol `/swarmainet/lease/0.1` | `LEASE_CHECKPOINT`, `LEASE_RENEW`, `LEASE_RESULT` (coordinator → substitute), `LEASE_ACK` (implemented, § 7.4) |
+| `ProposePayload.job` | `{id, epoch}`: job and lease epoch of a subtask (§ 7.3, implemented) |
 | `TRUST_ATTESTATION` | still deferred (§ 2.4) |
 
 Gateway:
@@ -258,7 +263,7 @@ cooperation:
 
 - Profiles, recipe statistics and controller state are local and contain no prompts, only categories, agents and result signals.
 - Checkpoints of a task (§ 7) contain prompts and partial results and are subject to the privacy class of the task.
-- Asynchronous tasks (§ 7.4): the coordinator sees the task in plain text and keeps the answer for 24 hours in `jobs.json` (0600); the requester keeps its own jobs there as well.
+- Asynchronous tasks (§ 7.4): the coordinator sees the task in plain text and keeps the answer for 24 hours in `jobs.json` (0600); the requester keeps its own jobs there as well. A substitute holds checkpoints only in memory and drops task and partial results as soon as the result arrives.
 - Canaries are public tasks without any relation to user data.
 
 ## 10. Gate and measurement
@@ -281,7 +286,7 @@ Metrics in addition to the measurement plan: convergence of the bandit (how many
 2. ✅ **Bandit over recipes** with today's selection as prior knowledge, and the pattern **cascade**. Implemented with fixed rules for "uncertain" (§ 5); opt-in via `cooperation.selection: bandit`.
 3. ✅ **PI controller** for the review effort per category, and the controller for `θ` with criterion 3 of the cascade (§ 4.2, § 5). Not yet: latency loop.
 4. ✅ **Task graph:** planner, decompose and distribute, synthesis. Pattern `decompose`, only on request (§ 6). Not yet: selection by the bandit, nested decomposition.
-5. **Asynchronous tasks and lease coordinator**, failure tests. Asynchronous tasks with coordination by a trusted peer implemented (§ 7.4); not yet: lease, checkpoints, substitute coordinator.
+5. ✅ **Asynchronous tasks and lease coordinator**, failure tests (§ 7.4): failure and return of the coordinator over three nodes in tests, failure on hardware with real lease times. Not yet: idempotence over subtask IDs.
 6. **Canary tasks** and manipulation tests.
 
 Every stage can be switched off with `cooperation.selection: rules`, so that the previous behaviour is kept for comparison.

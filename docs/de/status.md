@@ -11,7 +11,7 @@ SwarmAiNet ist ein **Forschungsprototyp**. Die Netzschicht ist weiter entwickelt
 | 0 · Spezifikation | Protokoll, Freigabeklassen, Bedrohungsmodell, Messplan | Entwurf v0.1 in [`spec/`](../../spec/de/README.md) |
 | 1 · Lokaler Schwarm | mDNS, statische Peers, OpenAI-Backends, Ressourcenmanager, Muster, Lastverteilung, Modellstärke, Quittungen | **abgeschlossen**, auf echter Hardware getestet: 3 Geräte, 3 Modellfamilien, Ollama, llama.cpp und vLLM |
 | 2 · P2P-Schicht | DHT, Einstiegsquellen, AutoNAT, Hole Punching, Relay; private, Mitglieds- und offene Netze, auch gleichzeitig | **privates Netz, Mitgliedsnetz und offenes Netz auf Hardware über zwei Standorte bestätigt** |
-| 3 · Selbstorganisierte Kooperation | Kompetenzprofil, Bandit, PI-Regler, Task-Graph, Lease-Koordinator | Spezifikation im Entwurf: [`spec/de/cooperation.md`](../../spec/de/cooperation.md); **Stufen 1 bis 4 umgesetzt** (Kompetenzprofil, Bandit über Muster als Opt-in, Kaskade, PI-Regler für Aufwand und `θ`, mit Simulationen geprüft; Task-Graph `decompose` auf Wunsch; Stufe 5 teilweise: asynchrone Aufträge, auch koordiniert von einem vertrauten Peer) |
+| 3 · Selbstorganisierte Kooperation | Kompetenzprofil, Bandit, PI-Regler, Task-Graph, Lease-Koordinator | Spezifikation im Entwurf: [`spec/de/cooperation.md`](../../spec/de/cooperation.md); **Stufen 1 bis 5 umgesetzt** (Kompetenzprofil, Bandit über Muster als Opt-in, Kaskade, PI-Regler für Aufwand und `θ`, mit Simulationen geprüft; Task-Graph `decompose` auf Wunsch; Stufe 5: asynchrone Aufträge, auch koordiniert von einem vertrauten Peer, mit Ersatzkoordinator, der nach einem Ausfall übernimmt) |
 | 4 · Offenes Testnetz | Ein-Klick-Client, Kredit, Sandbox, Benchmark-Pool | offen |
 
 ## Erprobung auf Hardware

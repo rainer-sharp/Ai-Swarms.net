@@ -50,6 +50,9 @@ type Node struct {
 	jobs    *jobs.Store
 	jobCtx  context.Context
 	jobStop context.CancelFunc
+	// Prüfpunkte, die dieser Knoten als Ersatzkoordinator hält (lease.go).
+	heldMu sync.Mutex
+	held   map[string]*heldLease
 }
 
 // Options erlaubt Tests, Sensoren und Energiequelle zu ersetzen.
@@ -113,6 +116,8 @@ func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
 	n := &Node{Cfg: cfg, ID: id, REM: m, Local: local, Receipts: store, started: time.Now(), version: o.Version,
 		Profile: profile.Open(filepath.Join(dir, "profile.json")), jobs: jobs.Open(filepath.Join(dir, "jobs.json"))}
 	n.jobCtx, n.jobStop = context.WithCancel(context.Background())
+	n.held = map[string]*heldLease{}
+	go n.watchLeases(n.jobCtx)
 	// Ressourcenmanager, Backends und Quittungen teilen sich alle Netze;
 	// fremde Aufträge aus allen Netzen konkurrieren um dieselben Slots.
 	for i, s := range nets {
@@ -145,7 +150,7 @@ func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
 			RelayLimits: p2p.RelayLimits(s.RelayLimits), DNSSeeds: s.DNSSeeds,
 			PeerCache: filepath.Join(dir, "peers-"+s.NetworkID+".json"),
 			DHTServer: dhtServer(cfg.Node.Helper, s.DHTServer), AnnouncePrivate: s.AnnouncePrivate, Announce: s.Announce, PortMapping: s.PortMapping,
-			Provider: local, Receipts: store, Coordinator: jobCoordinator{n},
+			Provider: local, Receipts: store, Coordinator: jobCoordinator{n}, Leases: leaseHolder{n},
 		})
 		if err != nil {
 			n.Close()

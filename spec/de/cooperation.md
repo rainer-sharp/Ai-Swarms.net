@@ -211,15 +211,20 @@ Phase 3 führt deshalb **asynchrone Aufträge** und einen **Lease** ein.
 - Teilaufträge sind über `(task_id, subtask_id)` idempotent; bereits quittierte Teilergebnisse werden nicht neu angefordert (Quittungen sind schon idempotent, Protokoll § 4.4).
 - Ein Koordinator, der nach einer Unterbrechung zurückkehrt und eine neuere Epoche sieht, bricht ab (`TASK_CANCEL` an seine offenen Teilaufträge).
 
-### 7.4 Umsetzung (Stufe 5, erster Teil)
+### 7.4 Umsetzung (Stufe 5)
 
-Umgesetzt sind die Schritte 1 und 5 aus § 7.2: asynchrone Aufträge, koordiniert vom eigenen Knoten oder von einem vertrauten Peer. Noch nicht: Lease, Prüfpunkte, Ersatzkoordinator und Epoche (Schritte 2 bis 4, § 7.3). Fällt der Koordinator aus, ist der Auftrag weiterhin verloren; der Auftraggeber sieht ihn dann als gescheitert, statt zu warten.
+Umgesetzt: asynchrone Aufträge, koordiniert vom eigenen Knoten oder von einem vertrauten Peer, mit einem optionalen Ersatzkoordinator, der nach einem Ausfall übernimmt (Schritte 1 bis 5 aus § 7.2, Epoche aus § 7.3).
 
 - **Gateway:** `POST /v1/jobs` nimmt eine Anfrage im Format der Chat-API an und antwortet sofort mit 202 und der Auftragskennung. `GET /v1/jobs/{id}` liefert den Zustand (`running`, `done`, `failed`, `canceled`) und, wenn fertig, unter `result` die Antwort im Format der Chat-API; `GET /v1/jobs` listet die eigenen Aufträge. `DELETE /v1/jobs/{id}` bricht einen laufenden Auftrag ab, auch beim Koordinator, und löscht einen abgeschlossenen. Der Header `X-SwarmAiNet-Coordinator: <peer-id>` nennt den koordinierenden Peer; ohne ihn koordiniert der eigene Knoten.
 - **Protokoll `/swarmainet/job/0.1`:** eine Nachricht je Stream und eine Antwort. `JOB_SUBMIT` (`job_id`, `request`: Nachrichten, Muster, Freigabeklasse, Fähigkeit, Agenten, Werkzeuge, `max_tokens`, `max_subtasks`, `deadline`, `pseudonymize_terms`, `trace`), `JOB_STATUS` (Abfrage mit `job_id`) und `JOB_CANCEL`; der Koordinator antwortet mit `JOB_STATUS`, solange der Auftrag läuft, und mit `JOB_RESULT` (`status`, `error`, `content`, `tool_calls`, `answer`: die Metadaten der Antwort), sobald er abgeschlossen ist. Eine Ablehnung kommt als `JOB_STATUS` mit `status: rejected` und dem Grund.
 - **Wer für wen koordiniert:** nur für Peers, denen er vertraut, und nur mit `cooperation.coordinate_for_others: true`; der Auftraggeber schickt nur an Peers, denen er vertraut. Der Koordinator sieht den Auftrag im Klartext und wendet die Freigabeklasse aus **seiner** Sicht an: `trusted` heißt dann sein vertrauter Kreis. Im privaten Netz ist beides dasselbe; mit `trusted_peers` kann es sich unterscheiden, deshalb nur Koordinatoren wählen, deren vertrauten Kreis man akzeptiert. `local` verlässt den Knoten nie. Jeder Auftraggeber sieht nur seine eigenen Aufträge.
 - **Grenzen:** höchstens 4 Aufträge für andere gleichzeitig, 2 je Peer. Frist `tasks.job_deadline_s` (Standard eine Stunde); der Koordinator begrenzt auch die Frist des Auftraggebers auf seine eigene.
-- **Speicher:** `jobs.json` im Datenverzeichnis (Rechte 0600, enthält Antworten). Abgeschlossene Aufträge bleiben 24 Stunden abrufbar, höchstens 200. Ein Auftrag, den der Knoten selbst koordinierte, als er beendet wurde, gilt nach dem Neustart als gescheitert; ein Koordinator, der einen Auftrag nicht mehr kennt, meldet ihn als unbekannt, und der Auftraggeber vermerkt ihn als gescheitert.
+- **Speicher:** `jobs.json` im Datenverzeichnis (Rechte 0600, enthält Antworten). Abgeschlossene Aufträge bleiben 24 Stunden abrufbar, höchstens 200. Ein Auftrag ohne Ersatz, den der Knoten selbst koordinierte, als er beendet wurde, gilt nach dem Neustart als gescheitert; ein Koordinator, der einen Auftrag nicht mehr kennt, meldet ihn als unbekannt, und der Auftraggeber vermerkt ihn als gescheitert.
+- **Ersatzkoordinator, Opt-in je Auftrag:** Der Header `X-SwarmAiNet-Substitute` nennt einen Peer oder `auto` (der Koordinator wählt unter den Peers, denen er vertraut, nicht den Auftraggeber). Ohne ihn gibt es keinen Ersatz, denn ein Prüfpunkt enthält den Auftrag im Klartext. Der Ersatz braucht `coordinate_for_others` und MUSS dem Auftraggeber vertrauen, sonst lehnt er ab (der Auftraggeber könnte das Ergebnis dort nicht abholen). Er hält höchstens 8 Prüfpunkte; `local` bekommt nie einen.
+- **Protokoll `/swarmainet/lease/0.1`:** `LEASE_CHECKPOINT` (Auftragskennung, Auftraggeber, Epoche, Ablauf, der Auftrag wie bei `JOB_SUBMIT`, bei `decompose` Plan und Ergebnisse fertiger Teilaufgaben), `LEASE_RENEW` (neuer Ablauf) und `LEASE_RESULT` (der Endzustand; der Ersatz verwirft dann Auftrag und Teilergebnisse, hält das Ergebnis 24 Stunden und übernimmt nicht mehr); der Ersatz antwortet mit `LEASE_ACK` (`ok`, `taken_over`, `epoch`). Der Lease gilt 60 s, der Koordinator verlängert alle 20 s und schickt stattdessen einen neuen Prüfpunkt, wenn es einen gibt; der Ersatz prüft alle 5 s. Ist der Ersatz nicht erreichbar, versucht der Koordinator einen anderen (bei `auto`) oder denselben erneut.
+- **Übernahme:** Läuft der Lease ab, erhöht der Ersatz die Epoche und führt den Auftrag selbst aus, bei `decompose` ab dem Plan des Prüfpunkts ohne die fertigen Teilaufgaben; andere Muster beginnen neu. Jeder Teilauftrag eines Auftrags mit Ersatz trägt `job: {id, epoch}`; ein Anbieter lehnt Teilaufträge einer älteren Epoche ab, sobald er eine neuere gesehen hat (`veraltete lease-epoche`). Ein Koordinator, der noch läuft, erfährt bei der nächsten Verlängerung von der Übernahme, bricht ab und verweist Anfragen ab dann an den Ersatz. Bis dahin können beide parallel arbeiten; die Epoche stoppt nur Teilaufträge bei Anbietern, die die neue schon gesehen haben, nicht die eigenen Modelle des Koordinators. Nach einer Übernahme gibt es keinen weiteren Ersatz.
+- **Auftraggeber:** Er erfährt den Ersatz aus den Antworten des Koordinators (`substitute`) und fragt dort nach, wenn der Koordinator nicht antwortet oder den Auftrag nicht mehr kennt. Ein Knoten, der beendet wird, meldet dem Ersatz kein Ergebnis, damit er übernimmt; nach dem Neustart verweisen seine eigenen Aufträge auf den Ersatz.
+- **Nicht umgesetzt:** Idempotenz über `(task_id, subtask_id)` (§ 7.3); unfertige Teilaufträge laufen beim Ersatz erneut. Feinere Prüfpunkte als je Teilaufgabe von `decompose`.
 
 ## 8. Protokoll und Schnittstellen
 
@@ -230,8 +235,8 @@ Neue Nachrichten und Felder (Versionierung wie bisher: neue optionale Payload-Fe
 | `TASK_BID` (bisher „ab Phase 3“) | optionales Gebot vor der Annahme: freie Kapazität, erwartete Laufzeit; der Koordinator kann mehrere Anbieter anfragen und den günstigsten nehmen |
 | `VERIFY_REQUEST` (bisher „ab Phase 3“) | eigene Nachricht für Prüfungen statt `TASK_PROPOSE` mit `role: verifier` |
 | Protokoll `/swarmainet/job/0.1` | asynchrone Aufträge: `JOB_SUBMIT`, `JOB_STATUS`, `JOB_RESULT`, `JOB_CANCEL` (umgesetzt, § 7.4) |
-| Protokoll `/swarmainet/lease/0.1` | `LEASE_CHECKPOINT` (Koordinator → Ersatz), `LEASE_RENEW`, `LEASE_TAKEOVER` |
-| `ProposePayload.lease_epoch` | Epoche des Koordinators (§ 7.3) |
+| Protokoll `/swarmainet/lease/0.1` | `LEASE_CHECKPOINT`, `LEASE_RENEW`, `LEASE_RESULT` (Koordinator → Ersatz), `LEASE_ACK` (umgesetzt, § 7.4) |
+| `ProposePayload.job` | `{id, epoch}`: Auftrag und Lease-Epoche eines Teilauftrags (§ 7.3, umgesetzt) |
 | `TRUST_ATTESTATION` | weiterhin zurückgestellt (§ 2.4) |
 
 Gateway:
@@ -258,7 +263,7 @@ cooperation:
 
 - Profile, Rezeptstatistik und Reglerzustand sind lokal und enthalten keine Prompts, nur Kategorien, Agenten und Ergebnissignale.
 - Prüfpunkte eines Auftrags (§ 7) enthalten Prompts und Teilergebnisse und unterliegen der Freigabeklasse des Auftrags.
-- Asynchrone Aufträge (§ 7.4): Der Koordinator sieht den Auftrag im Klartext und hält die Antwort 24 Stunden in `jobs.json` (0600); der Auftraggeber hält seine eigenen Aufträge ebenfalls dort.
+- Asynchrone Aufträge (§ 7.4): Der Koordinator sieht den Auftrag im Klartext und hält die Antwort 24 Stunden in `jobs.json` (0600); der Auftraggeber hält seine eigenen Aufträge ebenfalls dort. Ein Ersatz hält Prüfpunkte nur im Speicher und verwirft Auftrag und Teilergebnisse, sobald das Ergebnis eintrifft.
 - Canaries sind öffentliche Aufgaben ohne Bezug zu Nutzerdaten.
 
 ## 10. Gate und Messung
@@ -281,7 +286,7 @@ Kennzahlen zusätzlich zum Messplan: Konvergenz des Bandits (wie viele Aufträge
 2. ✅ **Bandit über Rezepte** mit der heutigen Auswahl als Vorwissen, und Muster **Kaskade**. Umgesetzt mit festen Regeln für „unsicher“ (§ 5); Opt-in über `cooperation.selection: bandit`.
 3. ✅ **PI-Regler** für den Prüfaufwand je Kategorie, dazu der Regler für `θ` mit Kriterium 3 der Kaskade (§ 4.2, § 5). Noch nicht: Latenz-Regler.
 4. ✅ **Task-Graph**: Planer, Zerlegen und Verteilen, Synthese. Muster `decompose`, nur auf Wunsch (§ 6). Noch nicht: Wahl durch den Bandit, verschachtelte Zerlegung.
-5. **Asynchrone Aufträge und Lease-Koordinator**, Ausfalltests. Asynchrone Aufträge mit Koordination durch einen vertrauten Peer umgesetzt (§ 7.4); noch nicht: Lease, Prüfpunkte, Ersatzkoordinator.
+5. ✅ **Asynchrone Aufträge und Lease-Koordinator**, Ausfalltests (§ 7.4): Ausfall und Rückkehr des Koordinators über drei Knoten in Tests, Ausfall auf Hardware mit echten Lease-Zeiten. Noch nicht: Idempotenz über Teilauftrags-IDs.
 6. **Canary-Aufgaben** und Manipulationstests.
 
 Jede Stufe bleibt hinter `cooperation.selection: rules` abschaltbar, damit das bisherige Verhalten als Vergleich erhalten bleibt.

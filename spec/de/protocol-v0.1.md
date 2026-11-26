@@ -18,6 +18,7 @@ Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
 | `/swarmainet/task/0.1` | Ein Teilauftrag pro Stream: Angebot, Annahme, Ergebnis, Quittung |
 | `/swarmainet/pex/0.1` | Peer-Austausch (Phase 2, siehe [P2P-Schicht](p2p-layer.md) § 2.4) |
 | `/swarmainet/job/0.1` | Asynchrone Aufträge bei einem koordinierenden Peer (Phase 3, siehe [Kooperation](cooperation.md) § 7.4) |
+| `/swarmainet/lease/0.1` | Prüfpunkte und Lease bei einem Ersatzkoordinator (Phase 3, siehe [Kooperation](cooperation.md) § 7.4) |
 
 - Rahmung: genau eine JSON-Nachricht (Envelope) pro Zeile, abgeschlossen mit `\n`, höchstens 4 MiB.
 - mDNS-Dienstname: `swarmainet-<network_id>`. Private Schwärme nutzen zusätzlich einen libp2p-PSK (dann nur TCP).
@@ -118,6 +119,8 @@ Die Anzeige enthält keine Prompts, internen IPs, Hardware- oder Energiedaten un
 `images` (optional, in einem Element von `messages[]`) trägt eingebettete Bilder: `[{ "mime": "image/png", "data": <base64> }, …]`, Formate `image/png`, `image/jpeg`, `image/webp` und `image/gif`, zusammen höchstens 2,75 MiB je Teilauftrag (`MaxImageBytes`). Agenten, die Bilder verstehen, melden die Modalität `image`. Ein Koordinator schickt Bilder nur an solche Agenten und nie als `reduced` an Fremde, denn ein Bild lässt sich nicht pseudonymisieren ([Freigabeklassen](privacy-classes.md), Regel 10). Ein Anbieter MUSS Bilder ablehnen an einen Agenten ohne `image` (`agent verarbeitet keine bilder`), bei `reduced` von Fremden (`bilder bei reduced nur im vertrauten kreis`) und in unbekannten Formaten oder über der Grenze (`bilder zu groß oder in unbekanntem format`). Er gibt sie im OpenAI-Format als `image_url` mit data-URL an den Chat seines Backends. Anbieter mit älteren Versionen kennen das Feld nicht; sie melden nie `image` und bekommen deshalb nie Bilder.
 
 `stream` (optional, fehlt = false) fordert Zwischenstände an. Der Anbieter schickt dann, während das Modell arbeitet, `TASK_PROGRESS` mit `{ "subtask_id", "status": "delta", "delta", "reasoning" }`: `delta` ist neuer Text der Antwort, `reasoning` neuer Text der Denkphase des Modells, beides seit dem vorigen Zwischenstand. Er SOLL sie bündeln (die Referenzimplementierung schickt höchstens alle 100 ms oder 16 KiB eine Nachricht). Die aneinandergereihten `delta`-Texte sind eine Vorschau; maßgeblich sind `TASK_RESULT`, seine Prüfsumme und die Quittung. Anbieter, die `stream` nicht kennen, schicken keine Zwischenstände, und der Koordinator wartet wie bisher auf das Ergebnis. Aufträge mit `audio` werden nicht gestreamt. Mit `tools` wird nur Text gestreamt: Werkzeug-Aufrufe MUSS der Anbieter aus `TASK_PROGRESS` heraushalten; sie kommen nur im Ergebnis, damit der Auftraggeber sie vor der Weitergabe prüfen kann (Regel 6 der [Freigabeklassen](privacy-classes.md)).
+
+`job` (optional) `{ "id", "epoch" }` nennt den asynchronen Auftrag und seine Lease-Epoche ([Kooperation](cooperation.md) § 7.4). Ein Anbieter MUSS einen Teilauftrag ablehnen, dessen Epoche kleiner ist als die höchste, die er für diesen Auftrag gesehen hat (`veraltete lease-epoche`); er merkt sich Epochen mindestens 6 Stunden.
 
 `depth` zählt die bisherigen Delegationen (beim ersten Empfänger 1). Ein Anbieter MUSS ablehnen, wenn `depth > max_depth`. Weiterdelegationen erben gleiche oder strengere Grenzen und verbrauchen dasselbe Budget.
 

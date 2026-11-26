@@ -27,6 +27,9 @@ type JobRequest struct {
 	Deadline          time.Time       `json:"deadline"`
 	PseudonymizeTerms []string        `json:"pseudonymize_terms,omitempty"`
 	Trace             bool            `json:"trace,omitempty"`
+	// Substitute: gewünschter Ersatzkoordinator (Peer-ID oder "auto");
+	// leer: keiner. Er bekommt Prüfpunkte mit dem Auftrag im Klartext.
+	Substitute string `json:"substitute,omitempty"`
 }
 
 type JobSubmitPayload struct {
@@ -60,6 +63,49 @@ type JobStatusPayload struct {
 	ToolCalls []ToolCall      `json:"tool_calls,omitempty"`
 	Answer    json.RawMessage `json:"answer,omitempty"`
 	Finished  time.Time       `json:"finished,omitzero"`
+	// Substitute: Ersatzkoordinator, der Prüfpunkte hält; bei ihm fragt der
+	// Auftraggeber nach, wenn der Koordinator nicht antwortet.
+	Substitute string `json:"substitute,omitempty"`
+}
+
+// LeaseCheckpointPayload: Prüfpunkt eines Auftrags für den Ersatzkoordinator.
+// Owner: Auftraggeber; leer, wenn der Koordinator selbst der Auftraggeber ist.
+// Plan und Results: bei decompose der Plan und die fertigen Teilergebnisse.
+type LeaseCheckpointPayload struct {
+	JobID   string            `json:"job_id"`
+	Owner   string            `json:"owner,omitempty"`
+	Epoch   int               `json:"epoch"`
+	Expiry  time.Time         `json:"expiry"`
+	Request JobRequest        `json:"request"`
+	Plan    json.RawMessage   `json:"plan,omitempty"`
+	Results map[string]string `json:"results,omitempty"`
+}
+
+// LeaseRenewPayload verlängert den Lease bis Expiry.
+type LeaseRenewPayload struct {
+	JobID  string    `json:"job_id"`
+	Owner  string    `json:"owner,omitempty"`
+	Epoch  int       `json:"epoch"`
+	Expiry time.Time `json:"expiry"`
+}
+
+// LeaseResultPayload: Der Auftrag ist abgeschlossen; der Ersatz hält das
+// Ergebnis für den Auftraggeber bereit und übernimmt nicht mehr.
+type LeaseResultPayload struct {
+	JobID  string           `json:"job_id"`
+	Owner  string           `json:"owner,omitempty"`
+	Epoch  int              `json:"epoch"`
+	Result JobStatusPayload `json:"result"`
+}
+
+// LeaseAckPayload: Antwort des Ersatzes. TakenOver: Er hat den Auftrag mit
+// Epoch übernommen; der bisherige Koordinator bricht ab.
+type LeaseAckPayload struct {
+	JobID     string `json:"job_id"`
+	OK        bool   `json:"ok"`
+	TakenOver bool   `json:"taken_over,omitempty"`
+	Epoch     int    `json:"epoch,omitempty"`
+	Error     string `json:"error,omitempty"`
 }
 
 // JobFinal: Der Auftrag ist abgeschlossen; der Zustand ändert sich nicht mehr.
