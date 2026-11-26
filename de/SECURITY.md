@@ -19,7 +19,7 @@ Bekannte Grenzen stehen im [Bedrohungsmodell](../spec/de/threat-model.md) und un
 
 ## Hinweise für den Betrieb
 
-- SwarmAiNet ist nicht unabhängig geprüft. Vertrauliche Inhalte gehören nur in private Netze oder Gruppennetze.
+- AI-Swarms.net ist nicht unabhängig geprüft. Vertrauliche Inhalte gehören nur in private Netze oder Gruppennetze.
 - Schlüsseldateien unter `~/.swarmainet/` und Einladungslinks mit Schlüssel sind Zugangsdaten. Wer sie hat, ist Mitglied.
 - Werkzeuge führt Ihre Anwendung aus, nicht das Modell. Ein Modell, das Werkzeuge sieht, kann Ihre Anwendung zu deren Aufruf bewegen. Geben Sie fremden Netzen nur Werkzeuge frei, deren Aufruf unbedenklich ist.
 - Den Wurzelschlüssel eines Gruppennetzes offline lagern.

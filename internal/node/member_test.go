@@ -79,7 +79,7 @@ func (n testNet) config(t *testing.T, id *identity.Identity, role string, extra 
 	}
 }
 
-// rawPeer ist ein libp2p-Knoten ohne SwarmAiNet: ein Fremder, der von Hand spricht.
+// rawPeer ist ein libp2p-Knoten ohne AI-Swarms.net: ein Fremder, der von Hand spricht.
 func rawPeer(t *testing.T, ctx context.Context, id *identity.Identity, target string) (host.Host, peer.ID) {
 	t.Helper()
 	h, err := libp2p.New(libp2p.Identity(id.Priv), libp2p.ListenAddrStrings("/ip4/127.0.0.1/tcp/0"), libp2p.EnableRelay())

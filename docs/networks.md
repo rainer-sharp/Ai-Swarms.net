@@ -2,7 +2,7 @@
 
 **English** · [Deutsch](de/networks.md)
 
-SwarmAiNet knows three kinds of networks. A node can belong to several at once.
+AI-Swarms.net knows three kinds of networks. A node can belong to several at once.
 
 | | Private network | Membership network | Open network |
 |---|---|---|---|

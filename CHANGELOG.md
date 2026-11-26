@@ -2,14 +2,28 @@
 
 **English** · [Deutsch](de/CHANGELOG.md)
 
-All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/) with the usual caveat for 0.x: incompatible changes are still possible between minor versions.
+All notable changes to AI-Swarms.net. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/) with the usual caveat for 0.x: incompatible changes are still possible between minor versions.
 
 ## [Unreleased]
+
+## [0.8.0] – 2026-11-26
+
+Long tasks can now run in the background: a job is submitted, the result fetched later, also from a trusted node that coordinates while your own device is offline, and a substitute coordinator takes over if the coordinator fails. With this, stages 1 to 5 of phase 3 are implemented. The protocol stays at version 0.1; there are two new protocols and an optional field in subtasks, so nodes with 0.8.0 and 0.7.0 work together. Existing configurations keep working without changes.
 
 ### Added
 
 - **Asynchronous jobs (cooperation stage 5):** `POST /v1/jobs` accepts a chat request and responds immediately with a job ID; `GET /v1/jobs/{id}` returns status and, when done, the answer, `DELETE` cancels or deletes. With the header `X-SwarmAiNet-Coordinator`, a trusted node with `cooperation.coordinate_for_others: true` coordinates the job, so the requester may go offline in the meantime (new protocol `/swarmainet/job/0.1`). Finished jobs stay retrievable for 24 hours, also after a restart. ([usage](docs/usage.md#asynchronous-jobs), [cooperation](spec/cooperation.md) § 7.4)
 - **Substitute coordinator (lease):** with `X-SwarmAiNet-Substitute: <peer-id>` or `auto`, a second trusted node holds checkpoints of a job (the task, with `decompose` also finished subtasks) and takes over when the coordinator stops renewing its lease for 60 seconds; the requester then fetches the result there. Providers refuse subtasks of an older lease epoch, so that a coordinator that returns does not work twice. New protocol `/swarmainet/lease/0.1` and optional field `job` in subtasks. ([cooperation](spec/cooperation.md) § 7.4, [protocol](spec/protocol-v0.1.md) § 4.2)
+
+### Changed
+
+- The project is now called **AI-Swarms.net** everywhere, like its domain and repository (previously "SwarmAiNet"). Only the display name changes: program `swarmainet`, model names `swarmainet/…`, headers `X-SwarmAiNet-…`, the directory `~/.swarmainet` and the protocols stay as they are.
+
+### Upgrade notes
+
+- Jobs are an addition to the API (`/v1/jobs`); chat requests and Open WebUI work as before. The node now keeps `jobs.json` in its data directory.
+- Requester, coordinator and substitute all need 0.8.0. A node only coordinates or holds checkpoints for others with `cooperation.coordinate_for_others: true`; it then sees their jobs in plain text.
+- Providers with 0.7.0 or older ignore the lease epoch of subtasks; the protection against double execution after a takeover only works with providers on 0.8.0.
 
 ## [0.7.0] – 2026-11-24
 
@@ -145,6 +159,7 @@ The protocol is unchanged (version 0.1): nodes with 0.2.0 and 0.1.0 work togethe
 
 First public version: local swarm (phase 1) and P2P layer with private networks and membership networks, tested on hardware across two sites.
 
+[0.8.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.4.0...v0.5.0

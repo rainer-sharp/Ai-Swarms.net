@@ -2,7 +2,7 @@
 
 [English](../networks.md) · **Deutsch**
 
-SwarmAiNet kennt drei Arten von Netzen. Ein Knoten kann mehreren gleichzeitig angehören.
+AI-Swarms.net kennt drei Arten von Netzen. Ein Knoten kann mehreren gleichzeitig angehören.
 
 | | Privates Netz | Mitgliedsnetz | Offenes Netz |
 |---|---|---|---|

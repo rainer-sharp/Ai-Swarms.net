@@ -42,7 +42,7 @@ cd Ai-Swarms.net
 deploy/linux/gruppe-beitreten.sh
 ```
 
-Das Skript lädt die Go-Version aus `go.mod` nach `~/.local/go` und prüft die Prüfsumme, baut das Programm, legt `~/gruppe-test` an, fragt nach dem Einladungslink und startet den Knoten. Ein vorhandener SwarmAiNet-Knoten bleibt unberührt, weil Verzeichnis, Port (4714) und Gateway (7715) eigene sind. Ein erneuter Aufruf aktualisiert das Programm und startet den Knoten neu, ohne erneut beizutreten.
+Das Skript lädt die Go-Version aus `go.mod` nach `~/.local/go` und prüft die Prüfsumme, baut das Programm, legt `~/gruppe-test` an, fragt nach dem Einladungslink und startet den Knoten. Ein vorhandener AI-Swarms.net-Knoten bleibt unberührt, weil Verzeichnis, Port (4714) und Gateway (7715) eigene sind. Ein erneuter Aufruf aktualisiert das Programm und startet den Knoten neu, ohne erneut beizutreten.
 
 Den Link erzeugt der Aussteller: `swarmainet member invite -net m-… -peer <adresse des helfers>`.
 

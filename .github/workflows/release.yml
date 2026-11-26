@@ -39,5 +39,5 @@ jobs:
             pre=""
             case "$tag" in *-*) pre="--prerelease" ;; esac
             gh release create "$tag" dist/* --verify-tag $pre \
-              --title "SwarmAiNet ${tag#v}" --notes-file notes.md
+              --title "AI-Swarms.net ${tag#v}" --notes-file notes.md
           fi

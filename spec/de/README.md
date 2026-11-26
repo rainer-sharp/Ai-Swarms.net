@@ -2,7 +2,7 @@
 
 [English](../README.md) · **Deutsch**
 
-Versionierte, sprachunabhängige Spezifikation von SwarmAiNet. Grundlage ist das [Gesamtkonzept](../../docs/de/concept.md).
+Versionierte, sprachunabhängige Spezifikation von AI-Swarms.net. Grundlage ist das [Gesamtkonzept](../../docs/de/concept.md).
 
 | Dokument | Inhalt |
 |---|---|

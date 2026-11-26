@@ -1,8 +1,8 @@
-# SwarmAiNet
+# AI-Swarms.net
 
 [English](../README.md) · **Deutsch**
 
-**Lokale KI-Modelle bilden ein Team.** SwarmAiNet verbindet die Rechner, auf denen Sie Modelle mit Ollama, llama.cpp, vLLM oder LM Studio betreiben, zu einem Schwarm. Für jede Anfrage stellt er ein Team zusammen: Ein Modell entwirft, ein Modell einer anderen Familie prüft, und nur bei Mängeln wird nachgebessert. Ihre Anwendungen sprechen mit dem Schwarm wie mit einem einzelnen OpenAI-Endpunkt.
+**Lokale KI-Modelle bilden ein Team.** AI-Swarms.net verbindet die Rechner, auf denen Sie Modelle mit Ollama, llama.cpp, vLLM oder LM Studio betreiben, zu einem Schwarm. Für jede Anfrage stellt er ein Team zusammen: Ein Modell entwirft, ein Modell einer anderen Familie prüft, und nur bei Mängeln wird nachgebessert. Ihre Anwendungen sprechen mit dem Schwarm wie mit einem einzelnen OpenAI-Endpunkt.
 
 > **Status: Forschungsprototyp.** Der lokale Schwarm sowie private Netze, Gruppennetze und das offene Netz laufen auf echter Hardware über mehrere Standorte. Ob der Schwarm bessere Antworten liefert als das beste Einzelmodell, ist noch nicht belegt. Protokoll in Version 0.1, inkompatible Änderungen sind möglich. Details: [Stand](../docs/de/status.md).
 
@@ -60,7 +60,7 @@ Oder in Open WebUI unter *Einstellungen → Verbindungen* die URL `http://127.0.
 
 ## Sicherheit
 
-SwarmAiNet ist nicht auditiert. Geben Sie vertrauliche Inhalte nur an eigene Geräte oder Mitglieder eines Gruppennetzes. Im offenen Netz sehen fremde Knoten, was Sie als `public` senden. Schwachstellen bitte nicht öffentlich melden, sondern wie in [SECURITY.md](SECURITY.md) beschrieben.
+AI-Swarms.net ist nicht auditiert. Geben Sie vertrauliche Inhalte nur an eigene Geräte oder Mitglieder eines Gruppennetzes. Im offenen Netz sehen fremde Knoten, was Sie als `public` senden. Schwachstellen bitte nicht öffentlich melden, sondern wie in [SECURITY.md](SECURITY.md) beschrieben.
 
 ## Mitwirken
 
@@ -68,7 +68,7 @@ Fehlerberichte, Messungen mit anderen Modellen und Erfahrungen aus anderen Netze
 
 ## Lizenz
 
-SwarmAiNet ist freie Software unter der [GNU AGPL-3.0](../LICENSE). Wer es verändert und weitergibt oder als Dienst im Netz anbietet, muss den Quellcode offenlegen. Für den Einbau in geschlossene Produkte gibt es eine [kommerzielle Lizenz](../COMMERCIAL.md).
+AI-Swarms.net ist freie Software unter der [GNU AGPL-3.0](../LICENSE). Wer es verändert und weitergibt oder als Dienst im Netz anbietet, muss den Quellcode offenlegen. Für den Einbau in geschlossene Produkte gibt es eine [kommerzielle Lizenz](../COMMERCIAL.md).
 
 Die Dokumentation und die Spezifikation stehen unter [CC BY 4.0](../LICENSE-DOCS), Abgrenzung siehe [COMMERCIAL.md](../COMMERCIAL.md#dokumentation-cc-by-40).
 

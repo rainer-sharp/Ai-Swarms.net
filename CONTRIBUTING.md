@@ -2,7 +2,7 @@
 
 **English** · [Deutsch](de/CONTRIBUTING.md)
 
-Thank you for your interest. SwarmAiNet is a research prototype; the following are especially helpful:
+Thank you for your interest. AI-Swarms.net is a research prototype; the following are especially helpful:
 
 - **Bug reports** with the output of `swarmainet status`, the log (`-v`) and a description of the network (network type, NAT, IPv6). Please redact peer IDs, addresses and invitation links first.
 - **Experience from other networks:** other routers, mobile networks, DS-Lite, corporate networks, Windows and macOS.
@@ -25,7 +25,7 @@ The tests start several nodes in the same process and need neither a network nor
 For maintainers: complete the version's section in `CHANGELOG.md` and `de/CHANGELOG.md`, then push an annotated tag:
 
 ```sh
-git tag -a v0.4.0 -m "SwarmAiNet 0.4.0"
+git tag -a v0.4.0 -m "AI-Swarms.net 0.4.0"
 git push origin v0.4.0
 ```
 
@@ -41,7 +41,7 @@ The [release workflow](.github/workflows/release.yml) then tests, builds the arc
 
 ## License and contributor agreement
 
-SwarmAiNet is licensed under the [GNU AGPL-3.0](LICENSE) and additionally under a [commercial license](COMMERCIAL.md) (in German). To keep both possible, we only accept contributions under the [contributor agreement](CLA.md) (in German): you keep your rights but grant the project a right of use that also covers the commercial license. Agree by commenting in your first pull request.
+AI-Swarms.net is licensed under the [GNU AGPL-3.0](LICENSE) and additionally under a [commercial license](COMMERCIAL.md) (in German). To keep both possible, we only accept contributions under the [contributor agreement](CLA.md) (in German): you keep your rights but grant the project a right of use that also covers the commercial license. Agree by commenting in your first pull request.
 
 Contributions to the documentation (`docs/`, `spec/`, guides) are licensed under [CC BY 4.0](LICENSE-DOCS); the contributor agreement applies to them as well.
 

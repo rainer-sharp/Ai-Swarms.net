@@ -1,6 +1,6 @@
 # Lizenzen
 
-Der Programmcode von SwarmAiNet steht unter zwei Lizenzen zur Wahl (Doppellizenz):
+Der Programmcode von AI-Swarms.net steht unter zwei Lizenzen zur Wahl (Doppellizenz):
 
 1. **GNU Affero General Public License 3.0** ([`LICENSE`](LICENSE)), kostenlos.
 2. **Kommerzielle Lizenz** von Rainer Sestig, auf Anfrage.
@@ -9,21 +9,21 @@ Die Dokumentation steht unter [CC BY 4.0](#dokumentation-cc-by-40).
 
 ## Wann reicht die AGPL-3.0?
 
-In den meisten Fällen. Sie dürfen SwarmAiNet ohne Einschränkung nutzen, verändern und weitergeben, auch in einer Firma und auch für Geld. Die Bedingung: Wer veränderte Fassungen weitergibt **oder anderen über ein Netz zur Verfügung stellt**, muss deren vollständigen Quellcode unter der AGPL-3.0 offenlegen.
+In den meisten Fällen. Sie dürfen AI-Swarms.net ohne Einschränkung nutzen, verändern und weitergeben, auch in einer Firma und auch für Geld. Die Bedingung: Wer veränderte Fassungen weitergibt **oder anderen über ein Netz zur Verfügung stellt**, muss deren vollständigen Quellcode unter der AGPL-3.0 offenlegen.
 
 Ohne Weiteres erlaubt sind zum Beispiel:
 
 - eigene Knoten, Helfer und Tracker betreiben, privat oder in einer Firma,
-- SwarmAiNet unverändert weitergeben oder als Dienst anbieten,
+- AI-Swarms.net unverändert weitergeben oder als Dienst anbieten,
 - Änderungen, die Sie unter der AGPL-3.0 veröffentlichen.
 
 ## Wann brauchen Sie die kommerzielle Lizenz?
 
 Wenn Sie die Bedingungen der AGPL-3.0 nicht erfüllen können oder wollen, zum Beispiel:
 
-- SwarmAiNet oder Teile davon in ein Produkt einbauen, dessen Quellcode Sie nicht offenlegen,
+- AI-Swarms.net oder Teile davon in ein Produkt einbauen, dessen Quellcode Sie nicht offenlegen,
 - einen veränderten Knoten, Helfer oder Tracker als Dienst für andere betreiben, ohne die Änderungen zu veröffentlichen,
-- SwarmAiNet mit Software kombinieren, deren Lizenz sich mit der AGPL-3.0 nicht verträgt.
+- AI-Swarms.net mit Software kombinieren, deren Lizenz sich mit der AGPL-3.0 nicht verträgt.
 
 Die kommerzielle Lizenz wird je Fall vereinbart.
 
@@ -41,7 +41,7 @@ Als Dokumentation gelten:
 - die Grafiken `deploy/raspberry-pi/*.svg`,
 - die Testvektoren der Mitgliedschaft unter `internal/membership/testdata/`, damit andere Umsetzungen sie frei verwenden können.
 
-Namensnennung zum Beispiel: „SwarmAiNet-Dokumentation, © 2026 Rainer Sestig, CC BY 4.0, github.com/rainer-sharp/Ai-Swarms.net“.
+Namensnennung zum Beispiel: „AI-Swarms.net-Dokumentation, © 2026 Rainer Sestig, CC BY 4.0, github.com/rainer-sharp/Ai-Swarms.net“.
 
 Nicht dazu gehören der Programmcode, Konfigurationsvorlagen, Skripte und die übrigen Testdaten (AGPL-3.0 bzw. kommerzielle Lizenz) sowie die Rechtstexte `LICENSE`, `LICENSE-DOCS`, `COMMERCIAL.md` und `CLA.md`.
 

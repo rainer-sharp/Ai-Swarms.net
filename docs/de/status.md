@@ -2,7 +2,7 @@
 
 [English](../status.md) · **Deutsch**
 
-SwarmAiNet ist ein **Forschungsprototyp**. Die Netzschicht ist weiter entwickelt als die Zusammenarbeit der Modelle: Die Auswahl folgt bisher festen Regeln, und ein Qualitätsvorteil des Schwarms gegenüber dem besten Einzelmodell ist noch nicht nachgewiesen (siehe [Benchmark](#benchmark)).
+AI-Swarms.net ist ein **Forschungsprototyp**. Die Netzschicht ist weiter entwickelt als die Zusammenarbeit der Modelle: Die Auswahl folgt bisher festen Regeln, und ein Qualitätsvorteil des Schwarms gegenüber dem besten Einzelmodell ist noch nicht nachgewiesen (siehe [Benchmark](#benchmark)).
 
 ## Phasen
 

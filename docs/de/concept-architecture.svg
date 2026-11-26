@@ -6,7 +6,7 @@
   <text x="32" y="38" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Nutzer und Anwendungen</text>
   <text x="32" y="57" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">Open WebUI, IDE, Coding-Agenten</text>
   <rect x="20" y="96" width="570" height="232" rx="10" fill="#f3f4f6" stroke="#b8bcc2"/>
-  <text x="576" y="118" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="end">Eigener SwarmAiNet-Knoten</text>
+  <text x="576" y="118" font-size="13" font-weight="bold" fill="#1f2328" text-anchor="end">Eigener AI-Swarms.net-Knoten</text>
   <rect x="34" y="130" width="174" height="82" rx="8" fill="#ffffff" stroke="#b8bcc2" stroke-width="1.2"/>
   <text x="46" y="152" font-size="14" font-weight="bold" fill="#1f2328" text-anchor="start">Gateway</text>
   <text x="46" y="171" font-size="12" font-weight="normal" fill="#59636e" text-anchor="start">OpenAI-API, nur localhost</text>

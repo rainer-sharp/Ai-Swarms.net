@@ -1,4 +1,4 @@
-# Beispielkonfiguration für einen SwarmAiNet-Knoten im lokalen Schwarm (Phase 1).
+# Beispielkonfiguration für einen AI-Swarms.net-Knoten im lokalen Schwarm (Phase 1).
 # Ablage: ~/.swarmainet/config.yaml  (erzeugen mit `swarmainet init`)
 
 node:

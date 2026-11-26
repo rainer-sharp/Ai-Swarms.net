@@ -1,8 +1,8 @@
-# SwarmAiNet
+# AI-Swarms.net
 
 **English** · [Deutsch](de/README.md)
 
-**Local AI models form a team.** SwarmAiNet connects the computers on which you run models with Ollama, llama.cpp, vLLM or LM Studio into a swarm. For each request it assembles a team: one model drafts, a model from a different family reviews, and revisions happen only if flaws are found. Your applications talk to the swarm as if it were a single OpenAI endpoint.
+**Local AI models form a team.** AI-Swarms.net connects the computers on which you run models with Ollama, llama.cpp, vLLM or LM Studio into a swarm. For each request it assembles a team: one model drafts, a model from a different family reviews, and revisions happen only if flaws are found. Your applications talk to the swarm as if it were a single OpenAI endpoint.
 
 > **Status: research prototype.** The local swarm as well as private networks, group networks and the open network run on real hardware across multiple sites. Whether the swarm delivers better answers than the best single model has not yet been shown. Protocol version 0.1; incompatible changes are possible. Details: [Status](docs/status.md).
 
@@ -62,7 +62,7 @@ Or in Open WebUI, enter the URL `http://127.0.0.1:7711/v1` under *Settings → C
 
 ## Security
 
-SwarmAiNet has not been audited. Share confidential content only with your own devices or members of a group network. In the open network, foreign nodes see whatever you send as `public`. Please do not report vulnerabilities publicly; follow the process described in [SECURITY.md](SECURITY.md).
+AI-Swarms.net has not been audited. Share confidential content only with your own devices or members of a group network. In the open network, foreign nodes see whatever you send as `public`. Please do not report vulnerabilities publicly; follow the process described in [SECURITY.md](SECURITY.md).
 
 ## Contributing
 
@@ -70,7 +70,7 @@ Bug reports, measurements with other models and experience from other networks a
 
 ## License
 
-SwarmAiNet is free software under the [GNU AGPL-3.0](LICENSE). Anyone who modifies and distributes it, or offers it as a network service, must disclose the source code. A [commercial license](COMMERCIAL.md) (in German) is available for use in closed products.
+AI-Swarms.net is free software under the [GNU AGPL-3.0](LICENSE). Anyone who modifies and distributes it, or offers it as a network service, must disclose the source code. A [commercial license](COMMERCIAL.md) (in German) is available for use in closed products.
 
 The documentation and specification are licensed under [CC BY 4.0](LICENSE-DOCS); for the distinction see [COMMERCIAL.md](COMMERCIAL.md#dokumentation-cc-by-40) (in German).
 

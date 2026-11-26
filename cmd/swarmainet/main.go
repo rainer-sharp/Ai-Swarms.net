@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
 
-// swarmainet ist der SwarmAiNet-Knoten.
+// swarmainet ist der AI-Swarms.net-Knoten.
 //
 //	swarmainet init      Konfiguration und Schlüssel anlegen
 //	swarmainet run       Knoten starten
@@ -41,7 +41,7 @@ import (
 )
 
 func usage() {
-	fmt.Fprintln(os.Stderr, `SwarmAiNet Knoten
+	fmt.Fprintln(os.Stderr, `AI-Swarms.net Knoten
 
 Befehle:
   init      Konfiguration und Schlüssel anlegen, standardmäßig mit eigenem privatem Netz

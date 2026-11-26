@@ -19,7 +19,7 @@ Known limitations are described in the [threat model](spec/threat-model.md) and 
 
 ## Operating notes
 
-- SwarmAiNet has not been independently audited. Confidential content belongs only in private networks or group networks.
+- AI-Swarms.net has not been independently audited. Confidential content belongs only in private networks or group networks.
 - Key files under `~/.swarmainet/` and invitation links containing a key are credentials. Whoever has them is a member.
 - Tools are executed by your application, not by the model. A model that sees tools can get your application to call them. Only allow tools for foreign networks whose invocation is harmless.
 - Keep the root key of a group network offline.

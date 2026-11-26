@@ -2,7 +2,7 @@
 
 **English** · [Deutsch](de/status.md)
 
-SwarmAiNet is a **research prototype**. The network layer is more advanced than the collaboration of the models: selection so far follows fixed rules, and a quality advantage of the swarm over the best single model has not yet been shown (see [Benchmark](#benchmark)).
+AI-Swarms.net is a **research prototype**. The network layer is more advanced than the collaboration of the models: selection so far follows fixed rules, and a quality advantage of the swarm over the best single model has not yet been shown (see [Benchmark](#benchmark)).
 
 ## Phases
 

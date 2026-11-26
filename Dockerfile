@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-# SwarmAiNet-Knoten als Container, vor allem für Helferknoten und Tracker
+# AI-Swarms.net-Knoten als Container, vor allem für Helferknoten und Tracker
 # (spec/p2p-layer.md § 6.1). Bauen: docker build -t swarmainet .
 # Mit Version (sonst meldet der Knoten „dev“, .git kommt nicht ins Image):
 #   docker build --build-arg VERSION=$(git describe --tags --always --dirty) -t swarmainet .

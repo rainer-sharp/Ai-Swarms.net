@@ -1,8 +1,8 @@
-# systemd-Benutzerdienst für einen SwarmAiNet-Knoten (deploy/linux/README.md).
+# systemd-Benutzerdienst für einen AI-Swarms.net-Knoten (deploy/linux/README.md).
 # Läuft als angemeldeter Benutzer mit ~/.swarmainet/config.yaml.
 # Ablage: ~/.config/systemd/user/swarmainet.service
 [Unit]
-Description=SwarmAiNet-Knoten
+Description=AI-Swarms.net-Knoten
 
 [Service]
 ExecStart=%h/.local/bin/swarmainet run -config %h/.swarmainet/config.yaml

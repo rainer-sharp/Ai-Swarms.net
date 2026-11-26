@@ -1,10 +1,10 @@
-# SwarmAiNet: Gesamtkonzept
+# AI-Swarms.net: Gesamtkonzept
 
 [English](../concept.md) · **Deutsch**
 
-**Fassung 2 vom 18.11.2026, zuletzt geändert am 21.11.2026.** Projekt und Domain heißen **Ai-Swarms.net**, die Software **SwarmAiNet** (Programm `swarmainet`). Die erste Fassung vom 14.10.2026 trug noch den Arbeitstitel „KI-Schwarm“ und liegt im [Archiv](../archive/concept-2026-10-14-de.pdf). Sie führte ein Claude- und ein GPT-5-Konzept zusammen und entschied die Punkte, in denen sie sich widersprachen. Diese Fassung bringt das Konzept auf den Stand von Spezifikation und Umsetzung; was sich gegenüber der ersten Fassung geändert hat, steht am Ende ([Änderungen](#änderungen-gegenüber-fassung-1)). Verbindlich im Detail ist die [Spezifikation](../../spec/de/README.md).
+**Fassung 2 vom 18.11.2026, zuletzt geändert am 21.11.2026.** Projekt, Software und Domain heißen **AI-Swarms.net** (Programm `swarmainet`; bis 26.11.2026 hieß die Software „SwarmAiNet“). Die erste Fassung vom 14.10.2026 trug noch den Arbeitstitel „KI-Schwarm“ und liegt im [Archiv](../archive/concept-2026-10-14-de.pdf). Sie führte ein Claude- und ein GPT-5-Konzept zusammen und entschied die Punkte, in denen sie sich widersprachen. Diese Fassung bringt das Konzept auf den Stand von Spezifikation und Umsetzung; was sich gegenüber der ersten Fassung geändert hat, steht am Ende ([Änderungen](#änderungen-gegenüber-fassung-1)). Verbindlich im Detail ist die [Spezifikation](../../spec/de/README.md).
 
-SwarmAiNet ist ein selbstverwaltetes P2P-Netz, in dem unterschiedliche lokale KI-Modelle pro Aufgabe ein Team bilden, sich gegenseitig prüfen und so bessere Ergebnisse liefern sollen als das beste Einzelmodell. Es verbindet zuerst die eigenen Geräte, dann Gruppen und Firmen und schließlich beliebige Teilnehmer mit eingeschränkten Rechten. Der Mehrwert gegenüber dem besten Einzelmodell wird nicht vorausgesetzt, sondern gemessen.
+AI-Swarms.net ist ein selbstverwaltetes P2P-Netz, in dem unterschiedliche lokale KI-Modelle pro Aufgabe ein Team bilden, sich gegenseitig prüfen und so bessere Ergebnisse liefern sollen als das beste Einzelmodell. Es verbindet zuerst die eigenen Geräte, dann Gruppen und Firmen und schließlich beliebige Teilnehmer mit eingeschränkten Rechten. Der Mehrwert gegenüber dem besten Einzelmodell wird nicht vorausgesetzt, sondern gemessen.
 
 ## Entscheidungen
 
@@ -413,7 +413,7 @@ Die P2P-Schicht wurde in Phase 2 robust gemacht, bevor in Phase 3 die Schwarmint
 
 | Thema | Fassung 1 (14.10.2026) | Fassung 2 (18.11.2026) |
 |---|---|---|
-| Name | KI-Schwarm, Protokoll `/ki-schwarm/…` | SwarmAiNet, Projekt und Domain Ai-Swarms.net, Protokoll `/swarmainet/…` |
+| Name | KI-Schwarm, Protokoll `/ki-schwarm/…` | AI-Swarms.net (Domain ai-swarms.net), Programm und Protokoll `swarmainet` |
 | Netzarten | offenes Netz und private Schwärme | drei Netzarten mit Priorität: privat, Gruppe, offen; Gruppennetze mit Zertifikaten neu |
 | Relay | Opt-in | im offenen Netz automatisch bei öffentlicher Erreichbarkeit |
 | Teilnahme am offenen Netz | Opt-in | wieder Opt-in: `init` legt standardmäßig ein eigenes privates Netz an, `init -open` für das offene Netz |

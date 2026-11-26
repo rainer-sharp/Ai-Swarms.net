@@ -1,7 +1,7 @@
-# systemd-Unit für einen SwarmAiNet-Knoten (deploy/raspberry-pi/README.md).
+# systemd-Unit für einen AI-Swarms.net-Knoten (deploy/raspberry-pi/README.md).
 # Ablage: /etc/systemd/system/swarmainet.service
 [Unit]
-Description=SwarmAiNet-Knoten
+Description=AI-Swarms.net-Knoten
 After=network-online.target
 Wants=network-online.target
 

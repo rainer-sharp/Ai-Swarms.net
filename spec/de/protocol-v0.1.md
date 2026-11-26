@@ -1,4 +1,4 @@
-# SwarmAiNet Protokoll v0.1
+# AI-Swarms.net Protokoll v0.1
 
 [English](../protocol-v0.1.md) · **Deutsch**
 

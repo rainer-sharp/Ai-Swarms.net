@@ -2,14 +2,28 @@
 
 [English](../CHANGELOG.md) · **Deutsch**
 
-Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/); die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/) mit dem üblichen Vorbehalt für 0.x: Zwischen Minor-Versionen sind inkompatible Änderungen noch möglich.
+Alle nennenswerten Änderungen an AI-Swarms.net. Das Format folgt [Keep a Changelog](https://keepachangelog.com/de/1.1.0/); die Versionen folgen [Semantic Versioning](https://semver.org/lang/de/) mit dem üblichen Vorbehalt für 0.x: Zwischen Minor-Versionen sind inkompatible Änderungen noch möglich.
 
 ## [Unveröffentlicht]
+
+## [0.8.0] – 2026-11-26
+
+Lange Aufträge können jetzt im Hintergrund laufen: Ein Auftrag wird abgegeben und das Ergebnis später abgeholt, auch von einem vertrauten Knoten, der koordiniert, während das eigene Gerät offline ist, und ein Ersatzkoordinator übernimmt, wenn der Koordinator ausfällt. Damit sind die Stufen 1 bis 5 von Phase 3 umgesetzt. Das Protokoll bleibt bei Version 0.1; es gibt zwei neue Protokolle und ein optionales Feld in Teilaufträgen, Knoten mit 0.8.0 und 0.7.0 arbeiten also zusammen. Bestehende Konfigurationen funktionieren ohne Änderung weiter.
 
 ### Hinzugefügt
 
 - **Asynchrone Aufträge (Kooperation Stufe 5):** `POST /v1/jobs` nimmt eine Chat-Anfrage an und antwortet sofort mit einer Auftragskennung; `GET /v1/jobs/{id}` liefert Zustand und, wenn fertig, die Antwort, `DELETE` bricht ab oder löscht. Mit dem Header `X-SwarmAiNet-Coordinator` koordiniert ein vertrauter Knoten mit `cooperation.coordinate_for_others: true` den Auftrag, sodass der Auftraggeber zwischendurch offline gehen darf (neues Protokoll `/swarmainet/job/0.1`). Abgeschlossene Aufträge bleiben 24 Stunden abrufbar, auch nach einem Neustart. ([Nutzung](../docs/de/usage.md#asynchrone-aufträge), [Kooperation](../spec/de/cooperation.md) § 7.4)
 - **Ersatzkoordinator (Lease):** Mit `X-SwarmAiNet-Substitute: <peer-id>` oder `auto` hält ein zweiter vertrauter Knoten Prüfpunkte eines Auftrags (den Auftrag, bei `decompose` auch fertige Teilaufgaben) und übernimmt, wenn der Koordinator seinen Lease 60 Sekunden lang nicht verlängert; der Auftraggeber holt das Ergebnis dann dort ab. Anbieter lehnen Teilaufträge einer älteren Lease-Epoche ab, damit ein zurückkehrender Koordinator nicht doppelt arbeitet. Neues Protokoll `/swarmainet/lease/0.1` und optionales Feld `job` in Teilaufträgen. ([Kooperation](../spec/de/cooperation.md) § 7.4, [Protokoll](../spec/de/protocol-v0.1.md) § 4.2)
+
+### Geändert
+
+- Das Projekt heißt jetzt überall **AI-Swarms.net**, wie Domain und Repository (bisher „SwarmAiNet“). Nur der Anzeigename ändert sich: Programm `swarmainet`, Modellnamen `swarmainet/…`, Header `X-SwarmAiNet-…`, das Verzeichnis `~/.swarmainet` und die Protokolle bleiben, wie sie sind.
+
+### Hinweise zum Aktualisieren
+
+- Aufträge sind eine Ergänzung der API (`/v1/jobs`); Chat-Anfragen und Open WebUI funktionieren wie bisher. Der Knoten legt jetzt `jobs.json` in seinem Datenverzeichnis an.
+- Auftraggeber, Koordinator und Ersatz brauchen alle 0.8.0. Ein Knoten koordiniert oder hält Prüfpunkte für andere nur mit `cooperation.coordinate_for_others: true`; er sieht deren Aufträge dann im Klartext.
+- Anbieter mit 0.7.0 oder älter beachten die Lease-Epoche von Teilaufträgen nicht; der Schutz vor doppelter Ausführung nach einer Übernahme wirkt nur bei Anbietern mit 0.8.0.
 
 ## [0.7.0] – 2026-11-24
 
@@ -145,6 +159,7 @@ Das Protokoll ist unverändert (Version 0.1): Knoten mit 0.2.0 und 0.1.0 arbeite
 
 Erste öffentliche Version: lokaler Schwarm (Phase 1) und P2P-Schicht mit privaten Netzen und Mitgliedsnetzen, auf Hardware über zwei Standorte getestet.
 
+[0.8.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rainer-sharp/Ai-Swarms.net/compare/v0.4.0...v0.5.0

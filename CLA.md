@@ -2,7 +2,7 @@
 
 > **Entwurf.** Vor der Veröffentlichung von einer Anwältin oder einem Anwalt für IT-Recht prüfen lassen. Eine englische Fassung kann für internationale Beitragende sinnvoll sein.
 
-Diese Vereinbarung gilt zwischen Ihnen („Beitragende“) und Rainer Sestig („Projektinhaber“) für alle Beiträge zum Projekt SwarmAiNet (Repository `github.com/rainer-sharp/Ai-Swarms.net`).
+Diese Vereinbarung gilt zwischen Ihnen („Beitragende“) und Rainer Sestig („Projektinhaber“) für alle Beiträge zum Projekt AI-Swarms.net (Repository `github.com/rainer-sharp/Ai-Swarms.net`).
 
 ## 1. Begriffe
 
@@ -38,6 +38,6 @@ Der Projektinhaber muss Beiträge nicht aufnehmen. Beiträge werden ohne Gewähr
 
 Sie stimmen dieser Vereinbarung zu, indem Sie in Ihrem ersten Pull Request folgenden Satz als Kommentar schreiben:
 
-> Ich habe die Beitragsvereinbarung (CLA.md) gelesen und stimme ihr für alle meine Beiträge zu SwarmAiNet zu.
+> Ich habe die Beitragsvereinbarung (CLA.md) gelesen und stimme ihr für alle meine Beiträge zu AI-Swarms.net zu.
 
 Es gilt deutsches Recht.

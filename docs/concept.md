@@ -1,10 +1,10 @@
-# SwarmAiNet: overall concept
+# AI-Swarms.net: overall concept
 
 **English** · [Deutsch](de/concept.md)
 
-**Version 2 of 18 Nov 2026, last changed on 21 Nov 2026.** The project and domain are called **Ai-Swarms.net**, the software **SwarmAiNet** (program `swarmainet`). The first version of 14 Oct 2026 still carried the working title "KI-Schwarm" and is kept in the [archive](archive/concept-2026-10-14-de.pdf) (in German). It merged a Claude concept and a GPT-5 concept and decided the points on which they contradicted each other. This version brings the concept up to date with the specification and the implementation; what has changed compared with the first version is listed at the end ([changes](#changes-from-version-1)). The [specification](../spec/README.md) is authoritative in the details.
+**Version 2 of 18 Nov 2026, last changed on 21 Nov 2026.** Project, software and domain are called **AI-Swarms.net** (program `swarmainet`; until 26 Nov 2026 the software was called "SwarmAiNet"). The first version of 14 Oct 2026 still carried the working title "KI-Schwarm" and is kept in the [archive](archive/concept-2026-10-14-de.pdf) (in German). It merged a Claude concept and a GPT-5 concept and decided the points on which they contradicted each other. This version brings the concept up to date with the specification and the implementation; what has changed compared with the first version is listed at the end ([changes](#changes-from-version-1)). The [specification](../spec/README.md) is authoritative in the details.
 
-SwarmAiNet is a self-governing P2P network in which different local AI models form a team per task, check each other and thus aim to deliver better results than the best single model. It first connects your own devices, then groups and companies and finally any participants with restricted rights. The added value over the best single model is not assumed but measured.
+AI-Swarms.net is a self-governing P2P network in which different local AI models form a team per task, check each other and thus aim to deliver better results than the best single model. It first connects your own devices, then groups and companies and finally any participants with restricted rights. The added value over the best single model is not assumed but measured.
 
 ## Decisions
 
@@ -413,7 +413,7 @@ The P2P layer was made robust in phase 2 before swarm intelligence is added in p
 
 | Topic | Version 1 (14 Oct 2026) | Version 2 (18 Nov 2026) |
 |---|---|---|
-| Name | KI-Schwarm, protocol `/ki-schwarm/…` | SwarmAiNet, project and domain Ai-Swarms.net, protocol `/swarmainet/…` |
+| Name | KI-Schwarm, protocol `/ki-schwarm/…` | AI-Swarms.net (domain ai-swarms.net), program and protocol `swarmainet` |
 | Network types | open network and private swarms | three network types with priority: private, group, open; group networks with certificates are new |
 | Relay | opt-in | automatic in the open network when publicly reachable |
 | Participation in the open network | opt-in | opt-in again: `init` creates a private network of your own by default, `init -open` for the open network |

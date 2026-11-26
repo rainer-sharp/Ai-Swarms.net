@@ -2,7 +2,7 @@
 
 [English](../CONTRIBUTING.md) · **Deutsch**
 
-Danke für Ihr Interesse. SwarmAiNet ist ein Forschungsprototyp; besonders hilfreich sind:
+Danke für Ihr Interesse. AI-Swarms.net ist ein Forschungsprototyp; besonders hilfreich sind:
 
 - **Fehlerberichte** mit Ausgabe von `swarmainet status`, dem Protokoll (`-v`) und einer Beschreibung des Netzes (Netzart, NAT, IPv6). Peer-IDs, Adressen und Einladungslinks vorher unkenntlich machen.
 - **Erfahrungen aus anderen Netzen:** andere Router, Mobilfunk, DS-Lite, Firmennetze, Windows und macOS.
@@ -25,7 +25,7 @@ Die Tests starten mehrere Knoten im selben Prozess und brauchen weder Netz noch 
 Für Maintainer: den Abschnitt der Version in `CHANGELOG.md` und `de/CHANGELOG.md` vervollständigen, dann einen annotierten Tag pushen:
 
 ```sh
-git tag -a v0.4.0 -m "SwarmAiNet 0.4.0"
+git tag -a v0.4.0 -m "AI-Swarms.net 0.4.0"
 git push origin v0.4.0
 ```
 
@@ -41,7 +41,7 @@ Der [Release-Workflow](../.github/workflows/release.yml) testet dann, baut mit [
 
 ## Lizenz und Beitragsvereinbarung
 
-SwarmAiNet steht unter der [GNU AGPL-3.0](../LICENSE) und zusätzlich unter einer [kommerziellen Lizenz](../COMMERCIAL.md). Damit beide möglich bleiben, nehmen wir Beiträge nur mit der [Beitragsvereinbarung](../CLA.md) auf: Sie behalten Ihre Rechte, räumen dem Projekt aber ein Nutzungsrecht ein, das auch die kommerzielle Lizenz abdeckt. Zustimmung per Kommentar im ersten Pull Request.
+AI-Swarms.net steht unter der [GNU AGPL-3.0](../LICENSE) und zusätzlich unter einer [kommerziellen Lizenz](../COMMERCIAL.md). Damit beide möglich bleiben, nehmen wir Beiträge nur mit der [Beitragsvereinbarung](../CLA.md) auf: Sie behalten Ihre Rechte, räumen dem Projekt aber ein Nutzungsrecht ein, das auch die kommerzielle Lizenz abdeckt. Zustimmung per Kommentar im ersten Pull Request.
 
 Beiträge zur Dokumentation (`docs/`, `spec/`, Anleitungen) stehen unter [CC BY 4.0](../LICENSE-DOCS); auch für sie gilt die Beitragsvereinbarung.
 

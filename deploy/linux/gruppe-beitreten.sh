@@ -10,7 +10,7 @@
 #   deploy/linux/gruppe-beitreten.sh entfernen Knoten und Testverzeichnis löschen
 #
 # Go wird bei Bedarf nach ~/.local/go geladen und geprüft. Der Knoten läuft getrennt
-# von einem vorhandenen SwarmAiNet-Knoten, mit eigenem Verzeichnis, Port und Gateway.
+# von einem vorhandenen AI-Swarms.net-Knoten, mit eigenem Verzeichnis, Port und Gateway.
 # Den Einladungslink fragt das Skript ab, damit er nicht in der Shell-Historie landet.
 set -euo pipefail
 
@@ -94,7 +94,7 @@ entfernen)
 esac
 
 [ "$(id -u)" -ne 0 ] || fehler "bitte ohne root ausführen; sudo wird nur bei Bedarf für curl abgefragt"
-[ -f "$REPO/go.mod" ] || fehler "$REPO ist kein SwarmAiNet-Repository"
+[ -f "$REPO/go.mod" ] || fehler "$REPO ist kein AI-Swarms.net-Repository"
 command -v python3 >/dev/null || fehler "python3 fehlt: sudo apt install python3"
 
 schritt "Voraussetzungen"

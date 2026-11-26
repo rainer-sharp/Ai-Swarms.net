@@ -42,7 +42,7 @@ cd Ai-Swarms.net
 deploy/linux/gruppe-beitreten.sh
 ```
 
-The script downloads the Go version from `go.mod` to `~/.local/go` and verifies the checksum, builds the program, creates `~/gruppe-test`, asks for the invitation link and starts the node. An existing SwarmAiNet node stays untouched, because directory, port (4714) and gateway (7715) are separate. Running it again updates the program and restarts the node without joining again.
+The script downloads the Go version from `go.mod` to `~/.local/go` and verifies the checksum, builds the program, creates `~/gruppe-test`, asks for the invitation link and starts the node. An existing AI-Swarms.net node stays untouched, because directory, port (4714) and gateway (7715) are separate. Running it again updates the program and restarts the node without joining again.
 
 The issuer creates the link: `swarmainet member invite -net m-… -peer <address of the helper>`.
 
