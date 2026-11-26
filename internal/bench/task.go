@@ -13,12 +13,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
+	"strconv"
 )
 
 // Task ist eine Aufgabe aus dem Aufgabensatz (JSONL, eine Aufgabe pro Zeile).
 type Task struct {
 	ID   string `json:"id"`
-	Kind string `json:"kind"` // code | math
+	Kind string `json:"kind"` // code | math | multi
 	// Prompt ist die vollständige Nutzernachricht an das Modell.
 	Prompt string `json:"prompt"`
 	// Code: Funktionskopf mit Docstring, Name der Funktion, verdeckte Tests.
@@ -27,12 +29,63 @@ type Task struct {
 	Tests      string `json:"tests,omitempty"`
 	// Mathematik: erwartete Zahl.
 	Answer string `json:"answer,omitempty"`
+	// Parts: Teile einer mehrteiligen Aufgabe (kind multi, spec/benchmark.md
+	// „Mixed task set“); gelöst, wenn alle Teile stimmen.
+	Parts []Part `json:"parts,omitempty"`
+}
+
+// Part ist ein Teil einer mehrteiligen Aufgabe. Code-Teile werden mit ihren
+// Tests geprüft, Zahlen- und Textteile über die Zeile „Answer <n>: …“.
+type Part struct {
+	N          int     `json:"n"`
+	Kind       string  `json:"kind"` // code | number | text
+	EntryPoint string  `json:"entry_point,omitempty"`
+	Tests      string  `json:"tests,omitempty"`
+	Answer     string  `json:"answer,omitempty"`
+	Tolerance  float64 `json:"tolerance,omitempty"` // absolut; 0: relativ 1e-6
+	Pattern    string  `json:"pattern,omitempty"`   // regulärer Ausdruck für Textteile
 }
 
 const (
-	KindCode = "code"
-	KindMath = "math"
+	KindCode  = "code"
+	KindMath  = "math"
+	KindMulti = "multi"
+
+	PartCode   = "code"
+	PartNumber = "number"
+	PartText   = "text"
 )
+
+// checkParts prüft die Teile einer mehrteiligen Aufgabe.
+func checkParts(parts []Part) error {
+	if len(parts) == 0 {
+		return fmt.Errorf("mehrteilige aufgabe ohne parts")
+	}
+	seen := map[int]bool{}
+	for _, p := range parts {
+		if p.N <= 0 || seen[p.N] {
+			return fmt.Errorf("teil %d: n fehlt oder doppelt", p.N)
+		}
+		seen[p.N] = true
+		switch p.Kind {
+		case PartCode:
+			if p.EntryPoint == "" || p.Tests == "" {
+				return fmt.Errorf("teil %d: code ohne entry_point oder tests", p.N)
+			}
+		case PartNumber:
+			if _, err := strconv.ParseFloat(p.Answer, 64); err != nil {
+				return fmt.Errorf("teil %d: answer %q ist keine zahl", p.N, p.Answer)
+			}
+		case PartText:
+			if _, err := regexp.Compile(p.Pattern); err != nil || p.Pattern == "" {
+				return fmt.Errorf("teil %d: pattern fehlt oder ungültig: %v", p.N, err)
+			}
+		default:
+			return fmt.Errorf("teil %d: kind %q unbekannt", p.N, p.Kind)
+		}
+	}
+	return nil
+}
 
 // LoadTasks liest den Aufgabensatz und liefert ihn mit seinem SHA-256.
 func LoadTasks(path string) ([]Task, string, error) {
@@ -64,6 +117,10 @@ func LoadTasks(path string) ([]Task, string, error) {
 			return nil, "", fmt.Errorf("%s:%d: code-aufgabe ohne entry_point oder tests", path, n)
 		case t.Kind == KindMath && t.Answer == "":
 			return nil, "", fmt.Errorf("%s:%d: mathe-aufgabe ohne answer", path, n)
+		case t.Kind == KindMulti:
+			if err := checkParts(t.Parts); err != nil {
+				return nil, "", fmt.Errorf("%s:%d: %w", path, n, err)
+			}
 		case t.Kind != KindCode && t.Kind != KindMath:
 			return nil, "", fmt.Errorf("%s:%d: kind %q unbekannt", path, n, t.Kind)
 		}

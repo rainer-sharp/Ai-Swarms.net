@@ -49,7 +49,7 @@ Budget = GPU seconds and tokens across all participating models. A single model 
 
 **Statistics:** paired comparison A against B on the same tasks. Hypothesis 2 holds if the lower bound of the 95 % bootstrap interval of the difference in success rate (A − B) lies above −5 percentage points while A needs at most half the VRAM per device, or if the coverage is significant (McNemar, A against the best setup from C).
 
-**Prerequisites:** the task set (draft in [`bench/tasks-mix-draft.jsonl`](../bench/tasks-mix-draft.jsonl)), support for multi-part tasks in `swarmainet bench`, specialists of at least three model families without model switching. Results get better once the router and the planner use the competence profile ([cooperation](cooperation.md) § 10).
+**Prerequisites:** the task set (draft in [`bench/tasks-mix-draft.jsonl`](../bench/tasks-mix-draft.jsonl), setups in [`bench/plan-mix.yaml`](../bench/plan-mix.yaml); `swarmainet bench` assesses multi-part tasks per part), specialists of at least three model families without model switching. Results get better once the router and the planner use the competence profile ([cooperation](cooperation.md) § 10).
 
 ## Metrics
 

@@ -356,6 +356,26 @@ func WriteReport(w io.Writer, results []Result, ref string) {
 			fmt.Fprintf(w, "| %s | %s |\n", n, strings.Join(cells, " | "))
 		}
 	}
+	if ps := PartAnalysis(results); len(ps) > 0 {
+		fmt.Fprintln(w, "\n### Mehrteilige Aufgaben: Teile und Abdeckung")
+		fmt.Fprintln(w, "\nTeile richtig je Art. Abdeckung: Aufgaben, die dieser Lauf löst und kein Einzelmodell (direkt, eine Stichprobe) vollständig.")
+		fmt.Fprintln(w, "\n| Lauf | Aufgaben gelöst | Teile richtig | Code | Zahl | Text | Abdeckung |")
+		fmt.Fprintln(w, "|---|---|---|---|---|---|---|")
+		for _, s := range ps {
+			cell := func(k string) string {
+				if s.ByKind[k][1] == 0 {
+					return "–"
+				}
+				return fmt.Sprintf("%d/%d", s.ByKind[k][0], s.ByKind[k][1])
+			}
+			cov := "–"
+			if s.Coverage >= 0 {
+				cov = fmt.Sprintf("%d", s.Coverage)
+			}
+			fmt.Fprintf(w, "| %s | %d/%d | %d/%d | %s | %s | %s | %s |\n", s.Run, s.Solved, s.N, s.PartsRight, s.Parts,
+				cell(PartCode), cell(PartNumber), cell(PartText), cov)
+		}
+	}
 	if st := StepAnalysis(results); len(st) > 0 {
 		fmt.Fprintln(w, "\n### Zwischenschritte (Prüfer und Synthese)")
 		fmt.Fprintln(w, "\nPrüfer: Urteil über den geprüften Text gegen dessen tatsächliche Richtigkeit. Überarbeitung: nach „issues“ aus falsch richtig gemacht bzw. aus richtig falsch. Synthese: Zusammenführung mehrerer Teillösungen.")
@@ -453,6 +473,84 @@ func StepAnalysis(results []Result) []StepStats {
 					s.Rescued++
 				}
 			}
+		}
+	}
+	return out
+}
+
+// PartStats: mehrteilige Aufgaben eines Laufs (Hypothese 2 im Messplan).
+type PartStats struct {
+	Run               string
+	N, Solved         int
+	Parts, PartsRight int
+	ByKind            map[string][2]int // Art → richtig, gesamt
+	// Coverage: Aufgaben, die dieser Lauf löst und kein Einzelmodell
+	// (direkt, eine Stichprobe) vollständig; −1 für Einzelmodelle selbst.
+	Coverage int
+}
+
+// single: Ergebnisse eines Einzelmodells (eine Stichprobe, ohne Schwarm).
+func single(r Result) bool { return r.Samples <= 1 && len(r.Steps) == 0 && r.SwarmTask == "" }
+
+func PartAnalysis(results []Result) []PartStats {
+	singles := map[string]bool{}  // Läufe, die als Einzelmodell gelten
+	bySingle := map[string]bool{} // Aufgaben, die ein Einzelmodell löst
+	notSingle := map[string]bool{}
+	for _, r := range results {
+		if r.Kind != KindMulti {
+			continue
+		}
+		if single(r) {
+			singles[r.Run] = true
+		} else {
+			notSingle[r.Run] = true
+		}
+	}
+	for run := range notSingle {
+		delete(singles, run) // ein Lauf mit Schwarm-Ergebnissen ist kein Einzelmodell
+	}
+	for _, r := range results {
+		if r.Kind == KindMulti && singles[r.Run] && r.Solved {
+			bySingle[r.TaskID] = true
+		}
+	}
+	idx := map[string]int{}
+	var out []PartStats
+	for _, r := range results {
+		if r.Kind != KindMulti {
+			continue
+		}
+		i, ok := idx[r.Run]
+		if !ok {
+			i = len(out)
+			idx[r.Run] = i
+			cov := 0
+			if singles[r.Run] {
+				cov = -1
+			}
+			out = append(out, PartStats{Run: r.Run, ByKind: map[string][2]int{}, Coverage: cov})
+		}
+		s := &out[i]
+		s.N++
+		if r.Solved {
+			s.Solved++
+			if s.Coverage >= 0 && !bySingle[r.TaskID] {
+				s.Coverage++
+			}
+		}
+		for j, ok := range r.Parts {
+			k := ""
+			if j < len(r.PartKinds) {
+				k = r.PartKinds[j]
+			}
+			c := s.ByKind[k]
+			c[1]++
+			s.Parts++
+			if ok {
+				c[0]++
+				s.PartsRight++
+			}
+			s.ByKind[k] = c
 		}
 	}
 	return out

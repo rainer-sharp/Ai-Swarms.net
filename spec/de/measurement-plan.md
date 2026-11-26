@@ -49,7 +49,7 @@ Budget = GPU-Sekunden und Tokens über alle beteiligten Modelle. Ein Einzelmodel
 
 **Statistik:** gepaarter Vergleich A gegen B auf denselben Aufgaben. Hypothese 2 trifft zu, wenn die untere Grenze des 95-%-Bootstrap-Intervalls der Differenz der Erfolgsquoten (A − B) über −5 Prozentpunkten liegt und A dabei höchstens die Hälfte des VRAM je Gerät braucht, oder wenn die Abdeckung signifikant ist (McNemar, A gegen den besten Aufbau aus C).
 
-**Voraussetzungen:** der Aufgabensatz (Entwurf in [`bench/tasks-mix-draft.jsonl`](../../bench/tasks-mix-draft.jsonl)), Unterstützung mehrteiliger Aufgaben in `swarmainet bench`, Spezialisten aus mindestens drei Modellfamilien ohne Modellwechsel. Die Ergebnisse werden besser, sobald Router und Planer das Kompetenzprofil nutzen ([Kooperation](cooperation.md) § 10).
+**Voraussetzungen:** der Aufgabensatz (Entwurf in [`bench/tasks-mix-draft.jsonl`](../../bench/tasks-mix-draft.jsonl), Aufbauten in [`bench/plan-mix.yaml`](../../bench/plan-mix.yaml); `swarmainet bench` bewertet mehrteilige Aufgaben je Teil), Spezialisten aus mindestens drei Modellfamilien ohne Modellwechsel. Die Ergebnisse werden besser, sobald Router und Planer das Kompetenzprofil nutzen ([Kooperation](cooperation.md) § 10).
 
 ## Kennzahlen
 

@@ -115,9 +115,9 @@ The prompt asks for all code in a single Python block and ends with one line `An
 | `number` | the value from `Answer <n>:` equals `answer` (relative deviation at most 10⁻⁶, or `tolerance`) |
 | `text` | the value from `Answer <n>:` matches the regular expression `pattern` |
 
-A task counts as solved if all parts are correct; the report also shows the success rate per part and per kind of part.
+A task counts as solved if all parts are correct. `swarmainet bench run` assesses multi-part tasks this way and stores the result per part (`parts`, `part_kinds`); the report adds a table with the parts per kind and the **coverage**: tasks a run solves that no single model (direct, one sample) solves completely. Swarm runs send no skill for these tasks, the planner of `decompose` decides; self-consistency takes the first attempt, since a majority vote over several parts is not meaningful. [`bench/plan-mix.yaml`](../bench/plan-mix.yaml) contains the setups A to C of the measurement plan. A trial run of three tasks against Qwen3.8 Flash solved 9 of 9 parts: format and assessment work, but the draft is too easy for a large model.
 
-**Still to do before the measurement:** support for `kind: multi` in `swarmainet bench run` (assessment per part); extending the set to 30 to 100 tasks, with harder parts, so that the generalist does not solve everything (ceiling effect of round 1); parts with images (generated charts and tables with known values) and with audio (recordings with a known transcript), so that coverage can be measured; a plan file with the setups A to C from the measurement plan.
+**Still to do before the measurement:** extending the set to 30 to 100 tasks, with harder parts, so that the generalist does not solve everything (ceiling effect of round 1); parts with images (generated charts and tables with known values) and with audio (recordings with a known transcript), so that coverage can be measured; installing the specialists that are still missing (see the plan file).
 
 ## Open questions
 

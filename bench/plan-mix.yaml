@@ -1,0 +1,64 @@
+# Hypothese 2: Team kleiner Spezialisten (spec/measurement-plan.md) – Entwurf.
+# Aufbauten A (Team mit decompose), B (großer Generalist) und C (jeder
+# Spezialist allein) auf dem gemischten Aufgabensatz.
+#   192.168.101.94  vLLM       Qwen3.8 Flash (groß, versteht Bilder)
+#   192.168.101.95  llama.cpp  Qwen3.8-27B Q4 (ein Modell zur Zeit)
+#                   Ollama     Spezialisten; alle gleichzeitig geladen lassen
+#                              (OLLAMA_MAX_LOADED_MODELS=6, OLLAMA_KEEP_ALIVE=-1),
+#                              sonst misst der Lauf Modellwechsel
+# Mit (neu) markierte Modelle sind auf .95 noch nicht vorhanden (ollama pull …).
+# Die Agent-IDs unter agents hängen vom Backend-Namen in der Konfiguration des
+# Knotens auf .95 ab (hier: ollama).
+# Start:      ./swarmainet bench run bench/plan-mix.yaml
+# Auswertung: ./swarmainet bench report -ref generalist-qwen27b bench/results-mix.jsonl
+
+tasks: bench/tasks-mix-draft.jsonl
+tasks_sha256: 0919af45818a45649bea9e3f526dc92b2514f386ce53edc558780df18bad2a89
+out: bench/results-mix.jsonl
+max_tokens: 8192
+
+runs:
+  # B: große Generalisten, je allein auf einem Gerät
+  - name: generalist-qwen27b
+    mode: direct
+    url: http://192.168.101.95:8080/v1
+    model: unsloth/Qwen3.8-27B-GGUF:Q4_K_XL
+  - name: generalist-flash
+    mode: direct
+    url: http://192.168.101.94:8000/v1
+    model: nvidia/Qwen3.8-Flash-Next-FP4-Local
+
+  # C: jeder Spezialist allein (für die Abdeckung)
+  - name: allein-coder
+    mode: direct
+    url: http://192.168.101.95:11434/v1
+    model: qwen2.5-coder:7b
+  - name: allein-llama
+    mode: direct
+    url: http://192.168.101.95:11434/v1
+    model: llama3.1:8b
+  - name: allein-phi
+    mode: direct
+    url: http://192.168.101.95:11434/v1
+    model: phi4-mini            # (neu) Mathe und Reasoning, Familie phi
+  - name: allein-gemma
+    mode: direct
+    url: http://192.168.101.95:11434/v1
+    model: gemma3:4b            # (neu) Generalist mit Bildern, Familie gemma
+  - name: allein-qwen-vl
+    mode: direct
+    url: http://192.168.101.95:11434/v1
+    model: qwen3-vl:8b
+
+  # A: das Team als Schwarm; der Planer zerlegt, jeder Teil geht an den passenden Spezialisten
+  - name: team-decompose
+    mode: swarm
+    gateway: http://127.0.0.1:7711
+    pattern: decompose
+    agents: &team ["ollama/qwen2.5-coder:7b", "ollama/llama3.1:8b", "ollama/phi4-mini", "ollama/gemma3:4b", "ollama/qwen3-vl:8b"]
+  # A ohne Zerlegung, zum Vergleich: das Team mit Prüfung, aber ohne Spezialisierung je Teil
+  - name: team-draft-verify
+    mode: swarm
+    gateway: http://127.0.0.1:7711
+    pattern: draft_verify_synthesize
+    agents: *team

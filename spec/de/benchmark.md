@@ -115,9 +115,9 @@ Der Prompt verlangt allen Code in einem einzigen Python-Block und endet mit eine
 | `number` | der Wert aus `Answer <n>:` stimmt mit `answer` überein (relative Abweichung höchstens 10⁻⁶, oder `tolerance`) |
 | `text` | der Wert aus `Answer <n>:` passt zum regulären Ausdruck `pattern` |
 
-Eine Aufgabe gilt als gelöst, wenn alle Teile stimmen; der Bericht zeigt zusätzlich die Erfolgsquote je Teil und je Art des Teils.
+Eine Aufgabe gilt als gelöst, wenn alle Teile stimmen. `swarmainet bench run` bewertet mehrteilige Aufgaben so und speichert das Ergebnis je Teil (`parts`, `part_kinds`); der Bericht ergänzt eine Tabelle mit den Teilen je Art und der **Abdeckung**: Aufgaben, die ein Lauf löst und kein Einzelmodell (direkt, eine Stichprobe) vollständig. Schwarm-Läufe senden für diese Aufgaben keine Fähigkeit, der Planer von `decompose` entscheidet; Self-Consistency nimmt den ersten Versuch, weil eine Mehrheitswahl über mehrere Teile nicht sinnvoll ist. [`bench/plan-mix.yaml`](../../bench/plan-mix.yaml) enthält die Aufbauten A bis C aus dem Messplan. Ein Probelauf mit drei Aufgaben gegen Qwen3.8 Flash löste 9 von 9 Teilen: Format und Bewertung funktionieren, der Entwurf ist für ein großes Modell aber zu leicht.
 
-**Vor der Messung noch zu tun:** Unterstützung für `kind: multi` in `swarmainet bench run` (Bewertung je Teil); Ausbau auf 30 bis 100 Aufgaben mit schwereren Teilen, damit der Generalist nicht alles löst (Deckeneffekt aus Runde 1); Teile mit Bildern (erzeugte Diagramme und Tabellen mit bekannten Werten) und mit Audio (Aufnahmen mit bekanntem Text), damit sich die Abdeckung messen lässt; eine Plan-Datei mit den Aufbauten A bis C aus dem Messplan.
+**Vor der Messung noch zu tun:** Ausbau auf 30 bis 100 Aufgaben mit schwereren Teilen, damit der Generalist nicht alles löst (Deckeneffekt aus Runde 1); Teile mit Bildern (erzeugte Diagramme und Tabellen mit bekannten Werten) und mit Audio (Aufnahmen mit bekanntem Text), damit sich die Abdeckung messen lässt; die noch fehlenden Spezialisten installieren (siehe Plan-Datei).
 
 ## Offene Fragen
 

@@ -67,6 +67,10 @@ type Result struct {
 	// StepSolved bewertet die Zwischentexte (Steps[i].Output) wie eine
 	// Endantwort; nil für Prüfer, fehlgeschlagene Schritte und ohne Text.
 	StepSolved []*bool `json:"step_solved,omitempty"`
+	// Parts und PartKinds: bei mehrteiligen Aufgaben je Teil richtig oder
+	// falsch und die Art des Teils (code, number, text).
+	Parts     []bool   `json:"parts,omitempty"`
+	PartKinds []string `json:"part_kinds,omitempty"`
 	// SwarmTask: Auftrags-ID beim Knoten, für die Rückmeldung ans Kompetenzprofil.
 	SwarmTask   string    `json:"swarm_task,omitempty"`
 	Verdict     string    `json:"verdict,omitempty"`
@@ -290,6 +294,19 @@ func solved(ctx context.Context, t Task, answer string, res *Result) bool {
 	if t.Kind == KindMath {
 		return MathCorrect(t, answer)
 	}
+	if t.Kind == KindMulti {
+		parts, err := GradeParts(ctx, t, answer)
+		if err != nil && res.Error == "" {
+			res.Error = err.Error()
+		}
+		res.Parts, res.PartKinds = parts, partKinds(t)
+		for _, ok := range parts {
+			if !ok {
+				return false
+			}
+		}
+		return true
+	}
 	r, err := RunCode(ctx, t, ExtractCode(t, answer), false)
 	if err != nil && res.Error == "" {
 		res.Error = err.Error()
@@ -331,7 +348,9 @@ func selfConsistency(ctx context.Context, p Plan, run Run, t Task, res *Result) 
 		return
 	}
 	res.Error = ""
-	if t.Kind == KindCode {
+	if t.Kind != KindMath {
+		// Code: kein Versuch bestand die Beispiele; mehrteilig: keine
+		// Mehrheitswahl über mehrere Teile, der erste Versuch zählt.
 		res.Answer = answers[0]
 		return
 	}
@@ -347,12 +366,16 @@ func selfConsistency(ctx context.Context, p Plan, run Run, t Task, res *Result) 
 	res.Answer = best
 }
 
-// skillFor legt die Fähigkeit je Aufgabenart fest, statt den Router raten zu lassen.
+// skillFor legt die Fähigkeit je Aufgabenart fest, statt den Router raten zu
+// lassen. Mehrteilige Aufgaben haben keine einzelne Fähigkeit (leer).
 func skillFor(kind string) string {
-	if kind == KindCode {
+	switch kind {
+	case KindCode:
 		return "code.python"
+	case KindMath:
+		return "reasoning.math"
 	}
-	return "reasoning.math"
+	return ""
 }
 
 func swarmTask(ctx context.Context, p Plan, run Run, t Task, res *Result) {
@@ -368,7 +391,9 @@ func swarmTask(ctx context.Context, p Plan, run Run, t Task, res *Result) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-SwarmAiNet-Privacy", string(protocol.PrivacyTrusted))
-	req.Header.Set("X-SwarmAiNet-Skill", skillFor(t.Kind))
+	if s := skillFor(t.Kind); s != "" {
+		req.Header.Set("X-SwarmAiNet-Skill", s)
+	}
 	if len(run.Agents) > 0 {
 		req.Header.Set("X-SwarmAiNet-Agents", strings.Join(run.Agents, ","))
 	}
@@ -414,6 +439,9 @@ func swarmTask(ctx context.Context, p Plan, run Run, t Task, res *Result) {
 // gradeSteps bewertet Entwürfe, Teillösungen und Synthesen einzeln, damit der
 // Bericht zeigen kann, was Prüfer und Synthese bewirken.
 func gradeSteps(ctx context.Context, t Task, steps []orchestrator.Step) []*bool {
+	if t.Kind == KindMulti {
+		return nil // Zwischenschritte lösen nur Teile; gewertet wird das Ergebnis
+	}
 	var out []*bool
 	graded := false
 	for _, s := range steps {

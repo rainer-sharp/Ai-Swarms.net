@@ -8,7 +8,7 @@ Alle nennenswerten Änderungen an AI-Swarms.net. Das Format folgt [Keep a Change
 
 ### Hinzugefügt
 
-- **Zweite Hypothese für Phase 3:** Neben der Qualität bei gleichem Budget prüft der Messplan jetzt auch, ob ein Team kleiner Spezialisten bei gemischten, mehrteiligen Aufgaben mit weniger Hardware die Qualität eines großen Generalisten erreicht oder Aufgaben löst, die keins seiner Mitglieder allein löst; das Gate von Phase 3 ist erfüllt, wenn eins von beiden zutrifft. Entwurf eines Aufgabensatzes mit 10 gemischten Aufgaben (`bench/tasks-mix-draft.jsonl`). ([Messplan](../spec/de/measurement-plan.md#hypothese-2-team-kleiner-spezialisten), [Benchmark](../spec/de/benchmark.md#gemischter-aufgabensatz-hypothese-2))
+- **Zweite Hypothese für Phase 3:** Neben der Qualität bei gleichem Budget prüft der Messplan jetzt auch, ob ein Team kleiner Spezialisten bei gemischten, mehrteiligen Aufgaben mit weniger Hardware die Qualität eines großen Generalisten erreicht oder Aufgaben löst, die keins seiner Mitglieder allein löst; das Gate von Phase 3 ist erfüllt, wenn eins von beiden zutrifft. Entwurf eines Aufgabensatzes mit 10 gemischten Aufgaben (`bench/tasks-mix-draft.jsonl`); `swarmainet bench` bewertet solche mehrteiligen Aufgaben je Teil und berichtet Teile je Art und Abdeckung; Plan mit den Aufbauten (`bench/plan-mix.yaml`). ([Messplan](../spec/de/measurement-plan.md#hypothese-2-team-kleiner-spezialisten), [Benchmark](../spec/de/benchmark.md#gemischter-aufgabensatz-hypothese-2))
 - **Logos:** Wortmarke und Emblem in heller und dunkler Variante als SVG und PNG, Favicons und die Erzeugerskripte, unter CC BY 4.0. ([Logos](../logos/de/README.md))
 
 ### Geändert
