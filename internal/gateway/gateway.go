@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Rainer Sestig und Mitwirkende.
 
 // Package gateway stellt die lokale OpenAI-kompatible API, die Status-API und
 // eine einfache Web-Oberfläche bereit. Es lauscht ausschließlich auf localhost.

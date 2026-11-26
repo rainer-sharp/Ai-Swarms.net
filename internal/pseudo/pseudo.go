@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Rainer Sestig und Mitwirkende.
 
 // Package pseudo ersetzt persönliche Daten durch Platzhalter wie [PERSON_1]
 // oder [EMAIL_2] und tauscht sie in Antworten zurück (Freigabeklasse reduced,

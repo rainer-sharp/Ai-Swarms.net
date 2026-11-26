@@ -29,5 +29,5 @@
 | [Spezifikation](../../spec/de/README.md) | Protokoll, P2P-Schicht, Mitgliedschaft, Freigabeklassen, Bedrohungsmodell, Kooperation, Messplan |
 | [Benchmark](../../bench/de/README.md) | Aufgaben, Ablauf, Ergebnisse |
 | [Gesamtkonzept](concept.md) | Vision, Entscheidungen, Rollen, Vertrauen, Roadmap; das [Original vom 14.10.2026](../archive/concept-2026-10-14-de.pdf) liegt im Archiv (PDF) |
-| [Mitwirken](../../de/CONTRIBUTING.md) | Bauen, Testen, Konventionen, Beitragsvereinbarung |
-| [Lizenzen](../../COMMERCIAL.md) | Code: AGPL-3.0 und kommerzielle Lizenz; Dokumentation: CC BY 4.0 |
+| [Mitwirken](../../de/CONTRIBUTING.md) | Bauen, Testen, Konventionen, Sign-off (DCO) |
+| [Lizenzen](../../de/LICENSING.md) | Code: AGPL-3.0-or-later; Dokumentation: CC BY 4.0; Beiträge mit Sign-off nach DCO |

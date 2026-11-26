@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Schreibt den Text eines GitHub-Releases: den Abschnitt der Version aus
 # CHANGELOG.md, relative Links auf die Dateien zum Tag umgeschrieben, dazu
 # Hinweise zu den Downloads. Aufruf: scripts/release-notes.py v0.4.0 OWNER/REPO

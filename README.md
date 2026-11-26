@@ -66,12 +66,12 @@ AI-Swarms.net has not been audited. Share confidential content only with your ow
 
 ## Contributing
 
-Bug reports, measurements with other models and experience from other networks are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Code contributions require the [contributor agreement](CLA.md) (in German).
+Bug reports, measurements with other models and experience from other networks are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Contributions are welcome under the project's licenses, with a sign-off under the [Developer Certificate of Origin](DCO).
 
 ## License
 
-AI-Swarms.net is free software under the [GNU AGPL-3.0](LICENSE). Anyone who modifies and distributes it, or offers it as a network service, must disclose the source code. A [commercial license](COMMERCIAL.md) (in German) is available for use in closed products.
+AI-Swarms.net is a community project and free software under the [GNU AGPL-3.0-or-later](LICENSE). Anyone who modifies and distributes it, or offers it as a network service, must disclose the source code.
 
-The documentation and specification are licensed under [CC BY 4.0](LICENSE-DOCS); for the distinction see [COMMERCIAL.md](COMMERCIAL.md#dokumentation-cc-by-40) (in German).
+The documentation and specification are licensed under [CC BY 4.0](LICENSE-DOCS); for the distinction see [LICENSING.md](LICENSING.md).
 
 The benchmark tasks in `bench/` are taken from HumanEval and GSM8K (© OpenAI, MIT).

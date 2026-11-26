@@ -39,17 +39,21 @@ Der [Release-Workflow](../.github/workflows/release.yml) testet dann, baut mit [
 - **Abhängigkeiten:** sparsam; neue Abhängigkeiten im Pull Request begründen, Lizenz siehe unten.
 - **Formatierung:** `gofmt`.
 
-## Lizenz und Beitragsvereinbarung
+## Lizenz und Sign-off
 
-AI-Swarms.net steht unter der [GNU AGPL-3.0](../LICENSE) und zusätzlich unter einer [kommerziellen Lizenz](../COMMERCIAL.md). Damit beide möglich bleiben, nehmen wir Beiträge nur mit der [Beitragsvereinbarung](../CLA.md) auf: Sie behalten Ihre Rechte, räumen dem Projekt aber ein Nutzungsrecht ein, das auch die kommerzielle Lizenz abdeckt. Zustimmung per Kommentar im ersten Pull Request.
+AI-Swarms.net ist ein Community-Projekt unter der [GNU AGPL-3.0-or-later](../LICENSE); eine kommerzielle Lizenz gibt es nicht. Beiträge stehen unter denselben Bedingungen: Code unter AGPL-3.0-or-later, Dokumentation (`docs/`, `spec/`, Anleitungen) unter [CC BY 4.0](../LICENSE-DOCS). Ihre Urheberrechte behalten Sie. Details: [LICENSING.md](LICENSING.md).
 
-Beiträge zur Dokumentation (`docs/`, `spec/`, Anleitungen) stehen unter [CC BY 4.0](../LICENSE-DOCS); auch für sie gilt die Beitragsvereinbarung.
+Jeder Commit trägt eine Zeile `Signed-off-by` mit Ihrem Namen und Ihrer Mail-Adresse. Damit bestätigen Sie das [Developer Certificate of Origin](../DCO): dass Sie den Beitrag selbst geschrieben haben oder ihn unter der Lizenz des Projekts beitragen dürfen. `git commit -s` fügt die Zeile automatisch hinzu:
+
+```
+Signed-off-by: Erika Mustermann <erika@example.org>
+```
 
 Neue Quelldateien beginnen mit:
 
 ```go
-// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Rainer Sestig und Mitwirkende.
 ```
 
-Neue Abhängigkeiten müssen mit der AGPL-3.0 und mit der kommerziellen Lizenz verträglich sein, also etwa MIT, BSD, ISC, Apache-2.0 oder MPL-2.0; GPL- und AGPL-Bibliotheken anderer gehen nicht.
+Neue Abhängigkeiten müssen mit der AGPL-3.0 verträglich sein, also etwa MIT, BSD, ISC, Apache-2.0, MPL-2.0, GPL-3.0 oder AGPL-3.0.

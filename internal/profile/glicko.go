@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Rainer Sestig und Mitwirkende.
 
 // Package profile führt das Kompetenzprofil eines Knotens (spec/cooperation.md
 // § 2): je Agent und Fähigkeit eine Glicko-2-Bewertung aus eigenen

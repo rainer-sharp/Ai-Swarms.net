@@ -39,17 +39,21 @@ The [release workflow](.github/workflows/release.yml) then tests, builds the arc
 - **Dependencies:** sparingly; justify new dependencies in the pull request, see below for licensing.
 - **Formatting:** `gofmt`.
 
-## License and contributor agreement
+## License and sign-off
 
-AI-Swarms.net is licensed under the [GNU AGPL-3.0](LICENSE) and additionally under a [commercial license](COMMERCIAL.md) (in German). To keep both possible, we only accept contributions under the [contributor agreement](CLA.md) (in German): you keep your rights but grant the project a right of use that also covers the commercial license. Agree by commenting in your first pull request.
+AI-Swarms.net is a community project under the [GNU AGPL-3.0-or-later](LICENSE); there is no commercial license. Contributions are licensed under the same terms: code under AGPL-3.0-or-later, documentation (`docs/`, `spec/`, guides) under [CC BY 4.0](LICENSE-DOCS). You keep your copyright. Details: [LICENSING.md](LICENSING.md).
 
-Contributions to the documentation (`docs/`, `spec/`, guides) are licensed under [CC BY 4.0](LICENSE-DOCS); the contributor agreement applies to them as well.
+Every commit carries a `Signed-off-by` line with your name and email address. With it, you confirm the [Developer Certificate of Origin](DCO): that you wrote the contribution yourself or may contribute it under the project's license. `git commit -s` adds the line automatically:
+
+```
+Signed-off-by: Jane Doe <jane@example.org>
+```
 
 New source files start with:
 
 ```go
-// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Rainer Sestig und Mitwirkende.
 ```
 
-New dependencies must be compatible with the AGPL-3.0 and with the commercial license, e.g. MIT, BSD, ISC, Apache-2.0 or MPL-2.0; third-party GPL and AGPL libraries are not possible.
+New dependencies must be compatible with the AGPL-3.0, e.g. MIT, BSD, ISC, Apache-2.0, MPL-2.0, GPL-3.0 or AGPL-3.0.

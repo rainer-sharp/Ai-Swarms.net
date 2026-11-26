@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Richtet auf einem Linux-Rechner einen Knoten für ein Gruppennetz ein und startet
 # ihn (spec/membership.md). Ausführen im geklonten Repository, ohne root:
 #

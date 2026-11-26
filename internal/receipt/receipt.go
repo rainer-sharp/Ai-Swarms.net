@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Rainer Sestig und Mitwirkende.
 
 // Package receipt erzeugt und speichert von beiden Seiten signierte Quittungen.
 // Ab Phase 1 werden sie nur gesammelt; Verrechnung (gegenseitiger Kredit) folgt in Phase 4.

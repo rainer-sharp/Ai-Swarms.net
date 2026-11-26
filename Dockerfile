@@ -1,4 +1,4 @@
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # AI-Swarms.net-Knoten als Container, vor allem für Helferknoten und Tracker
 # (spec/p2p-layer.md § 6.1). Bauen: docker build -t swarmainet .
 # Mit Version (sonst meldet der Knoten „dev“, .git kommt nicht ins Image):
@@ -23,7 +23,7 @@ COPY --from=build --chown=65532:65532 /out/data /data
 USER 65532:65532
 VOLUME /data
 EXPOSE 4711/tcp 4711/udp
-LABEL org.opencontainers.image.licenses="AGPL-3.0-only" \
+LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later" \
       org.opencontainers.image.source="https://github.com/rainer-sharp/Ai-Swarms.net"
 ENTRYPOINT ["/usr/local/bin/swarmainet"]
 CMD ["run", "-config", "/data/config.yaml"]
@@ -35,7 +35,7 @@ COPY --from=build /out/swarmainet /usr/local/bin/swarmainet
 COPY --from=build --chown=65532:65532 /out/data /data
 VOLUME /data
 EXPOSE 4711/tcp 4711/udp
-LABEL org.opencontainers.image.licenses="AGPL-3.0-only" \
+LABEL org.opencontainers.image.licenses="AGPL-3.0-or-later" \
       org.opencontainers.image.source="https://github.com/rainer-sharp/Ai-Swarms.net"
 ENTRYPOINT ["/usr/local/bin/swarmainet"]
 CMD ["run", "-config", "/data/config.yaml"]

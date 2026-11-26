@@ -29,5 +29,5 @@
 | [Specification](../spec/README.md) | Protocol, P2P layer, membership, privacy classes, threat model, cooperation, measurement plan |
 | [Benchmark](../bench/README.md) | Tasks, procedure, results |
 | [Overall concept](concept.md) | Vision, decisions, roles, trust, roadmap; the [original of 14 Oct 2026](archive/concept-2026-10-14-de.pdf) is archived (PDF, in German) |
-| [Contributing](../CONTRIBUTING.md) | Building, testing, conventions, contributor agreement |
-| [Licenses](../COMMERCIAL.md) | Code: AGPL-3.0 and commercial license; documentation: CC BY 4.0 (in German) |
+| [Contributing](../CONTRIBUTING.md) | Building, testing, conventions, sign-off (DCO) |
+| [Licenses](../LICENSING.md) | Code: AGPL-3.0-or-later; documentation: CC BY 4.0; contributions with DCO sign-off |

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Rainer Sestig und Mitwirkende.
 
 // Package audio teilt lange Aufnahmen in überlappende Stücke, die je in einen
 // Teilauftrag passen (protocol.MaxAudioBytes), und fügt die Abschriften wieder

@@ -1,5 +1,5 @@
-// SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (C) 2026 Rainer Sestig. Kommerzielle Lizenz: siehe COMMERCIAL.md.
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Rainer Sestig und Mitwirkende.
 
 // Package jobs verwaltet asynchrone Aufträge (spec/cooperation.md § 7): eigene,
 // die dieser Knoten oder ein vertrauter Peer koordiniert, und solche, die

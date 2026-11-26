@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Baut die Release-Archive aller Zielplattformen nach dist/ und schreibt
 # SHA256SUMS. Aufruf im Repository: scripts/build-release.sh v0.4.0
 # Läuft im Release-Workflow (.github/workflows/release.yml), geht aber auch

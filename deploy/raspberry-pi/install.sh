@@ -1,5 +1,5 @@
 #!/bin/sh
-# SPDX-License-Identifier: AGPL-3.0-only
+# SPDX-License-Identifier: AGPL-3.0-or-later
 # Installiert oder aktualisiert swarmainet als systemd-Dienst auf einem
 # Raspberry Pi (deploy/raspberry-pi/README.md). Aufruf im Verzeichnis mit
 # swarmainet-arm64, config.yaml und swarmainet.service:
