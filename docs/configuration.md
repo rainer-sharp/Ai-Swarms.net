@@ -9,7 +9,7 @@ The configuration lives in `~/.swarmainet/config.yaml` (create it with `swarmain
 | `node` | Addresses, gateway, network, trust, reachability (table below) |
 | `backends` | Inference servers and their models: `family`, `skills`, `context`, `strength`, `tools`, `vision` (understands images), `offer` |
 | `resources` | Resource manager: parallel tasks, GPU limits, temperature, RAM reserve, time windows, GPU minutes, energy (PV surplus, electricity price via Home Assistant) |
-| `tasks` | Default pattern, default privacy class, token limit `max_tokens` (default 8192, applies when a request names none; the provider lowers it to fit the model's `context`), deadline, subtasks; `pseudonymize_terms`: own terms (names, projects, customers) that are always replaced for foreign nodes with `reduced` ([usage](usage.md#optional-headers)) |
+| `tasks` | Default pattern, default privacy class, token limit `max_tokens` (default 8192, applies when a request names none; the provider lowers it to fit the model's `context`), deadline (`job_deadline_s` for [asynchronous jobs](usage.md#asynchronous-jobs), default 3600), subtasks; `pseudonymize_terms`: own terms (names, projects, customers) that are always replaced for foreign nodes with `reduced` ([usage](usage.md#optional-headers)) |
 | `cooperation` | How the pattern is chosen when a request names none (table below) |
 
 Secrets do not belong in the file: the Home Assistant token comes from an environment variable (`token_env`), network keys are kept in separate files with permissions 0600.
@@ -19,6 +19,7 @@ Secrets do not belong in the file: the Home Assistant token comes from an enviro
 | Key | Default | Meaning |
 |---|---|---|
 | `selection` | `rules` | `rules`: `tasks.pattern` applies; `bandit`: the node chooses the pattern per task category from its competence profile ([cooperation](../spec/cooperation.md) § 3). A request with `swarmainet/<pattern>` always gets that pattern |
+| `coordinate_for_others` | `false` | Coordinate [asynchronous jobs](usage.md#asynchronous-jobs) of trusted peers; this node then sees their jobs in plain text |
 | `exploration` | `0.05` | Share of random choice among the feasible patterns (0 to 0.5) |
 | `targets` | code 0.9, math 0.95, otherwise 0.85 | Targets per category, e.g. `code: { quality: 0.9, cascade_error: 0.05 }`. With `bandit`, controllers keep the success rate at `quality` (by setting a minimum effort) and the error rate of the cheap stage of the cascade at `cascade_error` (default 0.05, by setting the threshold `θ`) ([cooperation](../spec/cooperation.md) § 4.2); `latency_p90_s` is reserved for the latency loop |
 
@@ -57,6 +58,7 @@ Secrets do not belong in the file: the Home Assistant token comes from an enviro
 | `identity.key` | The node's private key, determines the peer ID |
 | `*.key` | Network keys of private networks |
 | `peers-<network_id>.json` | Most recently connected peers |
+| `jobs.json` | Asynchronous jobs and their answers, kept for 24 hours |
 | `profile.json` | Competence profile of the agents (see [usage](usage.md#feedback-and-competence-profile)) |
 | Files per membership network | Certificate, revocation lists, on an issuer its key and the register of open invitations |
 

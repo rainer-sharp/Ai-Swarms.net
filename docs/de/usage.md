@@ -43,6 +43,7 @@ Scheitert ein Schritt, nachdem er schon Text gestreamt hat, folgt ein Trenner (�
 | `X-SwarmAiNet-Skill` | Fähigkeit, z. B. `code.python`; ohne Angabe entscheidet der Router |
 | `X-SwarmAiNet-Agents` | kommagetrennte Agent-IDs, auf die die Auswahl beschränkt wird (für Messungen) |
 | `X-SwarmAiNet-Trace: 1` | Texte der Zwischenschritte in `steps[].output` |
+| `X-SwarmAiNet-Coordinator` | nur für `/v1/jobs`: Peer-ID eines vertrauten Knotens, der den Auftrag koordiniert ([unten](#asynchrone-aufträge)) |
 
 Ohne Header gilt `tasks.privacy_class` aus der Konfiguration (Standard `trusted`): Die Anfrage geht nur an eigene oder vertraute Geräte. An fremde Knoten im offenen Netz geht nur, was als `public` markiert ist. Lässt die Freigabeklasse keinen der bekannten Agenten zu, antwortet das Gateway mit 400 und nennt den Grund, etwa bei `trusted` ohne eigenes Modell und ohne vertraute Knoten.
 
@@ -94,6 +95,26 @@ Ein Transkriptionsmodell wird wie jedes andere eingetragen, nur mit eigener Fäh
   skills: [audio.transcribe]
   offer: true
 ```
+
+## Asynchrone Aufträge
+
+Lange Aufträge, etwa mit `swarmainet/decompose`, können im Hintergrund laufen: `POST /v1/jobs` nimmt dieselbe Anfrage an wie `/v1/chat/completions` und antwortet sofort mit einer Auftragskennung. Das Ergebnis holt man später ab; der Client muss die Verbindung nicht offen halten.
+
+```sh
+curl -s http://127.0.0.1:7711/v1/jobs -H 'Content-Type: application/json' \
+  -d '{"model":"swarmainet/decompose","messages":[{"role":"user","content":"…"}]}'
+# {"id":"job-…","object":"job","status":"running","coordinator":"local",…}
+curl -s http://127.0.0.1:7711/v1/jobs/job-…
+```
+
+| Anfrage | Bedeutung |
+|---|---|
+| `POST /v1/jobs` | Auftrag abgeben (202); `stream` wird ignoriert |
+| `GET /v1/jobs/{id}` | Zustand `running`, `done`, `failed` oder `canceled`; wenn fertig, unter `result` die Antwort im Format der Chat-API |
+| `GET /v1/jobs` | eigene Aufträge, die neuesten zuerst |
+| `DELETE /v1/jobs/{id}` | laufenden Auftrag abbrechen (200) oder abgeschlossenen löschen (204) |
+
+Mit dem Header `X-SwarmAiNet-Coordinator: <peer-id>` koordiniert ein vertrauter Knoten den Auftrag statt des eigenen, etwa ein Rechner mit Modellen, der rund um die Uhr läuft, während das Notebook ausgeschaltet ist. Dieser Knoten braucht `cooperation.coordinate_for_others: true` ([Konfiguration](configuration.md)). Er sieht den Auftrag im Klartext und wendet die Freigabeklasse aus seiner Sicht an; `local` verlässt den eigenen Knoten nie. Ist der Koordinator nicht erreichbar, liefert `GET` den letzten bekannten Stand mit `coordinator_error`. Abgeschlossene Aufträge bleiben 24 Stunden abrufbar, auch nach einem Neustart; ein Auftrag, der auf einem Knoten lief, als er beendet wurde, ist verloren und gilt als gescheitert. Details: [Kooperation](../../spec/de/cooperation.md) § 7.4.
 
 ## Rückmeldungen und Kompetenzprofil
 

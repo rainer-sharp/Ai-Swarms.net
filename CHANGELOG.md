@@ -6,6 +6,10 @@ All notable changes to SwarmAiNet. The format follows [Keep a Changelog](https:/
 
 ## [Unreleased]
 
+### Added
+
+- **Asynchronous jobs (cooperation stage 5, first part):** `POST /v1/jobs` accepts a chat request and responds immediately with a job ID; `GET /v1/jobs/{id}` returns status and, when done, the answer, `DELETE` cancels or deletes. With the header `X-SwarmAiNet-Coordinator`, a trusted node with `cooperation.coordinate_for_others: true` coordinates the job, so the requester may go offline in the meantime (new protocol `/swarmainet/job/0.1`). Finished jobs stay retrievable for 24 hours, also after a restart. Not yet: lease and substitute coordinator, so a job is still lost if its coordinator fails. ([usage](docs/usage.md#asynchronous-jobs), [cooperation](spec/cooperation.md) § 7.4)
+
 ## [0.7.0] – 2026-11-24
 
 A planner can now split multi-part tasks into a graph of subtasks that different models work on (pattern `decompose`), and reasoning models get more room: the default token limit rises from 2048 to 8192. The protocol stays at version 0.1 without new fields: nodes with 0.7.0 and 0.6.0 work together. Existing configurations keep working without changes.

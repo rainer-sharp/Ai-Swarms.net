@@ -31,6 +31,9 @@ const (
 	ProtoMemberCRL   = "/swarmainet/member-crl/0.1"
 	ProtoMemberRenew = "/swarmainet/member-renew/0.1"
 	ProtoPEX         = "/swarmainet/pex/0.1"
+	// ProtoJob: asynchrone Aufträge an einen koordinierenden Peer
+	// (spec/cooperation.md § 7).
+	ProtoJob = "/swarmainet/job/0.1"
 
 	sigDomain = "swarmainet/sig/v0.1\n"
 )
@@ -49,6 +52,14 @@ const (
 	TaskCancel         MsgType = "TASK_CANCEL"
 	TaskReceipt        MsgType = "TASK_RECEIPT"
 	TrustAttestation   MsgType = "TRUST_ATTESTATION"
+
+	// Asynchrone Aufträge (ProtoJob): Auftraggeber → Koordinator JOB_SUBMIT,
+	// JOB_STATUS (Abfrage) und JOB_CANCEL; der Koordinator antwortet mit
+	// JOB_STATUS, solange der Auftrag läuft, danach mit JOB_RESULT.
+	JobSubmit MsgType = "JOB_SUBMIT"
+	JobStatus MsgType = "JOB_STATUS"
+	JobResult MsgType = "JOB_RESULT"
+	JobCancel MsgType = "JOB_CANCEL"
 )
 
 // Envelope umschließt jede Nachricht. Signiert werden die Kopffelder und der

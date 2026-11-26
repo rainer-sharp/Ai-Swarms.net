@@ -182,6 +182,7 @@ func cmdRun(path string) error {
 	defer n.Close()
 	n.ProbeBackends(ctx)
 
+	var _ gateway.JobBackend = n // asynchrone Aufträge (/v1/jobs)
 	srv := &http.Server{Addr: cfg.Node.Gateway, Handler: gateway.Handler(n), ReadHeaderTimeout: 10 * time.Second}
 	go func() {
 		<-ctx.Done()

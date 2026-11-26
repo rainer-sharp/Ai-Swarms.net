@@ -40,6 +40,10 @@ type Cooperation struct {
 	Exploration float64 `yaml:"exploration"`
 	// Targets: Sollwerte je Aufgabenkategorie (code, math, general …).
 	Targets map[string]Target `yaml:"targets,omitempty"`
+	// CoordinateForOthers: asynchrone Aufträge vertrauter Peers annehmen und
+	// koordinieren (spec/cooperation.md § 7). Der Koordinator sieht den
+	// Auftrag im Klartext.
+	CoordinateForOthers bool `yaml:"coordinate_for_others"`
 }
 
 // Target: Sollwerte einer Aufgabenkategorie (spec/cooperation.md § 4.1).
@@ -384,7 +388,9 @@ type Tasks struct {
 	PrivacyClass string `yaml:"privacy_class"`
 	MaxTokens    int    `yaml:"max_tokens"`
 	DeadlineS    int    `yaml:"deadline_s"`
-	MaxSubtasks  int    `yaml:"max_subtasks"`
+	// JobDeadlineS: Frist asynchroner Aufträge (POST /v1/jobs); 0: eine Stunde.
+	JobDeadlineS int `yaml:"job_deadline_s"`
+	MaxSubtasks  int `yaml:"max_subtasks"`
 	// PseudonymizeTerms: eigene Begriffe (Namen, Projekte, Kunden), die bei
 	// privacy_class reduced für fremde Knoten immer ersetzt werden, zusätzlich
 	// zu dem, was die Erkennung findet (spec/privacy-classes.md).
@@ -449,6 +455,7 @@ func Default() Config {
 			PrivacyClass: "trusted",
 			MaxTokens:    8192,
 			DeadlineS:    300,
+			JobDeadlineS: 3600,
 			MaxSubtasks:  8,
 		},
 		Cooperation: Cooperation{Selection: "rules", Exploration: 0.05},

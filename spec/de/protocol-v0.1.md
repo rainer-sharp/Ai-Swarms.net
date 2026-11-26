@@ -17,6 +17,7 @@ Die Schlüsselwörter MUSS, SOLL und KANN sind normativ.
 | `/swarmainet/capability/0.1` | Abruf der signierten Fähigkeitsanzeige eines Peers |
 | `/swarmainet/task/0.1` | Ein Teilauftrag pro Stream: Angebot, Annahme, Ergebnis, Quittung |
 | `/swarmainet/pex/0.1` | Peer-Austausch (Phase 2, siehe [P2P-Schicht](p2p-layer.md) § 2.4) |
+| `/swarmainet/job/0.1` | Asynchrone Aufträge bei einem koordinierenden Peer (Phase 3, siehe [Kooperation](cooperation.md) § 7.4) |
 
 - Rahmung: genau eine JSON-Nachricht (Envelope) pro Zeile, abgeschlossen mit `\n`, höchstens 4 MiB.
 - mDNS-Dienstname: `swarmainet-<network_id>`. Private Schwärme nutzen zusätzlich einen libp2p-PSK (dann nur TCP).

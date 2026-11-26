@@ -6,6 +6,10 @@ Alle nennenswerten Änderungen an SwarmAiNet. Das Format folgt [Keep a Changelog
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
+- **Asynchrone Aufträge (Kooperation Stufe 5, erster Teil):** `POST /v1/jobs` nimmt eine Chat-Anfrage an und antwortet sofort mit einer Auftragskennung; `GET /v1/jobs/{id}` liefert Zustand und, wenn fertig, die Antwort, `DELETE` bricht ab oder löscht. Mit dem Header `X-SwarmAiNet-Coordinator` koordiniert ein vertrauter Knoten mit `cooperation.coordinate_for_others: true` den Auftrag, sodass der Auftraggeber zwischendurch offline gehen darf (neues Protokoll `/swarmainet/job/0.1`). Abgeschlossene Aufträge bleiben 24 Stunden abrufbar, auch nach einem Neustart. Noch nicht: Lease und Ersatzkoordinator; fällt der Koordinator aus, ist ein Auftrag weiterhin verloren. ([Nutzung](../docs/de/usage.md#asynchrone-aufträge), [Kooperation](../spec/de/cooperation.md) § 7.4)
+
 ## [0.7.0] – 2026-11-24
 
 Ein Planer kann mehrteilige Aufgaben jetzt in einen Graphen aus Teilaufgaben zerlegen, die verschiedene Modelle bearbeiten (Muster `decompose`), und Reasoning-Modelle bekommen mehr Raum: Die Standard-Token-Grenze steigt von 2048 auf 8192. Das Protokoll bleibt bei Version 0.1 ohne neue Felder: Knoten mit 0.7.0 und 0.6.0 arbeiten zusammen. Bestehende Konfigurationen funktionieren ohne Änderung weiter.

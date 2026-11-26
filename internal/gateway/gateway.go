@@ -65,6 +65,9 @@ func Handler(b Backend) http.Handler {
 	})
 	mux.HandleFunc("POST /v1/chat/completions", func(w http.ResponseWriter, r *http.Request) { chat(b, w, r) })
 	mux.HandleFunc("POST /v1/audio/transcriptions", func(w http.ResponseWriter, r *http.Request) { transcribe(b, w, r) })
+	if jb, ok := b.(JobBackend); ok {
+		handleJobs(mux, jb)
+	}
 	mux.HandleFunc("GET /api/status", func(w http.ResponseWriter, _ *http.Request) { writeJSON(w, http.StatusOK, b.StatusJSON()) })
 	control := func(path string, do func() error, done string) {
 		mux.HandleFunc("POST "+path, func(w http.ResponseWriter, _ *http.Request) {
@@ -240,10 +243,11 @@ func dataImage(url string) (protocol.Image, error) {
 	return protocol.Image{MIME: mime, Data: b}, nil
 }
 
-func chat(b Backend, w http.ResponseWriter, r *http.Request) {
-	var req chatRequest
+// parseChat liest eine Anfrage im Format der Chat-API. ok=false: Die
+// Fehlerantwort ist schon geschrieben.
+func parseChat(w http.ResponseWriter, r *http.Request) (req chatRequest, oreq orchestrator.Request, ok bool) {
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxChatBody)).Decode(&req); err != nil {
-		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+		if _, tooBig := errors.AsType[*http.MaxBytesError](err); tooBig {
 			writeErr(w, http.StatusRequestEntityTooLarge, fmt.Errorf("anfrage größer als %d bytes", maxChatBody))
 			return
 		}
@@ -272,7 +276,7 @@ func chat(b Backend, w http.ResponseWriter, r *http.Request) {
 	if rest, ok := strings.CutPrefix(req.Model, modelPrefix+"/"); ok {
 		pattern = rest
 	}
-	oreq := orchestrator.Request{
+	oreq = orchestrator.Request{
 		Messages:   msgs,
 		Tools:      req.Tools,
 		ToolChoice: req.ToolChoice,
@@ -283,6 +287,14 @@ func chat(b Backend, w http.ResponseWriter, r *http.Request) {
 		Trace:      r.Header.Get("X-SwarmAiNet-Trace") == "1",
 	}
 	oreq.Limits.MaxTokens = req.MaxTokens
+	return req, oreq, true
+}
+
+func chat(b Backend, w http.ResponseWriter, r *http.Request) {
+	req, oreq, ok := parseChat(w, r)
+	if !ok {
+		return
+	}
 	var sw *sseWriter
 	if req.Stream {
 		sw = newSSEWriter(w, req.Model)
@@ -307,20 +319,23 @@ func chat(b Backend, w http.ResponseWriter, r *http.Request) {
 		sw.finish(ans, nil)
 		return
 	}
-	id := "chatcmpl-" + ans.TaskID
-	created := time.Now().Unix()
+	writeJSON(w, http.StatusOK, completion(ans, req.Model, time.Now()))
+}
+
+// completion: Antwort im Format der Chat-API.
+func completion(ans *orchestrator.Answer, model string, created time.Time) map[string]any {
 	finish := "stop"
 	if len(ans.ToolCalls) > 0 {
 		finish = "tool_calls"
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"id": id, "object": "chat.completion", "created": created, "model": req.Model,
+	return map[string]any{
+		"id": "chatcmpl-" + ans.TaskID, "object": "chat.completion", "created": created.Unix(), "model": model,
 		"choices": []map[string]any{{
 			"index": 0, "finish_reason": finish,
 			"message": assistantMessage(ans),
 		}},
 		"swarmainet": ans,
-	})
+	}
 }
 
 // keepAliveEvery: So oft geht während einer Pause im Stream ein SSE-Kommentar,

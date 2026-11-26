@@ -31,6 +31,7 @@
 | Identitätsfälschung | Absender = Gegenstelle der Verbindung, Signatur über Peer-ID-Schlüssel | umgesetzt |
 | Überlastung des Anbieters | REM: Slots, Zeitfenster, GPU-Minuten, mittlere Auslastung, Temperatur, RAM-Reserve; max. 4 Streams pro Peer; 4 MiB pro Nachricht | umgesetzt |
 | Eigenbedarf verdrängt | eigene Nutzung bricht Fremdjobs ab | umgesetzt |
+| Koordinator liest oder missbraucht übergebene Aufträge | nur an beidseitig vertraute Peers, Koordination als Opt-in (`coordinate_for_others`), `local` nie; höchstens 4 Aufträge für andere, 2 je Peer; jeder Auftraggeber sieht nur seine eigenen. Der Koordinator sieht den Auftrag im Klartext und wendet die Freigabeklasse mit seiner eigenen Vertrauensliste an | umgesetzt |
 | Zugriff auf Gateway von außen | Bindung nur an localhost, Prüfung von Absender und Host-Header | umgesetzt |
 | Trittbrettfahrer | Kreditlimits, Tit-for-Tat, begrenztes Optimistic Unchoking | Quittungen ab Phase 1, Kredit ab Phase 4 |
 | Sybil | Proof of Useful Work, erarbeitetes Vertrauen, Bürgschaften | Phase 1: nur vertrauter Kreis |

@@ -98,6 +98,9 @@ type Options struct {
 	// AllowedTools: Werkzeuge, die Modelle dieses Netzes sehen dürfen
 	// (spec/privacy-classes.md). Im PSK-Netz heißt nil: alle.
 	AllowedTools []string
+	// Coordinator: nimmt asynchrone Aufträge vertrauter Peers an
+	// (cooperation.coordinate_for_others); nil: keine.
+	Coordinator Coordinator
 }
 
 type Node struct {
@@ -279,6 +282,9 @@ func New(ctx context.Context, o Options) (*Node, error) {
 	}
 	if o.PEX {
 		n.handle(protocol.ProtoPEX, anyRole, n.handlePEX)
+	}
+	if o.Coordinator != nil {
+		n.handle(protocol.ProtoJob, canTask, n.handleJob)
 	}
 	if n.member != nil {
 		h.SetStreamHandler(lp2pproto.ID(protocol.ProtoMember), n.handleAdmission)

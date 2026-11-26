@@ -9,7 +9,7 @@ Die Konfiguration liegt in `~/.swarmainet/config.yaml` (anlegen mit `swarmainet 
 | `node` | Adressen, Gateway, Netz, Vertrauen, Erreichbarkeit (Tabelle unten) |
 | `backends` | Inferenz-Server und ihre Modelle: `family`, `skills`, `context`, `strength`, `tools`, `vision` (versteht Bilder), `offer` |
 | `resources` | Ressourcenmanager: parallele Aufträge, GPU-Grenzen, Temperatur, RAM-Reserve, Zeitfenster, GPU-Minuten, Energie (PV-Überschuss, Strompreis über Home Assistant) |
-| `tasks` | Standardmuster, Standard-Freigabeklasse, Token-Grenze `max_tokens` (Standard 8192, gilt, wenn eine Anfrage keine nennt; der Anbieter senkt sie auf den `context` des Modells), Frist, Teilaufträge; `pseudonymize_terms`: eigene Begriffe (Namen, Projekte, Kunden), die bei `reduced` für fremde Knoten immer ersetzt werden ([Nutzung](usage.md#optionale-header)) |
+| `tasks` | Standardmuster, Standard-Freigabeklasse, Token-Grenze `max_tokens` (Standard 8192, gilt, wenn eine Anfrage keine nennt; der Anbieter senkt sie auf den `context` des Modells), Frist (`job_deadline_s` für [asynchrone Aufträge](usage.md#asynchrone-aufträge), Standard 3600), Teilaufträge; `pseudonymize_terms`: eigene Begriffe (Namen, Projekte, Kunden), die bei `reduced` für fremde Knoten immer ersetzt werden ([Nutzung](usage.md#optionale-header)) |
 | `cooperation` | Wie das Muster gewählt wird, wenn eine Anfrage keines nennt (Tabelle unten) |
 
 Geheimnisse gehören nicht in die Datei: Der Home-Assistant-Token kommt aus einer Umgebungsvariablen (`token_env`), Netzschlüssel stehen in eigenen Dateien mit Rechten 0600.
@@ -19,6 +19,7 @@ Geheimnisse gehören nicht in die Datei: Der Home-Assistant-Token kommt aus eine
 | Schlüssel | Standard | Bedeutung |
 |---|---|---|
 | `selection` | `rules` | `rules`: es gilt `tasks.pattern`; `bandit`: der Knoten wählt das Muster je Aufgabenkategorie nach seinem Kompetenzprofil ([Kooperation](../../spec/de/cooperation.md) § 3). Eine Anfrage mit `swarmainet/<muster>` bekommt immer dieses Muster |
+| `coordinate_for_others` | `false` | [asynchrone Aufträge](usage.md#asynchrone-aufträge) vertrauter Peers koordinieren; dieser Knoten sieht deren Aufträge dann im Klartext |
 | `exploration` | `0.05` | Anteil zufälliger Wahl unter den besetzbaren Mustern (0 bis 0,5) |
 | `targets` | code 0,9, math 0,95, sonst 0,85 | Sollwerte je Kategorie, z. B. `code: { quality: 0.9, cascade_error: 0.05 }`. Mit `bandit` halten Regler die Erfolgsquote bei `quality` (über einen Mindestaufwand) und die Fehlerquote der günstigen Stufe der Kaskade bei `cascade_error` (Standard 0,05, über die Schwelle `θ`) ([Kooperation](../../spec/de/cooperation.md) § 4.2); `latency_p90_s` ist für den Latenz-Regler vorgesehen |
 
@@ -57,6 +58,7 @@ Geheimnisse gehören nicht in die Datei: Der Home-Assistant-Token kommt aus eine
 | `identity.key` | privater Schlüssel des Knotens, bestimmt die Peer-ID |
 | `*.key` | Netzschlüssel privater Netze |
 | `peers-<network_id>.json` | zuletzt erfolgreich verbundene Peers |
+| `jobs.json` | asynchrone Aufträge und ihre Antworten, 24 Stunden lang |
 | `profile.json` | Kompetenzprofil der Agenten (siehe [Nutzung](usage.md#rückmeldungen-und-kompetenzprofil)) |
 | Dateien je Mitgliedsnetz | Zertifikat, Sperrlisten, beim Aussteller dessen Schlüssel und das Register offener Einladungen |
 

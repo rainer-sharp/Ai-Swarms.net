@@ -18,6 +18,7 @@ import (
 
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/config"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/identity"
+	"github.com/rainer-sharp/Ai-Swarms.net/internal/jobs"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/membership"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/orchestrator"
 	"github.com/rainer-sharp/Ai-Swarms.net/internal/p2p"
@@ -44,6 +45,11 @@ type Node struct {
 	started time.Time
 	// NetErrors: Netze, die wegen ihres Zertifikats nicht gestartet sind.
 	NetErrors []string
+
+	// Asynchrone Aufträge (jobs.go); jobCtx endet mit dem Knoten.
+	jobs    *jobs.Store
+	jobCtx  context.Context
+	jobStop context.CancelFunc
 }
 
 // Options erlaubt Tests, Sensoren und Energiequelle zu ersetzen.
@@ -105,7 +111,8 @@ func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
 	}
 	local := NewLocal(backends, m)
 	n := &Node{Cfg: cfg, ID: id, REM: m, Local: local, Receipts: store, started: time.Now(), version: o.Version,
-		Profile: profile.Open(filepath.Join(dir, "profile.json"))}
+		Profile: profile.Open(filepath.Join(dir, "profile.json")), jobs: jobs.Open(filepath.Join(dir, "jobs.json"))}
+	n.jobCtx, n.jobStop = context.WithCancel(context.Background())
 	// Ressourcenmanager, Backends und Quittungen teilen sich alle Netze;
 	// fremde Aufträge aus allen Netzen konkurrieren um dieselben Slots.
 	for i, s := range nets {
@@ -138,7 +145,7 @@ func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
 			RelayLimits: p2p.RelayLimits(s.RelayLimits), DNSSeeds: s.DNSSeeds,
 			PeerCache: filepath.Join(dir, "peers-"+s.NetworkID+".json"),
 			DHTServer: dhtServer(cfg.Node.Helper, s.DHTServer), AnnouncePrivate: s.AnnouncePrivate, Announce: s.Announce, PortMapping: s.PortMapping,
-			Provider: local, Receipts: store,
+			Provider: local, Receipts: store, Coordinator: jobCoordinator{n},
 		})
 		if err != nil {
 			n.Close()
@@ -160,6 +167,9 @@ func New(ctx context.Context, cfg config.Config, o Options) (*Node, error) {
 }
 
 func (n *Node) Close() error {
+	if n.jobStop != nil {
+		n.jobStop()
+	}
 	var errs []error
 	for _, pn := range n.Nets {
 		errs = append(errs, pn.Close())

@@ -17,6 +17,7 @@ The keywords MUST, SHOULD and MAY are normative.
 | `/swarmainet/capability/0.1` | Fetching a peer's signed capability announcement |
 | `/swarmainet/task/0.1` | One subtask per stream: offer, acceptance, result, receipt |
 | `/swarmainet/pex/0.1` | Peer exchange (phase 2, see [P2P layer](p2p-layer.md) § 2.4) |
+| `/swarmainet/job/0.1` | Asynchronous tasks at a coordinating peer (phase 3, see [cooperation](cooperation.md) § 7.4) |
 
 - Framing: exactly one JSON message (envelope) per line, terminated with `\n`, at most 4 MiB.
 - mDNS service name: `swarmainet-<network_id>`. Private swarms additionally use a libp2p PSK (then TCP only).
