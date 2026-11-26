@@ -94,6 +94,31 @@ Full report: [`bench/report-r1.md`](../bench/report-r1.md). Runtime just under 4
 
 **For round 2:** harder tasks (goal: best single model at 50–70 %), record intermediate texts (implemented, see implementation item 5), `reasoning.math` also for the Qwen models, a more restrained verifier for maths (implemented, see implementation item 6).
 
+## Mixed task set (hypothesis 2)
+
+For [hypothesis 2](measurement-plan.md#hypothesis-2-team-of-small-specialists) (team of small specialists), every task combines several parts from different domains, each automatically checkable. The draft [`bench/tasks-mix-draft.jsonl`](../bench/tasks-mix-draft.jsonl) contains 10 tasks with 3 parts each (code, calculation, facts, data from a table, dates, a translation), written for this project rather than taken from public benchmarks, so that no model knows them from training. Every part was checked against a reference solution.
+
+Format, one task per line:
+
+```json
+{"id": "mix/04", "kind": "multi", "prompt": "…", "parts": [
+  {"n": 1, "kind": "number", "answer": "5.4"},
+  {"n": 2, "kind": "code", "entry_point": "total_cost", "tests": "def check(f): …"},
+  {"n": 3, "kind": "text", "pattern": "(?i)^\\W*melon\\W*$"}]}
+```
+
+The prompt asks for all code in a single Python block and ends with one line `Answer <n>: <value>` per part that is not code.
+
+| Part | Assessment |
+|---|---|
+| `code` | the code from the answer runs with the hidden tests `check(f)` in the sandbox, as in round 1 |
+| `number` | the value from `Answer <n>:` equals `answer` (relative deviation at most 10⁻⁶, or `tolerance`) |
+| `text` | the value from `Answer <n>:` matches the regular expression `pattern` |
+
+A task counts as solved if all parts are correct; the report also shows the success rate per part and per kind of part.
+
+**Still to do before the measurement:** support for `kind: multi` in `swarmainet bench run` (assessment per part); extending the set to 30 to 100 tasks, with harder parts, so that the generalist does not solve everything (ceiling effect of round 1); parts with images (generated charts and tables with known values) and with audio (recordings with a known transcript), so that coverage can be measured; a plan file with the setups A to C from the measurement plan.
+
 ## Open questions
 
 1. **llama3.1:8b as a third family:** run it on `.95` as GGUF via llama.cpp, or is the VRAM sufficient for two loaded Ollama models (`OLLAMA_MAX_LOADED_MODELS=2`)? Until then it is a separate block with model switches (`schwarm-parallel-verify-llama` in the plan); in round 1 this raised the median latency from 24 to 39 s without a quality gain.

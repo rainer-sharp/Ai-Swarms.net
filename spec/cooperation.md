@@ -12,7 +12,7 @@ So far the orchestrator decides by fixed rules: it takes the pattern from the co
 - New **patterns** (cascade, decompose and distribute via a task graph) extend the choice (§ 5, § 6).
 - A **lease** makes the coordination of a task failure-safe (§ 7).
 
-**Gate phase 3** is the core hypothesis from the [measurement plan](measurement-plan.md): at equal budget, the swarm delivers higher verified quality than the best single model, or it reliably recognises that a single model is sufficient. If that is missed, the concept is revised before phase 4 (§ 10).
+**Gate phase 3** consists of the two hypotheses of the [measurement plan](measurement-plan.md); one of them has to hold: (1) at equal budget, the swarm delivers higher verified quality than the best single model, or it reliably recognises that a single model is sufficient; (2) a team of small specialists reaches the quality of a large generalist on mixed, multi-part tasks with clearly less hardware per device, or solves tasks that none of its members solves alone. If both are missed, the concept is revised before phase 4 (§ 10).
 
 Principles that apply to everything below:
 
@@ -279,6 +279,8 @@ The gate is the core hypothesis (measurement plan). It is tested with the experi
 Metrics in addition to the measurement plan: convergence of the bandit (how many tasks until a stable choice), control stability (oscillation of the effort), share of exploration, time to detect a manipulating agent.
 
 **Note on the status:** with the models currently available (two families without model switching), stage 3 is not meaningful. The mechanisms can still be built and tested with simulations (artificial agents with known quality); measuring the gate follows as soon as more diverse models are available.
+
+**Hypothesis 2 (team of small specialists)** is measured with its own setups (measurement plan, [hypothesis 2](measurement-plan.md#hypothesis-2-team-of-small-specialists)): the specialists with `decompose` against a large generalist and against each specialist alone, on mixed, multi-part tasks ([draft](../bench/tasks-mix-draft.jsonl)). Small specialists of different families are easier to come by than large models, so this measurement also eases the lack of diversity. For it to work well, two things are still missing: a router that assigns more than code, maths and `general` (so far a heuristic), and a planner that sees the competence profile of the agents and not only the names of their skills.
 
 ## 11. Implementation in stages
 

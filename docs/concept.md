@@ -367,7 +367,7 @@ Own protocol names (`/swarmainet/…`) and an own DHT prefix separate the swarm 
 
 ## Measurement and success criteria
 
-The swarm only counts as a success if, at equal budget, it delivers higher verified quality than the best single node and than a fixed multi-model flow, or reliably recognises that a single model is sufficient.
+The swarm counts as a success if, at equal budget, it delivers higher verified quality than the best single node and than a fixed multi-model flow, or reliably recognises that a single model is sufficient. A second, independent reason for a swarm: small specialists work together and handle tasks for which one device would otherwise need a large model, or which no single device can handle at all (code, calculation, images and speech in one request). Both are measured; phase 3 is a success if one of them holds ([measurement plan](../spec/measurement-plan.md)).
 
 | Metric | Comparison |
 |---|---|
@@ -388,8 +388,9 @@ The swarm only counts as a success if, at equal budget, it delivers higher verif
 2. The swarm solves them with a fixed flow (draft + verifier + synthesis).
 3. A PI controller adjusts the number of reviews dynamically.
 4. Several independent coordinators in the P2P network, with failure tests and simulated manipulated ratings.
+5. A team of small specialists against a large generalist on mixed, multi-part tasks.
 
-**Status:** round 1 (80 tasks from HumanEval and GSM8K) showed a ceiling effect: the best single model solves 79 of 80, the swarm hardly does harm but costs 3 to 8 times the tokens. Round 2 needs harder tasks and at least three model families without model switching ([report](../bench/report-r1.md)).
+**Status:** round 1 (80 tasks from HumanEval and GSM8K) showed a ceiling effect: the best single model solves 79 of 80, the swarm hardly does harm but costs 3 to 8 times the tokens. Round 2 needs harder tasks and at least three model families without model switching ([report](../bench/report-r1.md)). For the specialists there is a draft of mixed, multi-part tasks ([benchmark](../spec/benchmark.md#mixed-task-set-hypothesis-2)).
 
 ## Roadmap
 

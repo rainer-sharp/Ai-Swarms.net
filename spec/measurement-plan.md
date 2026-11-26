@@ -2,7 +2,12 @@
 
 **English** · [Deutsch](de/measurement-plan.md)
 
-Core hypothesis: **at equal budget**, the swarm delivers higher verified quality than the best single node and than a fixed multi-model flow – or reliably recognises that a single model is sufficient. This is the gate of phase 3; if it is missed, the concept is revised before phase 4.
+Two hypotheses, each a reason for a swarm:
+
+1. **Quality (hypothesis 1):** **at equal budget**, the swarm delivers higher verified quality than the best single node and than a fixed multi-model flow – or reliably recognises that a single model is sufficient.
+2. **Specialists (hypothesis 2):** a team of **small specialists** reaches the quality of a large generalist on mixed, multi-part tasks with clearly less hardware per device, or solves tasks that none of its members solves alone ([section below](#hypothesis-2-team-of-small-specialists)).
+
+The gate of phase 3 is met if hypothesis 1 or hypothesis 2 holds; if both are missed, the concept is revised before phase 4.
 
 ## Task sets
 
@@ -13,6 +18,7 @@ Core hypothesis: **at equal budget**, the swarm delivers higher verified quality
 | Fact checking | 30–100 | ground truth, assessed blind |
 | Multimodal analysis | 30–100 | ground truth (once vision agents exist) |
 | Open planning | 30–100 | blind pairwise comparison by models of other families + human |
+| Mixed, multi-part (hypothesis 2) | 30–100 | per part: unit tests, exact value or pattern; solved if all parts are correct ([benchmark](benchmark.md#mixed-task-set-hypothesis-2)) |
 
 Tasks are versioned and fixed by hash before the run (commit-reveal), so that no flow can be adjusted afterwards.
 
@@ -26,6 +32,24 @@ Tasks are versioned and fixed by hash before the run (commit-reveal), so that no
 ## Equal budget
 
 Budget = GPU seconds and tokens across all participating models. A single model may use the same budget for self-consistency (solving several times, majority/self-review); otherwise the comparison would be unfair.
+
+## Hypothesis 2: team of small specialists
+
+**Claim:** on mixed, multi-part tasks (code, calculation, facts, later images and audio in one request), a team of small specialists – each at most about 8 billion parameters and runnable on a device with at most 12 GB VRAM – is **not worse** than a large generalist (24 billion parameters or more on one device), or it solves tasks that none of its members solves alone.
+
+**Setups,** each on the same task set:
+
+| Setup | Flow |
+|---|---|
+| A · team | the specialists as a swarm with `swarmainet/decompose`: the planner splits, each part goes to the matching specialist |
+| B · generalist | the large model alone (`swarmainet/single`, restricted to it with `X-SwarmAiNet-Agents`) |
+| C · each specialist alone | every member alone on all tasks, to measure coverage |
+
+**Metrics:** success rate (all parts correct) and success rate per part; **coverage** (tasks solved by A that no setup from C solves completely); peak VRAM of the largest participating device and the sum over all devices; GPU seconds, energy where measured, latency and tokens.
+
+**Statistics:** paired comparison A against B on the same tasks. Hypothesis 2 holds if the lower bound of the 95 % bootstrap interval of the difference in success rate (A − B) lies above −5 percentage points while A needs at most half the VRAM per device, or if the coverage is significant (McNemar, A against the best setup from C).
+
+**Prerequisites:** the task set (draft in [`bench/tasks-mix-draft.jsonl`](../bench/tasks-mix-draft.jsonl)), support for multi-part tasks in `swarmainet bench`, specialists of at least three model families without model switching. Results get better once the router and the planner use the competence profile ([cooperation](cooperation.md) § 10).
 
 ## Metrics
 

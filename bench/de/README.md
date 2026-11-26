@@ -10,6 +10,7 @@ Aufgaben und Lauf-Pläne für den Benchmark aus [`spec/de/benchmark.md`](../../s
 | `plan-r1.yaml` | Läufe für den Testaufbau (vLLM auf `.94`, llama.cpp und Ollama auf `.95`) |
 | `results-r1.jsonl` | Ergebnisse, eine Zeile je Lauf und Aufgabe (entsteht beim Lauf) |
 | `report-r1.md` | Bericht und Bewertung der Runde 1 (17.10.2026) |
+| `tasks-mix-draft.jsonl` | Entwurf für Hypothese 2 (Team kleiner Spezialisten): 10 gemischte Aufgaben mit je 3 Teilen; `bench run` kann sie noch nicht bewerten ([Format](../../spec/de/benchmark.md#gemischter-aufgabensatz-hypothese-2)) |
 
 ## Ablauf
 

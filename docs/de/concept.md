@@ -367,7 +367,7 @@ Eigene Protokollnamen (`/swarmainet/…`) und ein eigenes DHT-Präfix trennen de
 
 ## Messung und Erfolgskriterien
 
-Der Schwarm gilt erst als Erfolg, wenn er bei gleichem Budget eine höhere geprüfte Qualität liefert als der beste Einzelknoten und als ein fester Multi-Modell-Ablauf, oder zuverlässig erkennt, dass ein Einzelmodell genügt.
+Der Schwarm gilt als Erfolg, wenn er bei gleichem Budget eine höhere geprüfte Qualität liefert als der beste Einzelknoten und als ein fester Multi-Modell-Ablauf, oder zuverlässig erkennt, dass ein Einzelmodell genügt. Ein zweiter, eigenständiger Grund für einen Schwarm: Kleine Spezialisten arbeiten zusammen und erledigen Aufgaben, für die ein Gerät sonst ein großes Modell bräuchte oder die kein einzelnes Gerät allein schafft (Code, Rechnung, Bilder und Sprache in einer Anfrage). Beides wird gemessen; Phase 3 ist ein Erfolg, wenn eins davon zutrifft ([Messplan](../../spec/de/measurement-plan.md)).
 
 | Kennzahl | Vergleich |
 |---|---|
@@ -388,8 +388,9 @@ Der Schwarm gilt erst als Erfolg, wenn er bei gleichem Budget eine höhere gepr�
 2. Der Schwarm löst sie mit festem Ablauf (Entwurf + Prüfer + Synthese).
 3. Ein PI-Regler passt die Zahl der Prüfungen dynamisch an.
 4. Mehrere unabhängige Koordinatoren im P2P-Netz, mit Ausfalltests und simulierten manipulierten Bewertungen.
+5. Ein Team kleiner Spezialisten gegen einen großen Generalisten bei gemischten, mehrteiligen Aufgaben.
 
-**Stand:** Runde 1 (80 Aufgaben aus HumanEval und GSM8K) zeigte einen Deckeneffekt: Das beste Einzelmodell löst 79 von 80, der Schwarm schadet kaum, kostet aber das 3- bis 8-Fache an Tokens. Runde 2 braucht schwerere Aufgaben und mindestens drei Modellfamilien ohne Modellwechsel ([Bericht](../../bench/de/report-r1.md)).
+**Stand:** Runde 1 (80 Aufgaben aus HumanEval und GSM8K) zeigte einen Deckeneffekt: Das beste Einzelmodell löst 79 von 80, der Schwarm schadet kaum, kostet aber das 3- bis 8-Fache an Tokens. Runde 2 braucht schwerere Aufgaben und mindestens drei Modellfamilien ohne Modellwechsel ([Bericht](../../bench/de/report-r1.md)). Für die Spezialisten gibt es einen Entwurf gemischter, mehrteiliger Aufgaben ([Benchmark](../../spec/de/benchmark.md#gemischter-aufgabensatz-hypothese-2)).
 
 ## Roadmap
 

@@ -94,6 +94,31 @@ Vollständiger Bericht: [`bench/de/report-r1.md`](../../bench/de/report-r1.md). 
 
 **Für Runde 2:** schwerere Aufgaben (Ziel: bestes Einzelmodell bei 50–70 %), Zwischentexte mitschreiben (umgesetzt, siehe Umsetzung Punkt 5), `reasoning.math` auch bei den Qwen-Modellen, zurückhaltenderer Prüfer bei Mathe (umgesetzt, siehe Umsetzung Punkt 6).
 
+## Gemischter Aufgabensatz (Hypothese 2)
+
+Für [Hypothese 2](measurement-plan.md#hypothese-2-team-kleiner-spezialisten) (Team kleiner Spezialisten) verbindet jede Aufgabe mehrere Teile aus verschiedenen Bereichen, jeder automatisch prüfbar. Der Entwurf [`bench/tasks-mix-draft.jsonl`](../../bench/tasks-mix-draft.jsonl) enthält 10 Aufgaben mit je 3 Teilen (Code, Rechnung, Fakten, Daten aus einer Tabelle, Datumsangaben, eine Übersetzung), eigens für dieses Projekt geschrieben statt aus öffentlichen Benchmarks übernommen, damit kein Modell sie aus dem Training kennt. Jeder Teil ist gegen eine Musterlösung geprüft.
+
+Format, eine Aufgabe je Zeile:
+
+```json
+{"id": "mix/04", "kind": "multi", "prompt": "…", "parts": [
+  {"n": 1, "kind": "number", "answer": "5.4"},
+  {"n": 2, "kind": "code", "entry_point": "total_cost", "tests": "def check(f): …"},
+  {"n": 3, "kind": "text", "pattern": "(?i)^\\W*melon\\W*$"}]}
+```
+
+Der Prompt verlangt allen Code in einem einzigen Python-Block und endet mit einer Zeile `Answer <n>: <Wert>` je Teil, der kein Code ist.
+
+| Teil | Bewertung |
+|---|---|
+| `code` | der Code aus der Antwort läuft mit den verdeckten Tests `check(f)` in der Sandbox, wie in Runde 1 |
+| `number` | der Wert aus `Answer <n>:` stimmt mit `answer` überein (relative Abweichung höchstens 10⁻⁶, oder `tolerance`) |
+| `text` | der Wert aus `Answer <n>:` passt zum regulären Ausdruck `pattern` |
+
+Eine Aufgabe gilt als gelöst, wenn alle Teile stimmen; der Bericht zeigt zusätzlich die Erfolgsquote je Teil und je Art des Teils.
+
+**Vor der Messung noch zu tun:** Unterstützung für `kind: multi` in `swarmainet bench run` (Bewertung je Teil); Ausbau auf 30 bis 100 Aufgaben mit schwereren Teilen, damit der Generalist nicht alles löst (Deckeneffekt aus Runde 1); Teile mit Bildern (erzeugte Diagramme und Tabellen mit bekannten Werten) und mit Audio (Aufnahmen mit bekanntem Text), damit sich die Abdeckung messen lässt; eine Plan-Datei mit den Aufbauten A bis C aus dem Messplan.
+
 ## Offene Fragen
 
 1. **llama3.1:8b als dritte Familie:** auf `.95` als GGUF über llama.cpp betreiben, oder reicht der VRAM für zwei geladene Ollama-Modelle (`OLLAMA_MAX_LOADED_MODELS=2`)? Bis dahin ist es ein eigener Block mit Modellwechseln (`schwarm-parallel-verify-llama` im Plan); in Runde 1 hob das die Median-Latenz von 24 auf 39 s ohne Qualitätsgewinn.

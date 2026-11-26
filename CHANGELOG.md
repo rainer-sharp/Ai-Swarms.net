@@ -8,6 +8,7 @@ All notable changes to AI-Swarms.net. The format follows [Keep a Changelog](http
 
 ### Added
 
+- **Second hypothesis for phase 3:** besides quality at equal budget, the measurement plan now also checks whether a team of small specialists reaches the quality of a large generalist on mixed, multi-part tasks with less hardware, or solves tasks none of its members solves alone; the gate of phase 3 is met if one of the two holds. Draft of a task set with 10 mixed tasks (`bench/tasks-mix-draft.jsonl`). ([measurement plan](spec/measurement-plan.md#hypothesis-2-team-of-small-specialists), [benchmark](spec/benchmark.md#mixed-task-set-hypothesis-2))
 - **Logos:** wordmark and emblem in light and dark variants as SVG and PNG, favicons and the generator scripts, under CC BY 4.0. ([logos](logos/README.md))
 
 ### Changed

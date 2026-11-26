@@ -10,6 +10,7 @@ Tasks and run plans for the benchmark from [`spec/benchmark.md`](../spec/benchma
 | `plan-r1.yaml` | Runs for the test setup (vLLM on `.94`, llama.cpp and Ollama on `.95`) |
 | `results-r1.jsonl` | Results, one line per run and task (created during the run) |
 | `report-r1.md` | Report and assessment of round 1 (17 Oct 2026) |
+| `tasks-mix-draft.jsonl` | Draft for hypothesis 2 (team of small specialists): 10 mixed tasks with 3 parts each; `bench run` cannot assess them yet ([format](../spec/benchmark.md#mixed-task-set-hypothesis-2)) |
 
 ## Procedure
 

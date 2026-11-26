@@ -12,7 +12,7 @@ Bisher entscheidet der Orchestrator nach festen Regeln: Er nimmt das Muster aus 
 - Neue **Muster** (Kaskade, Zerlegen und Verteilen über einen Task-Graph) erweitern die Auswahl (§ 5, § 6).
 - Ein **Lease** macht die Koordination eines Auftrags ausfallsicher (§ 7).
 
-**Gate Phase 3** ist die Kernhypothese aus dem [Messplan](measurement-plan.md): Der Schwarm liefert bei gleichem Budget eine höhere geprüfte Qualität als das beste Einzelmodell, oder er erkennt zuverlässig, dass ein Einzelmodell genügt. Wird das verfehlt, wird das Konzept vor Phase 4 überarbeitet (§ 10).
+**Gate Phase 3** sind die beiden Hypothesen aus dem [Messplan](measurement-plan.md); eine davon muss zutreffen: (1) Der Schwarm liefert bei gleichem Budget eine höhere geprüfte Qualität als das beste Einzelmodell, oder er erkennt zuverlässig, dass ein Einzelmodell genügt; (2) ein Team kleiner Spezialisten erreicht bei gemischten, mehrteiligen Aufgaben die Qualität eines großen Generalisten mit deutlich weniger Hardware je Gerät, oder es löst Aufgaben, die keins seiner Mitglieder allein löst. Werden beide verfehlt, wird das Konzept vor Phase 4 überarbeitet (§ 10).
 
 Grundsätze, die für alles Folgende gelten:
 
@@ -279,6 +279,8 @@ Das Gate ist die Kernhypothese (Messplan). Geprüft wird mit den Versuchsstufen 
 Kennzahlen zusätzlich zum Messplan: Konvergenz des Bandits (wie viele Aufträge bis zur stabilen Wahl), Regelungsstabilität (Schwingen des Aufwands), Anteil Exploration, Erkennungsdauer eines manipulierenden Agenten.
 
 **Hinweis zum Stand:** Mit den derzeit verfügbaren Modellen (zwei Familien ohne Modellwechsel) ist Stufe 3 nicht aussagekräftig. Die Mechanismen lassen sich trotzdem bauen und mit Simulationen (künstliche Agenten mit bekannter Qualität) prüfen; die Messung des Gates folgt, sobald unterschiedlichere Modelle bereitstehen.
+
+**Hypothese 2 (Team kleiner Spezialisten)** wird mit eigenen Aufbauten gemessen (Messplan, [Hypothese 2](measurement-plan.md#hypothese-2-team-kleiner-spezialisten)): die Spezialisten mit `decompose` gegen einen großen Generalisten und gegen jeden Spezialisten allein, auf gemischten, mehrteiligen Aufgaben ([Entwurf](../../bench/tasks-mix-draft.jsonl)). Kleine Spezialisten verschiedener Familien sind leichter zu bekommen als große Modelle, deshalb lindert diese Messung auch den Mangel an Vielfalt. Damit sie gut gelingt, fehlen noch zwei Dinge: ein Router, der mehr zuordnet als Code, Mathe und `general` (bisher eine Heuristik), und ein Planer, der das Kompetenzprofil der Agenten sieht und nicht nur die Namen ihrer Fähigkeiten.
 
 ## 11. Umsetzung in Stufen
 
